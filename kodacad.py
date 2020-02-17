@@ -961,7 +961,7 @@ if __name__ == '__main__':
     win.wgToolBar.addSeparator()
     #win.wgToolBar.addAction(QIcon(QPixmap('icons/translate.gif')), 'Translate Profile', geom)
     #win.wgToolBar.addAction(QIcon(QPixmap('icons/rotate.gif')), 'Rotate Profile', geom)
-    win.wgToolBar.addAction(QIcon(QPixmap('icons/del_el.gif')), 'Delete Edge Elem', delEl)
+    win.wgToolBar.addAction(QIcon(QPixmap('icons/del_el.gif')), 'Delete Profile Elem', delEl)
 
     win.raise_() # bring the app to the top
     app.exec_()

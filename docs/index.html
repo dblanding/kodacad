@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="Bluefish">
+<title>KodaCAD</title>
+</head>
+<body>
+<h1>Getting Started with KodaCAD</h1>
+
+<h3>Creating 3D models</h3>
+<img src="images/wp.png" width="481" height="423" border="0" alt="">
+<p>
+<ul>
+	<li>The basic paradigm for creating a 3D model is to start by drawing a sketch on a 2D workplane.</li>
+	<li>The workplane contains two types of drawn elements: <b>Construction</b> and <b>Profile</b>.</li>
+	<li><b>Construction</b> elements, as their name implies, are used to construct an accurate layout. They are the dotted magenta colored lines, infinite in length.</li>
+	<li>Where Construction elements intersect, 'selectable' yellow <b>Points</b> are shown.</li>
+	<li><b>Profile</b> elements are the ones that get assembled into a closed loop which is then used to create or modify 3D bodies. They are drawn by clicking on <b>Points</b> or by entering values on the <b>User Input</b>  widget.</li>
+</ul>
+</p>
+
+<h3>The User Interface</h3>
+<img src="images/ui.png" width="792" height="509" border="0" alt="">
+<p>
+<ul>
+	<li>The main <b>3D Display</b> window is the 3D view of workplanes and 3D parts.</li>
+	<li>To the left of the <b>3D Display</b> is the <b>Tree View</b> window, showing the heirarchical relationship among Parts, Assemblies and Workplanes. In addition to displaying heiarchical relationships, the Tree View window also allows user editing of certain parameters, allows Parts, Assemblies and Workplanes to be shown/hidden (using the checkboxes) and shows (by color):
+		<ul>
+			<li>Which part is <b>Active</b>, (the part that will be the subject of the current modification or operation).</li>
+			<li>Which Workplane is <b>Active</b>, (the workplane that will receive the effects from any toolbar buttons).</li>
+		</ul>
+	</li>
+	<li>The <b>Menu Bar</b> is located across the top of the application window. In general, 3D parts are created with a workflow that starts with the menu buttons on the left (<b>Workplane</b>) and prcceeds to the right (<b>Create</b>, then <b>Modify</b>).</li>
+	<li>The <b>Toolbar Buttons</b>, located on the far right, are used to create drawing elements on the <b>Active Workplane</b>.</li>
+	<li>Along the bottom of the application window, from left to right are:
+		<ul>
+			<li>A <b>StatusBar</b>, showing instructions, if any, for the user</li>
+			<li>A <b>User Input</b> widget into which numerical values (v), 2D coordinates (x, y), or other text (such as part name) can be entered.</li>
+			<li>A <b>Current Operation</b> label, showing the current opertion.</li>
+			<li>An <b>End Operation</b> button, allowing the user to end the current opertion.</li>
+			<li>A <b>Units</b> label, showing the currently selected units.</li>
+		</ul>
+	</li>
+</ul>
+</p>
+<h3>Navigation</h3>
+<p>In order to avoid accidental screen picks when using the mouse for navigation, the control key must be used with the mouse when panning or rotating the view.
+<ul>
+	<li>LMB for screen picks</li>
+	<li>CTRL-LMB to pan the view</li>
+	<li>CTRL-MMB to rotate the view</li>
+	<li>CTRL-RMB (Or scroll wheel) to Zoom the view</li>
+	<li>RMB for popup options (on both Display and Tree View)</li>
+</ul>
+<h3>Download & Installation:</h3>
+<p><b>KodaCAD</b> is very much still in development, so it isn't being made available in an executable binary format. In order to run it, you need to have Python version 3.7 (or higher) and the latest version of pythonOCC installed on your computer. 
+The easiest way to get this (the way I did it) is to download and install <a href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/download.html">Conda</a> (Install Python3, not python2.7.) Then install the latest version of <a href="https://anaconda.org/dlr-sc/pythonocc-core">PythonOCC</a>. Once you have got that, set up a pythonOCC environment within conda. 
+Clone the KodaCAD GitHub <a href="https://github.com/dblanding/kodacad">repository</a>
+onto your computer, then from within the pythonocc environment, run the file "kodacad.py".
+
+<h3>Tutorial: Creating the Classic OCC Bottle</h3>
+<img src="images/bottle.png" width="808" height="514" border="0" alt="">
+<p>
+Step by step tutorial Coming Soon! 
+</p>
+
+<h3>Author and Maintainer of KodaCAD:</h3>
+Doug Blanding<br>
+dBlanding@gmail.com
+</body>
+</html>
