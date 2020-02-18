@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta name="generator" content="Bluefish 2.2.10" />
+
+  <title>Bottle Tutorial</title>
+</head>
+
+<body>
+  <h1>Tutorial: Creating the Classic OCC Bottle</h1>
+
+  <h3>Create a New Workplane</h3>
+
+  <p>In the menubar, click on <b>Workplane</b> then <b>At Origin, XY Plane</b>.</p>
+
+	<img src="images/wp1.png" width="805" height="521" border="0" alt="" />
+
+  <p><b>wp1</b> is created in the X-Y plane of the global coordinate system. It is
+  <b>Active</b> (as signified by the green background color in tree view). Also notice
+  that a pair of construction lines has been created. One <b>horizontal</b> and one
+  <b>vertical</b>. They intersect at a point (shown as a yellow '+' symbol) which is
+  located at the workplane's (u=0, v=0) coordinates. Every workplane will have its own
+  (u, v, w) local coordinate system. If you think of the workplane as being represented
+  by a sheet of paper laying on a table in front of you, u is the horizontal direction to
+  the right, v is the vertical direction away from you, and w is the direction normal to
+  the paper (out of the table).</p><img src="images/wp2.png" width="805" height="521"
+  border="0" alt="" />
+
+  <p>Now zoom in using one of these techniques:</p>
+
+  <ul>
+    <li>MMB scroll wheel</li>
+
+    <li>Ctrl+RMB</li>
+
+    <li>RMB</li>
+
+    <li style="list-style: none; display: inline">
+      <ul>
+        <li>Draw</li>
+
+        <li style="list-style: none; display: inline">
+          <ul>
+            <li>Fit All</li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul><img src="images/wp3.png" width="805" height="521" border="0" alt="" />
+
+  <h3>Draw construction lines</h3>
+
+  <p>Click on top-most toolbar button (Horizontal Construction line), then Enter
+  <b>30</b> into the <b>User Input</b> widget.</p><img src="images/wp4.png" width="805"
+  height="521" border="0" alt="" />
+
+  <p>Draw 5 more construction lines at the following values: 15, 7.5, -7.5, -15, -30 and
+  zoom in a bit more.</p><img src="images/wp5.png" width="805" height="521" border="0"
+  alt="" />
+
+  <h3>Draw construction circles</h3>
+
+  <p>Click on "construction circe" toolbar button, then click on the point at 0, 30
+  (center of circle), then point at 0, -15.</p><img src="images/wp6.png" width="805"
+  height="521" border="0" alt="" />
+
+  <p>Draw a second construction circle by first entering the coordinates of its center
+  (0,-30) but without the parentheses, then enter the value 45 for the radius.</p>
+
+  <p>In general, when a 2d point is needed, you have the option of either clicking on a
+  point or entering the point coordinates in the <b>User Input</b> widget. When in doubt,
+  check the status bar in the lower left corner to find out what data is expected
+  next.</p><img src="images/wp7.png" width="805" height="521" border="0" alt="" />
+
+  <h3>Draw the Profile</h3>
+
+  <p>Click on the (blue) <b>line</b> toolbar button and then add two lines as shown by
+  clicking on the end points. Next, use the <b>Arc by3Pts</b> tool to create two arcs.
+  (Clicking order is end, mid, end.) The profile is now complete. It needs to be a closed
+  loop, otherwise the next step won't work.</p><img src="images/wp8.png" width="805"
+  height="521" border="0" alt="" />
+
+  <h3>Extrude the Bottle</h3>
+
+  <p>In the menubar, click on <b>Create 3D</b> then <b>Extrude</b>. Enter <b>70</b> for
+  the extrusion distance and enter <b>Bottle</b> for the name.</p>
+
+  <p>The new part <b>Bottle</b> is now displayed in both the 3D Display window and in the
+  Tree View widget. Notice also that the Tree View shows <b>Bottle</b> highlighted in
+  yellow, signifying that this is the <b>Active part</b>. It is important to remember
+  which part is active, because any subsequent modifications will be carried out on the
+  Active part.</p><img src="images/bot1.png" width="805" height="521" border="0" alt=
+  "" />
+
+  <h3>Blend (fillet) the edges of the Bottle</h3>
+
+  <p>Hide wp1 from the display widow by unchecking its checkbox in the Tree View. This is
+  done to make sure that we don't accidentally select profile lines in the next step.</p>
+
+  <p>In the menubar, click on <b>Modify Active Part</b> then <b>Fillet</b>. Carefully
+  select all 12 edges (one by one) of the <b>Bottle</b>. (I know this is a pain. Box
+  select would be really handy, but it's not implemented yet.) Enter the fillet radius
+  value of <b>3</b>.</p>
+
+  <p>A new <b>Bottle</b> part (with the same name) has been created and made active. The
+  old part is still there but blanked from view (and no longer active). The old part is
+  an <b>Ancestor</b> of the new part.</p><img src="images/bot2.png" width="805" height=
+  "521" border="0" alt="" />
+
+  <h3>Create the neck</h3>
+
+  <p>In the menubar, click on <b>Workpane</b> then <b>On face</b>. Select the top face of
+  the bottle. (The face normal will be the <b>w direction</b> of the new workplane.) Now
+  select one of the flat side faces. (The face normal will be the <b>u direction</b> of
+  the new workplane.) A new workplane <b>w2</b> is now be created (and is active). Its
+  0,0 coordinates are located at the center of the bottle's top face.</p>
+
+  <p>Next, make a Profile circle on <b>w2</b> with center at 0,0 and radius = 7.5.</p>
+
+  <p>Now click on <b>Create 3D</b> then <b>Extrude</b>. Enter <b>7</b> for the extrusion
+  distance and enter <b>Neck</b> for the name.</p>
+
+  <p>The Neck is created and is now the <b>active part</b>.</p><img src="images/bot3.png"
+  width="805" height="521" border="0" alt="" />
+
+  <h3>Fuse the Neck to the Bottle</h3>
+
+  <p>In the Tree View, hide wp2 by unchecking its box. We no longer need to see that. Now
+  left click on the most recently created <b>Bottle</b> (still with a check mark), then
+  right click and select <b>Set Active</b>. By setting the Bottle active, we can fuse the
+  Neck to the Bottle rather than the other way around.</p>
+
+  <p>Now click on <b>Modify Active Part</b> then <b>Fuse</b>. Click on the Neck in the
+  <b>3D Display</b> window. (Clicking the Neck in the Tree View window won't work
+  (yet).)</p>
+
+  <p>A new <b>Bottle</b> is now created and is set active. Uncheck the check box of the
+  Neck. We don't need to see that any longer.</p><img src="images/bot4.png" width="805"
+  height="521" border="0" alt="" />
+
+  <h3>Shell the Bottle</h3>
+
+  <p>Just for fun, try filleting the base of the neck with a radius value of <b>2</b>
+  before shelling.</p>
+
+  <p>Now in the menubar, click on <b>Modify Active Part</b> then <b>Shell</b>. Click
+  first on the top circular face of the bottle, then enter a shell thickness of
+  <b>1</b>.</p>
+
+  <p>The final <b>Bottle</b> is comlete.</p><img src="images/bot5.png" width="805"
+  height="521" border="0" alt="" />
+</body>
+</html>
