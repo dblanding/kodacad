@@ -94,34 +94,32 @@ class StepImporter():
             isRef = self.shape_tool.GetReferredShape(cLabel, refLabel)
             if isRef:  # I think all components are references, but just in case...
                 refShape = self.shape_tool.GetShape(refLabel)
-                refLabelEntry = refLabel.EntryDumpToString()
-                logger.debug("Entry referred to: %s", refLabelEntry)
+                refEntry = refLabel.EntryDumpToString()
+                leafName = f"{name} ({refEntry})"
+                logger.debug("Entry referred to: %s", refEntry)
                 refName = self.getName(refLabel)
                 logger.debug("Name of referred item: %s", refName)
                 if self.shape_tool.IsSimpleShape(refLabel):
                     logger.debug("Referred item is a Shape")
-                    logger.debug("Name of Shape: %s", refName)
                     tempAssyLocStack = list(self.assyLocStack)
                     tempAssyLocStack.reverse()
-
+                    # Move the shape to it's correct location
                     for loc in tempAssyLocStack:
                         cShape.Move(loc)
-
                     color = self.getColor(refShape)
-                    self.tree.create_node(name,
-                                          self.getNewUID(),
+                    uid = self.getNewUID()
+                    self.tree.create_node(leafName,
+                                          uid,
                                           self.assyUidStack[-1],
                                           {'a': False, 'l': None, 'c': color, 's': cShape})
                 elif self.shape_tool.IsAssembly(refLabel):
                     logger.debug("Referred item is an Assembly")
-                    logger.debug("Name of Assembly: %s", refName)
-                    name = self.getName(cLabel)  # Instance name
-                    aLoc = TopLoc_Location()
                     # Location vector is carried by component
+                    aLoc = TopLoc_Location()
                     aLoc = self.shape_tool.GetLocation(cLabel)
                     self.assyLocStack.append(aLoc)
                     newAssyUID = self.getNewUID()
-                    self.tree.create_node(name,
+                    self.tree.create_node(leafName,
                                           newAssyUID,
                                           self.assyUidStack[-1],
                                           {'a': True, 'l': aLoc, 'c': None, 's': None})
@@ -180,11 +178,12 @@ class StepImporter():
             topLoc = self.shape_tool.GetLocation(rootlabel)
             self.assyLocStack.append(topLoc)
             entry = rootlabel.EntryDumpToString()
+            leafName = f"{name} ({entry})"
             logger.debug("Entry: %s", entry)
             logger.debug("Top assy name: %s", name)
             # Create root node for top assy
             newAssyUID = self.getNewUID()
-            self.tree.create_node(name, newAssyUID, None,
+            self.tree.create_node(leafName, newAssyUID, None,
                                   {'a': True, 'l': None, 'c': None, 's': None})
             self.assyUidStack.append(newAssyUID)
             topComps = TDF_LabelSequence() # Components of Top Assy
