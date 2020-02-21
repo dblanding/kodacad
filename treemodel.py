@@ -22,7 +22,8 @@
 #
 
 import logging
-from OCC.Core.TCollection import TCollection_ExtendedString
+from OCC.Core.TCollection import (TCollection_ExtendedString,
+                                  TCollection_AsciiString)
 from OCC.Core.TDF import TDF_ChildIterator
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
@@ -30,7 +31,8 @@ from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
                               XCAFDoc_DocumentTool_ColorTool,
                               XCAFDoc_DocumentTool_LayerTool,
                               XCAFDoc_DocumentTool_MaterialTool)
-
+from OCC.Core.XmlXCAFDrivers import (XmlXCAFDrivers_DocumentRetrievalDriver,
+                                     XmlXCAFDrivers_DocumentStorageDriver)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG) # set to DEBUG | INFO | ERROR
 
@@ -79,9 +81,18 @@ class TreeModel():
             self.getAllChildLabels(lbl, first=False)
         return self.allChildLabels
 
-    def saveDoc(self, filename):
+    def saveDoc(self, filename="foo.caf"):
         """Save doc to file (for educational purposes) (not working yet)
+
+        https://www.opencascade.com/doc/occt-7.4.0/overview/html/occt_user_guides__ocaf.html#occt_ocaf_11
         """
+        frmte = TCollection_ExtendedString("Xml-XCAF")
+        frmta = TCollection_AsciiString("MDTV-CAF")
+        self.app.DefineFormat(TCollection_AsciiString("DocumentFormat"),
+                              TCollection_AsciiString("MDTV-CAF"),
+                              TCollection_AsciiString("caf"),
+                              XmlXCAFDrivers_DocumentRetrievalDriver(),
+                              XmlXCAFDrivers_DocumentStorageDriver(frmte))
         logger.debug("Saving doc to file")
         savefilename = TCollection_ExtendedString(filename)
         self.app.SaveAs(self.doc, savefilename)

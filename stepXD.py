@@ -239,5 +239,5 @@ class StepImporter():
                                           self.assyUidStack[-1],
                                           {'a': False, 'l': None,
                                            'c': color, 's': shape})
-
+        tmodel.saveDoc()
         return tmodel.doc  # <class 'OCC.Core.TDocStd.TDocStd_Document'>
