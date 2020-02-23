@@ -44,7 +44,7 @@ class TreeModel():
         # Create the application and document
         doc = TDocStd_Document(TCollection_ExtendedString(title))
         app = XCAFApp_Application_GetApplication()
-        app.NewDocument(TCollection_ExtendedString("MDTV-CAF"), doc)
+        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
         self.app = app
         self.doc = doc
         # Initialize tools
