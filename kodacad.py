@@ -877,7 +877,7 @@ if __name__ == '__main__':
     win = MainWindow()
     win.add_menu('File')
     win.add_function_to_menu('File', "Load STEP", win.loadStep)
-    win.add_function_to_menu('File', "Save STEP", win.saveStep)
+    win.add_function_to_menu('File', "Save STEP (Top Ay)", win.saveStepTopAsy)
     win.add_function_to_menu('File', "Save STEP (Act Prt)", win.saveStepActPrt)
     win.add_menu('Workplane')
     win.add_function_to_menu('Workplane', "At Origin, XY Plane", makeWP)
