@@ -28,7 +28,7 @@ from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
                              QDockWidget, QDesktopWidget, QToolButton,
-                             QLineEdit, QTreeWidgetItem, QAction, QDockWidget,
+                             QLineEdit, QTreeWidgetItem, QAction, QFrame,
                              QToolBar, QFileDialog, QAbstractItemView,
                              QInputDialog, QTreeWidgetItemIterator)
 from OCC.Core.AIS import AIS_Shape, AIS_Line, AIS_Circle
@@ -71,7 +71,7 @@ logger.setLevel(logging.DEBUG) # set to DEBUG | INFO | ERROR
 class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
     """ Display assembly structure.
 
-    TO DO: This Part/Assy tree view GUI and the OCAF data model need to be
+    TO DO: This Part/Assy tree view GUI and the XCAF data model need to be
     maintained in sync with each other. That's not happening right now.
     While it is very slick (from the user's perspective) to be able to edit
     the assembly structure using 'drag & drop' of parts and assemblies within
@@ -79,7 +79,7 @@ class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
     sync. There are some moves that need to be prohibited, such as moving an
     item into a child relationship with an item that is not an assembly.
     Currently, 'drag and drop' changes in the GUI are not propagated to the
-    OCAF data model.
+    XCAF data model.
     IDEA: As an alternative to 'drag & drop', consider adding an option to
     the RMB pop-up to change the parent of a QTreeWidgetItem.
     """
@@ -190,7 +190,7 @@ class MainWindow(QMainWindow):
         self.unitscale = self._unitDict[self.units]
         self.unitsLabel = QLabel()
         self.unitsLabel.setText("Units: %s " % self.units)
-        #self.unitsLabel.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        self.unitsLabel.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
 
         self.endOpButton = QToolButton()
         self.endOpButton.setText('End Operation')
@@ -235,7 +235,7 @@ class MainWindow(QMainWindow):
 
         self.activeAsy = self.treeViewRoot   # tree node object
         self.activeAsyUID = 0
-        self._assyDict = {}  # k = uid, v = Loc
+        self._assyDict = {}     # k = uid, v = Loc
         self._assyDict[0] = None  # Root assembly has no location vector
         self.showItemActive(0)
         self.doc = None  # <class 'OCC.Core.TDocStd.TDocStd_Document'>
@@ -843,6 +843,7 @@ class MainWindow(QMainWindow):
         """
         labels = TDF_LabelSequence()
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         shape_tool.GetShapes(labels)
         logger.info('Number of labels at root : %i', labels.Length())
         try:

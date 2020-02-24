@@ -38,7 +38,14 @@ logger.setLevel(logging.DEBUG) # set to DEBUG | INFO | ERROR
 
 
 class TreeModel():
-    """XCAF Tree Model of heirarchical CAD assembly data."""
+    """XCAF Tree Model of heirarchical CAD assembly data.
+
+    This class isn't very useful (yet). It is used only once (by stepXD,
+    and __init__ is the only method used). It only has 3 other methods
+    two of which aren't used, and one that doesn't work. Nonetheless,
+    I have decided to use the XCAF tree model to manage the CAD data of
+    this application so hopefully it will grow to have many more useful
+    methods."""
 
     def __init__(self, title):
         # Create the application and document

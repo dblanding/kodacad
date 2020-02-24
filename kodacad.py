@@ -694,10 +694,11 @@ def mill():
     wp = win.activeWp
     if win.lineEditStack:
         length = float(win.lineEditStack.pop()) * win.unitscale
-        wire = wp.wire
-        if not wire:
-            print("Need to 'makeWire' first.")
+        wireOK = wp.makeWire()
+        if not wireOK:
+            print("Unable to make wire.")
             return
+        wire = wp.wire
         workPart = win.activePart
         wrkPrtUID = win.activePartUID
         punchProfile = BRepBuilderAPI_MakeFace(wire)
