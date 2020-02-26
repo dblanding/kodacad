@@ -46,11 +46,13 @@ from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDocStd import TDocStd_Document
-from OCC.Core.TDF import TDF_LabelSequence
+from OCC.Core.TDF import TDF_LabelSequence, TDF_Label
 from OCC.Core.TopoDS import (topods_Edge, topods_Vertex, TopoDS_Shape)
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
-                              XCAFDoc_DocumentTool_ColorTool)
+                              XCAFDoc_DocumentTool_ColorTool,
+                              XCAFDoc_ColorGen)
+from OCC.Core.XSControl import XSControl_WorkSession
 import OCC.Display.OCCViewer
 import OCC.Display.backend
 used_backend = OCC.Display.backend.load_backend()
@@ -902,10 +904,16 @@ class MainWindow(QMainWindow):
         # Add component parts to assembly
         for uid, part in self._partDict.items():
             newLabel = shape_tool.AddComponent(rootlabel, part, True)
+            color = self._colorDict[uid]
+            # Get referrred label and apply color to it
+            refLabel = TDF_Label()  # label of referred shape
+            isRef = shape_tool.GetReferredShape(newLabel, refLabel)
+            if isRef:
+                color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
             name = self._nameDict[uid]
             newName = TCollection_ExtendedString(name)
             TDataStd_Name.Set(newLabel, newName)
-            logger.info('Component part %s aadded', name)
+            logger.info('Component part %s added', name)
 
         # myAssembly->UpdateAssemblies();
         shape_tool.UpdateAssemblies()
@@ -922,10 +930,11 @@ class MainWindow(QMainWindow):
             return
 
         # initialize STEP exporter
-        step_writer = STEPCAFControl_Writer()
+        WS = XSControl_WorkSession()
+        step_writer = STEPCAFControl_Writer(WS, False)
 
         # transfer shapes and write file
-        step_writer.Transfer(self.doc)
+        step_writer.Transfer(self.doc, STEPControl_AsIs)
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
 
