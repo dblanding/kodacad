@@ -94,7 +94,7 @@ class StepImporter():
             if isRef:  # I think all components are references, but just in case...
                 refShape = self.shape_tool.GetShape(refLabel)
                 refEntry = refLabel.EntryDumpToString()
-                leafName = f"{name} ({refEntry})"
+                leafName = name
                 logger.debug("Entry referred to: %s", refEntry)
                 refName = self.getName(refLabel)
                 logger.debug("Name of referred item: %s", refName)
@@ -177,7 +177,7 @@ class StepImporter():
             topLoc = self.shape_tool.GetLocation(rootlabel)
             self.assyLocStack.append(topLoc)
             entry = rootlabel.EntryDumpToString()
-            leafName = f"{name} ({entry})"
+            leafName = name
             logger.debug("Entry: %s", entry)
             logger.debug("Top assy name: %s", name)
             # Create root node for top assy
