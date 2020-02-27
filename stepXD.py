@@ -66,7 +66,6 @@ class StepImporter():
 
     def getColor(self, shape):
         # Get the part color
-        #string_seq = self.layer_tool.GetObject().GetLayers(shape)
         color = Quantity_Color()
         self.color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
         logger.debug("color: %i, %i, %i", color.Red(), color.Green(), color.Blue())

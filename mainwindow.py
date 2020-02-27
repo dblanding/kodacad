@@ -32,7 +32,7 @@ from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
                              QToolBar, QFileDialog, QAbstractItemView,
                              QInputDialog, QTreeWidgetItemIterator)
 from OCC.Core.AIS import AIS_Shape, AIS_Line, AIS_Circle
-from OCC.Core.BRep import BRep_Tool
+from OCC.Core.BRep import BRep_Tool, BRep_Builder
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.CPnts import CPnts_AbscissaPoint_Length
 from OCC.Core.gp import gp_Vec
@@ -47,7 +47,8 @@ from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TDF import TDF_LabelSequence, TDF_Label
-from OCC.Core.TopoDS import (topods_Edge, topods_Vertex, TopoDS_Shape)
+from OCC.Core.TopoDS import (topods_Edge, topods_Vertex, TopoDS_Shape,
+                             TopoDS_Compound)
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
                               XCAFDoc_DocumentTool_ColorTool,
@@ -817,6 +818,26 @@ class MainWindow(QMainWindow):
 
         # Save self.doc as step file
         self.saveStep()
+
+    def createEmptyDoc(self):
+        """Create XCAF doc with an empty assembly at entry 0:1:1:1
+
+        This causes the program to hang & crash."""
+
+        # Create the application and document
+        title = "XCAF document"
+        doc = TDocStd_Document(TCollection_ExtendedString(title))
+        app = XCAFApp_Application_GetApplication()
+        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+        print(type(doc.Main()))  # <class 'OCC.Core.TDF.TDF_Label'>
+        print(doc.Main().EntryDumpToString())  # 0:1
+        print(type(shape_tool))  # <class 'OCC.Core.XCAFDoc.XCAFDoc_ShapeTool'>
+        # Create a compound
+        compound = TopoDS_Compound()
+        print(type(compound))
+        rootLabel = shape_tool.AddShape(compound)  # Hangs & crashes here
+        #self.doc = doc
 
     def createEmptyDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1
