@@ -848,6 +848,15 @@ def printActPart():
     else:
         print(None)
 
+def printActiveAsyInfo():
+    uid = win.activeAsyUID
+    treeNode = win.activeAsy
+    try:
+        name = treeNode.text(0)
+    except AttributeError:
+        name = "Error getting name of Active assembly"
+    print(f"Active Assembly Name: {name} \t UID: {uid}")
+
 def printTreeView():
     """Print 'uid'; 'name'; 'parent' for all items in treeView."""
     iterator = QTreeWidgetItemIterator(win.treeView)

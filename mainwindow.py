@@ -393,7 +393,7 @@ class MainWindow(QMainWindow):
                 self.redraw()
             elif uid in ad:
                 self.setActiveAsy(uid)
-                sbText = "%s [uid=%i] is now the active workplane" % (name, uid)
+                sbText = "%s [uid=%i] is now the active assembly" % (name, uid)
             self.statusBar().showMessage(sbText, 5000)
 
     def showItemActive(self, uid):
@@ -482,8 +482,8 @@ class MainWindow(QMainWindow):
         within the application. Using that uid as a key, record the
         information in the various dictionaries. The process of modifying
         an existing part generally involves doing an operation on an
-        existing 'ancestor' part, which is not thrown away, but merely
-        removed from the drawlist.
+        existing 'ancestor' part ('ancestor' parameter is the ancestor's
+        uid) which is not thrown away, but merely removed from the drawlist.
         """
         uid = self._currentUID + 1
         self._currentUID = uid
@@ -501,11 +501,13 @@ class MainWindow(QMainWindow):
             name = 'Part'   # Default name
         # Update appropriate dictionaries
         if typ == 'p':
-            self._partDict[uid] = objct # OCC...
+            self._partDict[uid] = objct  # <TopoDS_Shape>
             if color:   # Quantity_Color()
-                c = OCC.Display.OCCViewer.rgb_color(color.Red(), color.Green(), color.Blue())
+                c = OCC.Display.OCCViewer.rgb_color(color.Red(),
+                                                    color.Green(),
+                                                    color.Blue())
             else:
-                c = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)   # default color
+                c = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)  # default color
             self._colorDict[uid] = c
             if ancestor:
                 self._ancestorDict[uid] = ancestor
