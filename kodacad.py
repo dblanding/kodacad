@@ -618,6 +618,8 @@ def extrude():
         myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(),
                                        aPrismVec).Shape()
         uid = win.getNewPartUID(myBody, name=name)
+        win.statusBar().showMessage('New part created.')
+        win.clearCallback()
         win.addComponent()
         win.redraw()
     else:
@@ -738,9 +740,12 @@ def fillet(event=None):
         mkFillet = BRepFilletAPI_MakeFillet(workPart)
         for edge in edges:
             mkFillet.Add(filletR, edge)
-        newPart = mkFillet.Shape()
-        win.getNewPartUID(newPart, ancestor=wrkPrtUID)
-        win.statusBar().showMessage('Fillet operation complete')
+        try:
+            newPart = mkFillet.Shape()
+            win.getNewPartUID(newPart, ancestor=wrkPrtUID)
+            win.statusBar().showMessage('Fillet operation complete')
+        except RuntimeError as e:
+            print(f"Unable to make Fillet. {e}")
         win.clearCallback()
     else:
         win.registerCallback(filletC)

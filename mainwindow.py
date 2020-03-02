@@ -21,6 +21,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from collections import defaultdict
 import logging
 import os, os.path
 import sys
@@ -228,8 +229,8 @@ class MainWindow(QMainWindow):
         self._partDict = {}     # k = uid, v = <ToopoDS_Shape> object
         self._nameDict = {}     # k = uid, v = partName
         self._colorDict = {}    # k = uid, v = part display color
-        self._transparencyDict = {}    # k = uid, v = part display transparency
-        self._ancestorDict = {} # k = uid, v = ancestorUID
+        self._transparencyDict = {}  # k = uid, v = part display transparency
+        self._ancestorDict = defaultdict(list)  # k = uid, v = [list of ancestorUIDs]
 
         self.activeWp = None    # WorkPlane object
         self.activeWpUID = 0
@@ -479,43 +480,42 @@ class MainWindow(QMainWindow):
         """
         Method for assigning a unique ID (serial number) to a new part
         (typ='p'), assembly (typ='a') or workplane (typ='w') generated
-        within the application. Using that uid as a key, record the
-        information in the various dictionaries. The process of modifying
-        an existing part generally involves doing an operation on an
-        existing 'ancestor' part ('ancestor' parameter is the ancestor's
-        uid) which is not thrown away, but merely removed from the drawlist.
+        within the application. Using the uid as a key, record the
+        information in the various dictionaries. If the 'ancestor' parameter
+        is non-zero, it holds the uid of an existing shape being modified.
+        In this case, the uid of the modified shape is reused and the
+        modified shape is archived.
         """
-        uid = self._currentUID + 1
-        self._currentUID = uid
-        if ancestor:
-            if ancestor in self._colorDict.keys():
-                color = self._colorDict[ancestor]
-            if ancestor in self._transparencyDict.keys():
-                transp = self._transparencyDict[ancestor]
-                self._transparencyDict[uid] = transp
+        if not ancestor:  # Get new UID
+            uid = self._currentUID + 1
+            self._currentUID = uid
+        else:  # Re-use ancestor UID and archive older shape
+            uid = ancestor
+            self._ancestorDict[uid].append(objct)
+            if uid == self.activePartUID:  # Don't overlook this
+                self.activePart = objct
             if not name:
                 name = self._nameDict[ancestor] # Keep ancestor name
-            if ancestor in self.drawList:
-                self.drawList.remove(ancestor)  # Remove ancestor from draw list
-        if not name:
-            name = 'Part'   # Default name
         # Update appropriate dictionaries
         if typ == 'p':
             self._partDict[uid] = objct  # <TopoDS_Shape>
-            if color:   # Quantity_Color()
-                c = OCC.Display.OCCViewer.rgb_color(color.Red(),
-                                                    color.Green(),
-                                                    color.Blue())
-            else:
-                c = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)  # default color
-            self._colorDict[uid] = c
-            if ancestor:
-                self._ancestorDict[uid] = ancestor
-            # add item to treeView
-            self.addItemToTreeView(name, uid)
-            # Make new part active
-            self.setActivePart(uid)
+            if not name:
+                name = 'Part'   # Default name
+            if not ancestor:
+                if color:   # Quantity_Color()
+                    c = OCC.Display.OCCViewer.rgb_color(color.Red(),
+                                                        color.Green(),
+                                                        color.Blue())
+                else:
+                    c = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)  # default color
+                self._colorDict[uid] = c
+                # add item to treeView
+                self.addItemToTreeView(name, uid)
+                # Make new part active
+                self.setActivePart(uid)
         elif typ == 'a':
+            if not name:
+                name = 'Assembly'   # Default name
             self._assyDict[uid] = objct  # TopLoc_Location
             # add item to treeView
             self.addItemToTreeView(name, uid)
