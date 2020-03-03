@@ -244,6 +244,8 @@ class MainWindow(QMainWindow):
         self.showItemActive(0)
         self.createEmptyDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
 
+        self._labelDict = {}
+
     def createEmptyDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1.
 
@@ -263,6 +265,7 @@ class MainWindow(QMainWindow):
         self.setLabelName(rootLabel, "top")
         self.doc = doc
         self.rootLabel = rootLabel
+        self.shape_tool = shape_tool
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -368,6 +371,30 @@ class MainWindow(QMainWindow):
                 wdict[uid] = item
             iterator += 1
         return (pdict, adict, wdict)
+
+    def showClickedInfo(self):
+        """Show info for item clicked in treeView."""
+        item = self.itemClicked
+        if item:
+            self.showItemInfo(item)
+
+    def showItemInfo(self, item):
+        """Show info for item clicked in treeView."""
+        if item:
+            name = item.text(0)
+            strUID = item.text(1)
+            uid = int(strUID)
+            label = self._labelDict[uid]
+            cname = label.GetLabelName()  # component name
+            cEntry = label.EntryDumpToString()
+            rlabel = TDF_Label()  # label of referred shape
+            isRef = self.shape_tool.GetReferredShape(label, rlabel)
+            if isRef:
+                rname = rlabel.GetLabelName()
+                rEntry = rlabel.EntryDumpToString()
+                print(f"UID: {uid}\t{cname}[{cEntry}] ==> {rname}[{rEntry}]")
+            else:
+                print(f"UID: {uid}\t{cname}[{cEntry}]")
 
     def setClickedActive(self):
         """Set item clicked in treeView Active."""
@@ -868,6 +895,7 @@ class MainWindow(QMainWindow):
         self.setLabelName(newLabel, newName)
         logger.info('Part %s added to root label', newName)
         shape_tool.UpdateAssemblies()
+        self._labelDict[self.activePartUID] = newLabel
 
     def addComponents(self):
         """Add all parts in _partDict as components of top assy in self.doc"""

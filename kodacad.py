@@ -934,6 +934,7 @@ if __name__ == '__main__':
     drawSubMenu.addAction('Draw All', win.drawAll)
     drawSubMenu.addAction('Draw Only Active Part', win.drawOnlyActivePart)
 
+    win.treeView.popMenu.addAction('Item Info', win.showClickedInfo)
     win.treeView.popMenu.addAction('Set Active', win.setClickedActive)
     win.treeView.popMenu.addAction('Make Transparent', win.setTransparent)
     win.treeView.popMenu.addAction('Make Opaque', win.setOpaque)
