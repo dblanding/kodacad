@@ -47,7 +47,7 @@ from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDocStd import TDocStd_Document
-from OCC.Core.TDF import TDF_LabelSequence, TDF_Label
+from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_CopyLabel
 from OCC.Core.TopoDS import (topods_Edge, topods_Vertex, TopoDS_Shape,
                              TopoDS_Compound)
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
@@ -262,6 +262,7 @@ class MainWindow(QMainWindow):
         rootLabel = shape_tool.NewShape()  # entry: 0:1:1:1
         self.setLabelName(rootLabel, "top")
         self.doc = doc
+        self.rootLabel = rootLabel
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -760,7 +761,23 @@ class MainWindow(QMainWindow):
         name = os.path.basename(fname).split('.')[0]
         nextUID = self._currentUID
         stepImporter = stepXD.StepImporter(fname, nextUID)
-        doc = stepImporter.doc  # TODO: 'paste' this onto self.doc
+
+        stepdoc = stepImporter.doc
+        step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(stepdoc.Main())
+        labels = TDF_LabelSequence()
+        step_shape_tool.GetShapes(labels)
+        logger.info('Number of labels at STEP_root : %i', labels.Length())
+        try:
+            steprootLabel = labels.Value(1) # First label at root
+            # 'paste' this onto root label of self.doc
+            copyLabel = TDF_CopyLabel(steprootLabel, self.rootLabel)
+            copyLabel.Perform()
+            shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+            shape_tool.UpdateAssemblies()
+        except RuntimeError as e:
+            print(e)
+            return
+
         tree = stepImporter.tree
         tempTreeDict = {}   # uid:asyPrtTreeItem (used temporarily during unpack)
         treedump = tree.expand_tree(mode=tree.DEPTH)
