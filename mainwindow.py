@@ -533,6 +533,7 @@ class MainWindow(QMainWindow):
         # Add new uid to draw list and sync w/ treeView
         self.drawList.append(uid)
         self.syncCheckedToDrawList()
+        self.addComponent()
         return uid
 
     def addItemToTreeView(self, name, uid):
@@ -836,7 +837,8 @@ class MainWindow(QMainWindow):
         shape_tool.GetShapes(labels)
         try:
             rootLabel = labels.Value(1) # First label at root
-        except RuntimeError:
+        except RuntimeError as e:
+            print(e)
             return
         newLabel = shape_tool.AddComponent(rootLabel, self.activePart, True)
         color = self._colorDict[self.activePartUID]
