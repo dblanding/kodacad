@@ -49,6 +49,7 @@ class StepImporter():
         self._currentUID = nextUID
         self.assyUidStack = [0]
         self.assyLocStack = []
+        self.labelDict = {}  # {k=uid: v=label}
         self.doc = self.read_file()  # TDocStd_Document
 
     def getNewUID(self):
@@ -107,6 +108,7 @@ class StepImporter():
                         cShape.Move(loc)
                     color = self.getColor(refShape)
                     uid = self.getNewUID()
+                    self.labelDict[uid] = cLabel
                     self.tree.create_node(leafName,
                                           uid,
                                           self.assyUidStack[-1],
@@ -118,6 +120,7 @@ class StepImporter():
                     aLoc = self.shape_tool.GetLocation(cLabel)
                     self.assyLocStack.append(aLoc)
                     newAssyUID = self.getNewUID()
+                    self.labelDict[newAssyUID] = cLabel
                     self.tree.create_node(leafName,
                                           newAssyUID,
                                           self.assyUidStack[-1],
@@ -182,6 +185,7 @@ class StepImporter():
             logger.debug("Top assy name: %s", name)
             # Create root node for top assy
             newAssyUID = self.getNewUID()
+            self.labelDict[newAssyUID] = rootlabel
             self.tree.create_node(leafName, newAssyUID, None,
                                   {'a': True, 'l': None, 'c': None, 's': None})
             self.assyUidStack.append(newAssyUID)

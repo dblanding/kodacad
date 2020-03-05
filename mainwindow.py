@@ -242,26 +242,26 @@ class MainWindow(QMainWindow):
         self._assyDict = {}     # k = uid, v = Loc
         self._assyDict[0] = None  # Root assembly has no location vector
         self.showItemActive(0)
-        self.createEmptyDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
+        self.createDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
 
         self._labelDict = {}
 
-    def createEmptyDoc(self):
+    def createDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1.
 
-        This is done only once on __init__."""
+        This is done only once in __init__."""
 
-        # Create the application and document
+        # Create the application and document with empty rootLabel
         title = "Main document"
         doc = TDocStd_Document(TCollection_ExtendedString(title))
         app = XCAFApp_Application_GetApplication()
         app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
         # type(doc.Main()) = <class 'OCC.Core.TDF.TDF_Label'>
-        # doc.Main().EntryDumpToString() = 0:1
-        # shape_tool is at label entry 0:1:1
-        # add empty top assembly
-        rootLabel = shape_tool.NewShape()  # entry: 0:1:1:1
+        # doc.Main().EntryDumpToString() 0:1
+        # shape_tool is at label entry = 0:1:1
+        # Create empty rootLabel entry = 0:1:1:1
+        rootLabel = shape_tool.NewShape()
         self.setLabelName(rootLabel, "top")
         self.doc = doc
         self.rootLabel = rootLabel
@@ -384,17 +384,23 @@ class MainWindow(QMainWindow):
             name = item.text(0)
             strUID = item.text(1)
             uid = int(strUID)
+            print(self._labelDict.keys())
             label = self._labelDict[uid]
+            print("gets here")  # This prints before crashing
             cname = label.GetLabelName()  # component name
-            cEntry = label.EntryDumpToString()
-            rlabel = TDF_Label()  # label of referred shape
-            isRef = self.shape_tool.GetReferredShape(label, rlabel)
-            if isRef:
-                rname = rlabel.GetLabelName()
-                rEntry = rlabel.EntryDumpToString()
-                print(f"UID: {uid}\t{cname}[{cEntry}] ==> {rname}[{rEntry}]")
-            else:
-                print(f"UID: {uid}\t{cname}[{cEntry}]")
+            print(cname)  # This does not print
+            try:
+                cEntry = label.EntryDumpToString()
+                rlabel = TDF_Label()  # label of referred shape
+                isRef = self.shape_tool.GetReferredShape(label, rlabel)
+                if isRef:
+                    rname = rlabel.GetLabelName()
+                    rEntry = rlabel.EntryDumpToString()
+                    print(f"UID: {uid}\t{cname}[{cEntry}] ==> {rname}[{rEntry}]")
+                else:
+                    print(f"UID: {uid}\t{cname}[{cEntry}]")
+            except RuntimeError as e:
+                print(e)
 
     def setClickedActive(self):
         """Set item clicked in treeView Active."""
@@ -790,6 +796,8 @@ class MainWindow(QMainWindow):
         stepImporter = stepXD.StepImporter(fname, nextUID)
 
         stepdoc = stepImporter.doc
+        self.doc = stepdoc
+        '''
         step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(stepdoc.Main())
         labels = TDF_LabelSequence()
         step_shape_tool.GetShapes(labels)
@@ -804,6 +812,8 @@ class MainWindow(QMainWindow):
         except RuntimeError as e:
             print(e)
             return
+        '''
+        self._labelDict.update(stepImporter.labelDict)
 
         tree = stepImporter.tree
         tempTreeDict = {}   # uid:asyPrtTreeItem (used temporarily during unpack)
