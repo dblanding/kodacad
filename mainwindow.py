@@ -50,6 +50,7 @@ from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_CopyLabel
 from OCC.Core.TopoDS import (topods_Edge, topods_Vertex, TopoDS_Shape,
                              TopoDS_Compound)
+from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
                               XCAFDoc_DocumentTool_ColorTool,
@@ -237,14 +238,12 @@ class MainWindow(QMainWindow):
         self._wpDict = {}       # k = uid, v = wpObject
         self._wpNmbr = 1
 
-        self.activeAsy = self.treeViewRoot   # tree node object
         self.activeAsyUID = 0
-        self._assyDict = {}     # k = uid, v = Loc
-        self._assyDict[0] = None  # Root assembly has no location vector
+        self._assyDict = {self.activeAsyUID: TopLoc_Location()}  # k = uid, v = Loc
         self.showItemActive(0)
-        self.createDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
-
         self._labelDict = {}
+        self.createDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
+        self.activeAsy = self.setActiveAsy(self.activeAsyUID)
 
     def createDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1.
@@ -262,10 +261,11 @@ class MainWindow(QMainWindow):
         # shape_tool is at label entry = 0:1:1
         # Create empty rootLabel entry = 0:1:1:1
         rootLabel = shape_tool.NewShape()
-        self.setLabelName(rootLabel, "top")
+        self.setLabelName(rootLabel, "/")
         self.doc = doc
         self.rootLabel = rootLabel
         self.shape_tool = shape_tool
+        self._labelDict[0] = rootLabel
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -384,11 +384,11 @@ class MainWindow(QMainWindow):
             name = item.text(0)
             strUID = item.text(1)
             uid = int(strUID)
-            print(self._labelDict.keys())
+            #print(self._labelDict.keys())
             label = self._labelDict[uid]
-            print("gets here")  # This prints before crashing
+            #print("gets here")  # This prints before crashing
             cname = label.GetLabelName()  # component name
-            print(cname)  # This does not print
+            #print(cname)  # This does not print
             try:
                 cEntry = label.EntryDumpToString()
                 rlabel = TDF_Label()  # label of referred shape
@@ -605,7 +605,7 @@ class MainWindow(QMainWindow):
         """Change active assembly status in coordinated manner."""
         # modify status in self
         self.activeAsyUID = uid
-        self.activeAsy = self._assyDict[uid]
+        self.activeAsy = self._labelDict[uid]
         # show as active in treeView
         self.showItemActive(uid)
 

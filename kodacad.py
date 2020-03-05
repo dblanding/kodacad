@@ -824,8 +824,12 @@ def printCurrUID():
 
 def printActiveAsyInfo():
     uid = win.activeAsyUID
-    treeNode = win.activeAsy
-    print(f"Active Assembly Name: {treeNode} \t UID: {uid}")
+    label = win._labelDict[uid]
+    try:
+        name = label.GetLabelName()
+    except AttributeError:
+        name = "Error getting name of Active assembly"
+    print(f"Active Assembly Name: {name} \t UID: {uid}")
 
 def printActiveWpInfo():
     print(f"Name: {win.activeWp}")
@@ -852,15 +856,6 @@ def printActPart():
         print("Active Part: %s [uid=%i]" % (name, int(uid)))
     else:
         print(None)
-
-def printActiveAsyInfo():
-    uid = win.activeAsyUID
-    treeNode = win.activeAsy
-    try:
-        name = treeNode.text(0)
-    except AttributeError:
-        name = "Error getting name of Active assembly"
-    print(f"Active Assembly Name: {name} \t UID: {uid}")
 
 def printTreeView():
     """Print 'uid'; 'name'; 'parent' for all items in treeView."""
