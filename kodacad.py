@@ -46,6 +46,7 @@ from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.TopTools import TopTools_ListOfShape
 from OCCUtils import Topology
 from mainwindow import MainWindow
+import stepanalyzer
 import workplane
 
 logger = logging.getLogger(__name__)
@@ -816,6 +817,11 @@ def shellC(shapeList, *args):  # callback (collector) for shell
 #
 #############################################
 
+def dumpDoc():
+    sa = stepanalyzer.StepAnalyzer(document=win.doc)
+    dumpdata = sa.dump()
+    print(dumpdata)
+
 def topoDumpAP():
     Topology.dumpTopology(win.activePart)
 
@@ -908,7 +914,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Modify Active Part', "Shell", shell)
     win.add_function_to_menu('Modify Active Part', "Fuse", fuse)
     win.add_menu('Utility')
-    win.add_function_to_menu('Utility', "dump doc", win.dumpDoc)
+    win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "Add active part to doc", win.addComponent)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(current UID)", printCurrUID)
