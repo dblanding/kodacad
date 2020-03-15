@@ -384,11 +384,12 @@ class MainWindow(QMainWindow):
             name = item.text(0)
             strUID = item.text(1)
             uid = int(strUID)
-            #print(self._labelDict.keys())
-            label = self._labelDict[uid]
-            #print("gets here")  # This prints before crashing
+            try:
+                label = self._labelDict[uid]
+            except KeyError as e:
+                print(f"Not working for this item: {e}")
+                return
             cname = label.GetLabelName()  # component name
-            #print(cname)  # This does not print
             try:
                 cEntry = label.EntryDumpToString()
                 rlabel = TDF_Label()  # label of referred shape
@@ -567,7 +568,7 @@ class MainWindow(QMainWindow):
         # Add new uid to draw list and sync w/ treeView
         self.drawList.append(uid)
         self.syncCheckedToDrawList()
-        self.addComponent()
+        #self.addComponent()
         return uid
 
     def addItemToTreeView(self, name, uid):
@@ -796,8 +797,7 @@ class MainWindow(QMainWindow):
         stepImporter = stepXD.StepImporter(fname, nextUID)
 
         stepdoc = stepImporter.doc
-        self.doc = stepdoc
-        '''
+
         step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(stepdoc.Main())
         labels = TDF_LabelSequence()
         step_shape_tool.GetShapes(labels)
@@ -812,7 +812,7 @@ class MainWindow(QMainWindow):
         except RuntimeError as e:
             print(e)
             return
-        '''
+
         self._labelDict.update(stepImporter.labelDict)
 
         tree = stepImporter.tree

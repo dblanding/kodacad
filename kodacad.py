@@ -594,14 +594,14 @@ def makeBox():
     name = 'Box'
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
     uid = win.getNewPartUID(myBody, name=name)
-    #win.addComponent()
+    win.addComponent()
     win.redraw()
 
 def makeCyl():
     name = 'Cylinder'
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
     uid = win.getNewPartUID(myBody, name=name)
-    #win.addComponent()
+    win.addComponent()
     win.redraw()
 
 def extrude():
@@ -621,7 +621,7 @@ def extrude():
         uid = win.getNewPartUID(myBody, name=name)
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
-        #win.addComponent()
+        win.addComponent()
         win.redraw()
     else:
         win.registerCallback(extrudeC)
@@ -652,7 +652,7 @@ def revolve():
         uid = win.getNewPartUID(revolved_shape, name=name)
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
-        #win.addComponent()
+        win.addComponent()
         win.redraw()
     else:
         win.registerCallback(revolveC)
