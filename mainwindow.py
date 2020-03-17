@@ -531,6 +531,8 @@ class MainWindow(QMainWindow):
                 self.activePart = objct
             if not name:
                 name = self._nameDict[ancestor] # Keep ancestor name
+            # Replace (in self.doc) old shape with new modified shape
+            self.replaceShape(uid, objct)
         # Update appropriate dictionaries
         if typ == 'p':
             self._partDict[uid] = objct  # <TopoDS_Shape>
@@ -568,7 +570,6 @@ class MainWindow(QMainWindow):
         # Add new uid to draw list and sync w/ treeView
         self.drawList.append(uid)
         self.syncCheckedToDrawList()
-        #self.addComponent()
         return uid
 
     def addItemToTreeView(self, name, uid):
@@ -882,6 +883,20 @@ class MainWindow(QMainWindow):
         step_writer.Transfer(self.activePart, STEPControl_AsIs)
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
+
+    def replaceShape(self, uid, shape):
+        """Add active part to top assembly of self.doc."""
+        label = self._labelDict[uid]
+        color = self._colorDict[uid]
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        # Get referrred label and apply color to it
+        refLabel = TDF_Label()  # label of referred shape
+        isRef = shape_tool.GetReferredShape(label, refLabel)
+        if isRef:
+            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
+            shape_tool.SetShape(refLabel, shape)
+            shape_tool.UpdateAssemblies()
 
     def addComponent(self):
         """Add active part to top assembly of self.doc."""
