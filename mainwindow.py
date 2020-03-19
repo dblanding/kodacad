@@ -885,7 +885,7 @@ class MainWindow(QMainWindow):
         assert status == IFSelect_RetDone
 
     def replaceShape(self, uid, shape):
-        """Add active part to top assembly of self.doc."""
+        """Replace (in self.doc) ancestor shape with modified shape."""
         label = self._labelDict[uid]
         color = self._colorDict[uid]
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())

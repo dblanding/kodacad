@@ -728,6 +728,38 @@ def millC(shapeList, *args):
     if win.lineEditStack:
         mill()
 
+def pull():
+    """Pull profile on active WP onto active part."""
+    wp = win.activeWp
+    if win.lineEditStack:
+        length = float(win.lineEditStack.pop()) * win.unitscale
+        wireOK = wp.makeWire()
+        if not wireOK:
+            print("Unable to make wire.")
+            return
+        wire = wp.wire
+        workPart = win.activePart
+        wrkPrtUID = win.activePartUID
+        pullProfile = BRepBuilderAPI_MakeFace(wire)
+        aPrismVec = wp.wVec * length
+        tool = BRepPrimAPI_MakePrism(pullProfile.Shape(),
+                                       aPrismVec).Shape()
+        newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
+        uid = win.getNewPartUID(newPart, ancestor=wrkPrtUID)
+        win.statusBar().showMessage('Pull operation complete')
+        win.clearCallback()
+        win.redraw()
+    else:
+        win.registerCallback(pullC)
+        win.lineEdit.setFocus()
+        statusText = "Enter pull distance"
+        win.statusBar().showMessage(statusText)
+
+def pullC(shapeList, *args):
+    win.lineEdit.setFocus()
+    if win.lineEditStack:
+        pull()
+
 def fillet(event=None):
     if (win.lineEditStack and win.edgeStack):
         text = win.lineEditStack.pop()
@@ -910,6 +942,7 @@ if __name__ == '__main__':
     win.add_menu('Modify Active Part')
     #win.add_function_to_menu('Modify Active Part', "Rotate Act Part", rotateAP)
     win.add_function_to_menu('Modify Active Part', "Mill", mill)
+    win.add_function_to_menu('Modify Active Part', "Pull", pull)
     win.add_function_to_menu('Modify Active Part', "Fillet", fillet)
     win.add_function_to_menu('Modify Active Part', "Shell", shell)
     win.add_function_to_menu('Modify Active Part', "Fuse", fuse)
