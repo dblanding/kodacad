@@ -63,11 +63,11 @@
   <h3>Draw construction circles</h3>
 
   <p>Click on "construction circe" toolbar button, then click on the point at 0, 30
-  (center of circle), then point at 0, -15.</p><img src="images/wp6.png" width="805"
+  (center of circle), then the point at 0, -15.</p><img src="images/wp6.png" width="805"
   height="521" border="0" alt="" />
 
   <p>Draw a second construction circle by first entering the coordinates of its center
-  (0,-30) but without the parentheses, then enter the value 45 for the radius.</p>
+  <b>0,-30</b> then enter the value <b>45</b> for the radius.</p>
 
   <p>In general, when a 2d point is needed, you have the option of either clicking on a
   point or entering the point coordinates in the <b>User Input</b> widget. When in doubt,
@@ -104,12 +104,12 @@
   select would be really handy, but it's not implemented yet.) Enter the fillet radius
   value of <b>3</b>.</p>
 
-  <p>A new <b>Bottle</b> part (with the same name) has been created and made active. The
-  old part is still there but blanked from view (and no longer active). The old part is
-  an <b>Ancestor</b> of the new part.</p><img src="images/bot2.png" width="805" height=
-  "521" border="0" alt="" />
+  <p>The <b>Bottle</b> part is now represented by a newly created shape which has taken
+  the place of the previous shape (prior to blending). The previous shape is still
+  accesible (if needed). It has been appended to a list of <b>ancestor</b> shapes.
+  </p><img src="images/bot2.png" width="805" height="521" border="0" alt="" />
 
-  <h3>Create the neck</h3>
+  <h3>Create the neck profile</h3>
 
   <p>In the menubar, click on <b>Workpane</b> then <b>On face</b>. Select the top face of
   the bottle. (The face normal will be the <b>w direction</b> of the new workplane.) Now
@@ -117,27 +117,18 @@
   the new workplane.) A new workplane <b>w2</b> is now be created (and is active). Its
   0,0 coordinates are located at the center of the bottle's top face.</p>
 
-  <p>Next, make a Profile circle on <b>w2</b> with center at 0,0 and radius = 7.5.</p>
+  <p>Next, make a Profile circle on <b>w2</b> with center at <b>0,0</b> and radius =
+  <b>7.5</b></p>
+  </p><img src="images/bot3.png" width="805" height="521" border="0" alt="" />
 
-  <p>Now click on <b>Create 3D</b> then <b>Extrude</b>. Enter <b>7</b> for the extrusion
-  distance and enter <b>Neck</b> for the name.</p>
+  <h3>Create the Neck of the Bottle</h3>
 
-  <p>The Neck is created and is now the <b>active part</b>.</p><img src="images/bot3.png"
-  width="805" height="521" border="0" alt="" />
+  <p>Now click on <b>Modify Active Part</b> then <b>Pull</b>. Enter the value <b>7</b>
+  (the height of the Neck). This will pull a circular boss 7mm tall on the top face of
+  the bottle.</p>
 
-  <h3>Fuse the Neck to the Bottle</h3>
-
-  <p>In the Tree View, hide wp2 by unchecking its box. We no longer need to see that. Now
-  left click on the most recently created <b>Bottle</b> (still with a check mark), then
-  right click and select <b>Set Active</b>. By setting the Bottle active, we can fuse the
-  Neck to the Bottle rather than the other way around.</p>
-
-  <p>Now click on <b>Modify Active Part</b> then <b>Fuse</b>. Click on the Neck in the
-  <b>3D Display</b> window. (Clicking the Neck in the Tree View window won't work
-  (yet).)</p>
-
-  <p>A new <b>Bottle</b> is now created and is set active. Uncheck the check box of the
-  Neck. We don't need to see that any longer.</p><img src="images/bot4.png" width="805"
+  <p>The <b>Bottle</b> now has a neck. Uncheck the check box of <b>w2</b>.
+  We don't need to see that any longer.</p><img src="images/bot4.png" width="805"
   height="521" border="0" alt="" />
 
   <h3>Shell the Bottle</h3>
@@ -149,7 +140,7 @@
   first on the top circular face of the bottle, then enter a shell thickness of
   <b>1</b>.</p>
 
-  <p>The final <b>Bottle</b> is comlete.</p><img src="images/bot5.png" width="805"
-  height="521" border="0" alt="" />
+  <p>The <b>Bottle</b> is comlete. If desired, it can be saved in STEP format.
+  </p><img src="images/bot5.png" width="805" height="521" border="0" alt="" />
 </body>
 </html>
