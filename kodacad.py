@@ -944,7 +944,6 @@ if __name__ == '__main__':
     win.add_function_to_menu('Modify Active Part', "Fuse", fuse)
     win.add_menu('Utility')
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
-    win.add_function_to_menu('Utility', "Add active part to doc", win.addComponent)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(current UID)", printCurrUID)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
