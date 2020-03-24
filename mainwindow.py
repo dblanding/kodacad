@@ -421,15 +421,15 @@ class MainWindow(QMainWindow):
             pd, ad, wd = self.sortViewItems()
             if uid in pd:
                 self.setActivePart(uid)
-                sbText = "%s [uid=%i] is now the active part" % (name, uid)
-                self.redraw()
+                sbText = f"{name} [uid={uid}] is now the active part"
+                #self.redraw()
             elif uid in wd:
                 self.setActiveWp(uid)
-                sbText = "%s [uid=%i] is now the active workplane" % (name, uid)
-                self.redraw()
+                sbText = f"{name} [uid={uid}] is now the active workplane"
+                self.redraw()  # update color of new active wp
             elif uid in ad:
                 self.setActiveAsy(uid)
-                sbText = "%s [uid=%i] is now the active assembly" % (name, uid)
+                sbText = f"{name} [uid={uid}] is now the active assembly"
             self.statusBar().showMessage(sbText, 5000)
 
     def showItemActive(self, uid):
@@ -1089,7 +1089,7 @@ class MainWindow(QMainWindow):
             edgelen = CPnts_AbscissaPoint_Length(BRepAdaptor_Curve(edge))
             edgelen = edgelen / self.unitscale
             self.calculator.putx(edgelen)
-            self.redraw()
+            #self.redraw()
             self.edgeLen()
         else:
             self.registerCallback(self.edgeLenC)

@@ -622,7 +622,6 @@ def extrude():
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
         win.addComponent()
-        win.redraw()
     else:
         win.registerCallback(extrudeC)
         win.lineEdit.setFocus()
@@ -653,7 +652,6 @@ def revolve():
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
         win.addComponent()
-        win.redraw()
     else:
         win.registerCallback(revolveC)
         win.lineEdit.setFocus()
@@ -700,7 +698,7 @@ def mill():
     """Mill profile on active WP into active part."""
     wp = win.activeWp
     if win.lineEditStack:
-        length = float(win.lineEditStack.pop()) * win.unitscale
+        depth = float(win.lineEditStack.pop()) * win.unitscale
         wireOK = wp.makeWire()
         if not wireOK:
             print("Unable to make wire.")
@@ -709,18 +707,17 @@ def mill():
         workPart = win.activePart
         wrkPrtUID = win.activePartUID
         punchProfile = BRepBuilderAPI_MakeFace(wire)
-        aPrismVec = wp.wVec * length
+        aPrismVec = wp.wVec * -depth
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(),
                                        aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
         uid = win.getNewPartUID(newPart, ancestor=wrkPrtUID)
         win.statusBar().showMessage('Mill operation complete')
         win.clearCallback()
-        win.redraw()
     else:
         win.registerCallback(millC)
         win.lineEdit.setFocus()
-        statusText = "Enter milling depth for tool (Neg value for -W)"
+        statusText = "Enter milling depth (pos in -w direction)"
         win.statusBar().showMessage(statusText)
 
 def millC(shapeList, *args):
@@ -748,11 +745,10 @@ def pull():
         uid = win.getNewPartUID(newPart, ancestor=wrkPrtUID)
         win.statusBar().showMessage('Pull operation complete')
         win.clearCallback()
-        win.redraw()
     else:
         win.registerCallback(pullC)
         win.lineEdit.setFocus()
-        statusText = "Enter pull distance"
+        statusText = "Enter pull distance (pos in +w direction)"
         win.statusBar().showMessage(statusText)
 
 def pullC(shapeList, *args):
