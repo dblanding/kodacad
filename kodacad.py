@@ -77,7 +77,7 @@ def wpBy3Pts(*args):
         uDir = gp_Dir(uVec)
         axis3 = gp_Ax3(origin, wDir, uDir)
         wp = workplane.WorkPlane(100, ax3=axis3)
-        win.getNewPartUID(wp, typ='w')
+        win.get_wp_uid(wp)
         win.clearCallback()
         statusText = "Workplane created."
         win.statusBar().showMessage(statusText)
@@ -116,7 +116,7 @@ def wpOnFace(*args):
     faceU = win.faceStack.pop()
     faceW = win.faceStack.pop()
     wp = workplane.WorkPlane(100, face=faceW, faceU=faceU)
-    win.getNewPartUID(wp, typ='w')
+    win.get_wp_uid(wp)
     win.clearCallback()
     statusText = "Workplane created."
     win.statusBar().showMessage(statusText)
@@ -135,7 +135,7 @@ def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
 
 def makeWP():   # Default workplane located in X-Y plane at 0,0,0
     wp = workplane.WorkPlane(100)
-    win.getNewPartUID(wp, typ='w')
+    win.get_wp_uid(wp)
     win.redraw()
 
 #############################################
