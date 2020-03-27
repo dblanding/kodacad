@@ -215,7 +215,7 @@ class MainWindow(QMainWindow):
         status.showMessage("Ready", 5000)
 
         self._currentUID = 0
-        self.draw_list = []      # list of part uid's to be displayed
+        self.draw_list = []     # list of part uid's to be displayed
         self.hide_list = []     # list of uid's
         self.floatStack = []    # storage stack for floating point values
         self.xyPtStack = []     # storage stack for 2d points (x, y)
@@ -239,9 +239,9 @@ class MainWindow(QMainWindow):
         self._wpNmbr = 1
 
         self.activeAsyUID = 0
-        self._assyDict = {self.activeAsyUID: TopLoc_Location()}  # k = uid, v = Loc
+        self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
-        self._labelDict = {}
+        self.label_dict = {}
         self.createDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
 
@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
         self.doc = doc
         self.rootLabel = rootLabel
         self.shape_tool = shape_tool
-        self._labelDict[0] = rootLabel
+        self.label_dict[0] = rootLabel
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -318,7 +318,7 @@ class MainWindow(QMainWindow):
         self.treeView.clear()
         self.assy_root, self.wp_root = self.create_root_items()
         self.repopulate_2D_tree_view()
-        
+
     def create_root_items(self):
         # Root Items in TreeView
         root_item = ['/', '0']  # [name, uid]
@@ -389,7 +389,7 @@ class MainWindow(QMainWindow):
             uid = item.text(1)
             if uid in self.part_dict:
                 pdict[uid] = item
-            elif uid in self._assyDict:
+            elif uid in self.assy_list:
                 adict[uid] = item
             elif uid in self.wp_dict:
                 wdict[uid] = item
@@ -408,7 +408,7 @@ class MainWindow(QMainWindow):
             name = item.text(0)
             uid = item.text(1)
             try:
-                label = self._labelDict[uid]
+                label = self.label_dict[uid]
             except KeyError as e:
                 print(f"Not working for this item: {e}")
                 return
@@ -580,10 +580,10 @@ class MainWindow(QMainWindow):
             self.clearTree()
             # Initialize self._share_dict
             self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
-
+            self.assy_list = []  # assy uid's
         # To be used by redraw()
         self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
-
+        self.label_dict = {}  # {uid: label}
         # Temporary use during unpacking
         self.tree_view_item_dict = {'0:1:1': self.assy_root}  # {entry: item}
         self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
@@ -600,6 +600,7 @@ class MainWindow(QMainWindow):
         root_name = root_label.GetLabelName()
         root_entry = root_label.EntryDumpToString()
         root_uid = self.get_uid_from_entry(root_entry)
+        self.label_dict[root_uid] = root_label
         parent_item = self.assy_root
         # First label at root holds an assembly & it is the Top Assy.
         # Through this label, the entire assembly is accessible.
@@ -617,6 +618,7 @@ class MainWindow(QMainWindow):
             item.setCheckState(0, Qt.Checked)
             self.treeView.expandItem(item)
             self.tree_view_item_dict[root_entry] = item
+            self.assy_list.append(root_uid)
 
         top_comps = TDF_LabelSequence() # Components of Top Assy
         subchilds = False
@@ -643,6 +645,7 @@ class MainWindow(QMainWindow):
             c_entry = c_label.EntryDumpToString()
             c_uid = self.get_uid_from_entry(c_entry)
             c_shape = self.shape_tool.GetShape(c_label)
+            self.label_dict[c_uid] = c_label
             logger.debug("Component number %i", j+1)
             logger.debug("Component name: %s", c_name)
             logger.debug("Component entry: %s", c_entry)
@@ -682,6 +685,7 @@ class MainWindow(QMainWindow):
                 self.assy_loc_stack.append(aLoc)
                 self.assy_entry_stack.append(ref_entry)
                 self.tree_view_item_dict[ref_entry] = item
+                self.assy_list.append(c_uid)
                 r_comps = TDF_LabelSequence() # Components of Assy
                 subchilds = False
                 isAssy = self.shape_tool.GetComponents(ref_label, r_comps, subchilds)
@@ -740,7 +744,7 @@ class MainWindow(QMainWindow):
         """Change active assembly status in coordinated manner."""
         # modify status in self
         self.activeAsyUID = uid
-        self.activeAsy = self._labelDict[uid]
+        self.activeAsy = self.label_dict[uid]
         # show as active in treeView
         self.showItemActive(uid)
 
@@ -800,46 +804,47 @@ class MainWindow(QMainWindow):
     def redraw_wp(self):
         context = self.canva._display.Context
         for uid in self.wp_dict:
-            wp = self.wp_dict[uid]
-            border = wp.border
-            if uid == self.activeWpUID:
-                borderColor = Quantity_Color(Quantity_NOC_DARKGREEN)
-            else:
-                borderColor = Quantity_Color(Quantity_NOC_GRAY)
-            aisBorder = AIS_Shape(border)
-            context.Display(aisBorder, True)
-            context.SetColor(aisBorder, borderColor, True)
-            transp = 0.8  # 0.0 <= transparency <= 1.0
-            context.SetTransparency(aisBorder, transp, True)
-            drawer = aisBorder.DynamicHilightAttributes()
-            context.HilightWithColor(aisBorder, drawer, True)
-            clClr = Quantity_Color(Quantity_NOC_MAGENTA1)
-            for cline in wp.clines:
-                geomline = wp.geomLineBldr(cline)
-                aisline = AIS_Line(geomline)
-                aisline.SetOwner(geomline)
-                drawer = aisline.Attributes()
-                # asp parameters: (color, type, width)
-                asp = Prs3d_LineAspect(clClr, 2, 1.0)
-                drawer.SetLineAspect(asp)
-                aisline.SetAttributes(drawer)
-                context.Display(aisline, False)  # (see comment below)
-                # 'False' above enables 'context' mode display & selection
-            pntlist = wp.intersectPts()  # type <gp_Pnt>
-            for point in pntlist:
-                self.canva._display.DisplayShape(point)
-            for ccirc in wp.ccircs:
-                aiscirc = AIS_Circle(wp.convert_circ_to_geomCirc(ccirc))
-                drawer = aisline.Attributes()
-                # asp parameters: (color, type, width)
-                asp = Prs3d_LineAspect(clClr, 2, 1.0)
-                drawer.SetLineAspect(asp)
-                aiscirc.SetAttributes(drawer)
-                context.Display(aiscirc, False)  # (see comment below)
-                # 'False' above enables 'context' mode display & selection
-            for edge in wp.edgeList:
-                self.canva._display.DisplayShape(edge, color="WHITE")
-            self.canva._display.Repaint()
+            if uid in self.draw_list:
+                wp = self.wp_dict[uid]
+                border = wp.border
+                if uid == self.activeWpUID:
+                    borderColor = Quantity_Color(Quantity_NOC_DARKGREEN)
+                else:
+                    borderColor = Quantity_Color(Quantity_NOC_GRAY)
+                aisBorder = AIS_Shape(border)
+                context.Display(aisBorder, True)
+                context.SetColor(aisBorder, borderColor, True)
+                transp = 0.8  # 0.0 <= transparency <= 1.0
+                context.SetTransparency(aisBorder, transp, True)
+                drawer = aisBorder.DynamicHilightAttributes()
+                context.HilightWithColor(aisBorder, drawer, True)
+                clClr = Quantity_Color(Quantity_NOC_MAGENTA1)
+                for cline in wp.clines:
+                    geomline = wp.geomLineBldr(cline)
+                    aisline = AIS_Line(geomline)
+                    aisline.SetOwner(geomline)
+                    drawer = aisline.Attributes()
+                    # asp parameters: (color, type, width)
+                    asp = Prs3d_LineAspect(clClr, 2, 1.0)
+                    drawer.SetLineAspect(asp)
+                    aisline.SetAttributes(drawer)
+                    context.Display(aisline, False)  # (see comment below)
+                    # 'False' above enables 'context' mode display & selection
+                pntlist = wp.intersectPts()  # type <gp_Pnt>
+                for point in pntlist:
+                    self.canva._display.DisplayShape(point)
+                for ccirc in wp.ccircs:
+                    aiscirc = AIS_Circle(wp.convert_circ_to_geomCirc(ccirc))
+                    drawer = aisline.Attributes()
+                    # asp parameters: (color, type, width)
+                    asp = Prs3d_LineAspect(clClr, 2, 1.0)
+                    drawer.SetLineAspect(asp)
+                    aiscirc.SetAttributes(drawer)
+                    context.Display(aiscirc, False)  # (see comment below)
+                    # 'False' above enables 'context' mode display & selection
+                for edge in wp.edgeList:
+                    self.canva._display.DisplayShape(edge, color="WHITE")
+                self.canva._display.Repaint()
 
     def redraw(self):
         context = self.canva._display.Context
@@ -847,26 +852,26 @@ class MainWindow(QMainWindow):
             self.canva._display.SetSelectionModeNeutral()
             context.SetAutoActivateSelection(True)
         context.RemoveAll(True)
-        # Removed 'if uid in self.draw_list:' test
         for uid in self.part_dict:
-            if uid in self._transparencyDict:
-                transp = self._transparencyDict[uid]
-            else:
-                transp = 0.0
-            part_data = self.part_dict[uid]
-            shape = part_data['shape']
-            name = part_data['name']
-            color = part_data['color']
-            try:
-                aisShape = AIS_Shape(shape)
-                context.Display(aisShape, True)
-                context.SetColor(aisShape, color, True)
-                # Set shape transparency, a float from 0.0 to 1.0
-                context.SetTransparency(aisShape, transp, True)
-                drawer = aisShape.DynamicHilightAttributes()
-                context.HilightWithColor(aisShape, drawer, True)
-            except AttributeError as e:
-                print(e)
+            if uid in self.draw_list:
+                if uid in self._transparencyDict:
+                    transp = self._transparencyDict[uid]
+                else:
+                    transp = 0.0
+                part_data = self.part_dict[uid]
+                shape = part_data['shape']
+                name = part_data['name']
+                color = part_data['color']
+                try:
+                    aisShape = AIS_Shape(shape)
+                    context.Display(aisShape, True)
+                    context.SetColor(aisShape, color, True)
+                    # Set shape transparency, a float from 0.0 to 1.0
+                    context.SetTransparency(aisShape, transp, True)
+                    drawer = aisShape.DynamicHilightAttributes()
+                    context.HilightWithColor(aisShape, drawer, True)
+                except AttributeError as e:
+                    print(e)
         self.redraw_wp()
 
     def drawAll(self):
@@ -941,7 +946,7 @@ class MainWindow(QMainWindow):
             print(e)
             return
         self.parse_doc(new_tree=True)
-        self.redraw()
+        self.drawAll()
 
     def saveStepActPrt(self):
         prompt = 'Choose filename for step file.'
@@ -963,7 +968,7 @@ class MainWindow(QMainWindow):
 
     def replaceShape(self, uid, shape):
         """Replace (in self.doc) ancestor shape with modified shape."""
-        label = self._labelDict[uid]
+        label = self.label_dict[uid]
         color = self._colorDict[uid]
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
@@ -997,7 +1002,7 @@ class MainWindow(QMainWindow):
         self.setLabelName(newLabel, newName)
         logger.info('Part %s added to root label', newName)
         shape_tool.UpdateAssemblies()
-        self._labelDict[self.activePartUID] = newLabel
+        self.label_dict[self.activePartUID] = newLabel
 
     def addComponents(self):
         """Add all parts in _partDict as components of top assy in self.doc"""
