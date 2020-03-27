@@ -182,7 +182,7 @@ class MainWindow(QMainWindow):
 
         self.calculator = None
 
-        self.treeViewRoot = self.create_root_item()
+        self.assy_root, self.wp_root = self.create_root_items()
         self.itemClicked = None   # TreeView item that has been mouse clicked
 
         # Internally, everything is always in mm
@@ -215,7 +215,8 @@ class MainWindow(QMainWindow):
         status.showMessage("Ready", 5000)
 
         self._currentUID = 0
-        self.drawList = []      # list of part uid's to be displayed
+        self.draw_list = []      # list of part uid's to be displayed
+        self.hide_list = []     # list of uid's
         self.floatStack = []    # storage stack for floating point values
         self.xyPtStack = []     # storage stack for 2d points (x, y)
         self.ptStack = []       # storage stack for gp_Pnts
@@ -315,21 +316,37 @@ class MainWindow(QMainWindow):
     def clearTree(self):
         """Remove all tree view widget items and replace root item"""
         self.treeView.clear()
-        self.treeViewRoot = self.create_root_item()
+        self.assy_root, self.wp_root = self.create_root_items()
+        self.repopulate_2D_tree_view()
         
-    def create_root_item(self):
-        itemName = ['/', '0:1:1'] # Root Item in TreeView
-        treeViewRoot = QTreeWidgetItem(self.treeView, itemName)
-        self.treeView.expandItem(treeViewRoot)
-        return treeViewRoot
+    def create_root_items(self):
+        # Root Items in TreeView
+        root_item = ['/', '0']  # [name, uid]
+        tree_view_root = QTreeWidgetItem(self.treeView, root_item)
+        self.treeView.expandItem(tree_view_root)
+        wp_root = QTreeWidgetItem(tree_view_root, ['2D', 'wp0'])
+        self.treeView.expandItem(wp_root)
+        ay_root = QTreeWidgetItem(tree_view_root, ['3D', '0:1:1.0'])
+        self.treeView.expandItem(ay_root)
+        return (ay_root, wp_root)
 
+    def repopulate_2D_tree_view(self):
+        """Add all workplanes to 2D section of tree view."""
+
+        # add items to treeView
+        for uid in self.wp_dict:
+            itemName = [uid, uid]
+            item = QTreeWidgetItem(self.wp_root, itemName)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(0, Qt.Checked)
+        
     def contextMenu(self, point):
         self.menu = QMenu()
         action = self.popMenu.exec_(self.mapToGlobal(point))
 
     def treeViewItemClicked(self, item):  # called whenever treeView item is clicked
         self.itemClicked = item # store item
-        if not self.inSync():   # click may have been on checkmark. Update drawList (if needed)
+        if not self.inSync():   # click may have been on checkmark. Update draw_list (if needed)
             self.syncDrawListToChecked()
             self.redraw()
 
@@ -344,17 +361,17 @@ class MainWindow(QMainWindow):
         return dl
 
     def inSync(self):
-        """Return True if checked items are in sync with drawList."""
-        return self.checkedToList() == self.drawList
+        """Return True if checked items are in sync with draw_list."""
+        return self.checkedToList() == self.draw_list
 
     def syncDrawListToChecked(self):
-        self.drawList = self.checkedToList()
+        self.draw_list = self.checkedToList()
 
     def syncCheckedToDrawList(self):
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             uid = item.text(1)
             if (uid in self.part_dict) or (uid in self.wp_dict):
-                if uid in self.drawList:
+                if uid in self.draw_list:
                     item.setCheckState(0, Qt.Checked)
                 else:
                     item.setCheckState(0, Qt.Unchecked)
@@ -512,6 +529,27 @@ class MainWindow(QMainWindow):
             self.unitscale = self._unitDict[self.units]
             self.unitsLabel.setText("Units: %s " % self.units)
 
+    def get_wp_uid(self, wp_objct):
+        """
+        Assign a uid to a new workplane & add to tree view (2D).
+        """
+
+        # Update appropriate dictionaries
+        uid = "wp%i" % self._wpNmbr
+        self._wpNmbr += 1
+        self.wp_dict[uid] = wp_objct # wpObject
+        # add item to treeView
+        itemName = [uid, uid]
+        item = QTreeWidgetItem(self.wp_root, itemName)
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+        item.setCheckState(0, Qt.Checked)
+        # Make new workplane active
+        self.setActiveWp(uid)
+        # Add new uid to draw list and sync w/ treeView
+        self.draw_list.append(uid)
+        self.syncCheckedToDrawList()
+        return uid
+
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry
 
@@ -528,7 +566,7 @@ class MainWindow(QMainWindow):
         return entry + '.' + str(value)
 
     def parse_doc(self, new_tree=False):
-        """Parse self.doc, generate part_dict & new tree view items.
+        """Parse self.doc, generate part_dict & new tree view items (3D).
 
         self.doc is the data model containing both the 3D shapes and the
         assembly structure. By calling this function whenever self.doc is
@@ -547,7 +585,7 @@ class MainWindow(QMainWindow):
         self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
 
         # Temporary use during unpacking
-        self.tree_view_item_dict = {'0:1:1': self.treeViewRoot}  # {entry: item}
+        self.tree_view_item_dict = {'0:1:1': self.assy_root}  # {entry: item}
         self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
         self.assy_loc_stack = []  # [applicable location vectors]
 
@@ -561,7 +599,8 @@ class MainWindow(QMainWindow):
         # Get root label information
         root_name = root_label.GetLabelName()
         root_entry = root_label.EntryDumpToString()
-        parent_item = self.treeViewRoot
+        root_uid = self.get_uid_from_entry(root_entry)
+        parent_item = self.assy_root
         # First label at root holds an assembly & it is the Top Assy.
         # Through this label, the entire assembly is accessible.
         # There is no need to explicitly examine other labels at root.
@@ -572,7 +611,7 @@ class MainWindow(QMainWindow):
 
         if new_tree:
             # create node in tree view
-            item_name = [root_name, root_entry]
+            item_name = [root_name, root_uid]
             item = QTreeWidgetItem(parent_item, item_name)
             item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
             item.setCheckState(0, Qt.Checked)
@@ -609,7 +648,7 @@ class MainWindow(QMainWindow):
             logger.debug("Component entry: %s", c_entry)
             if new_tree:
                 # create node in tree view
-                item_name = [c_name, c_entry]
+                item_name = [c_name, c_uid]
                 parent = self.tree_view_item_dict[self.assy_entry_stack[-1]]
                 item = QTreeWidgetItem(parent, item_name)
                 item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
@@ -666,81 +705,9 @@ class MainWindow(QMainWindow):
         color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
         return color
 
-    def getNewPartUID(self, objct, name="", ancestor=0,
-                      typ='p', color=None):
-        """
-        Method for assigning a unique ID (serial number) to a new part
-        (typ='p'), assembly (typ='a') or workplane (typ='w') generated
-        within the application. Using the uid as a key, record the
-        information in the various dictionaries. If the 'ancestor' parameter
-        is non-zero, it holds the uid of an existing shape being modified.
-        In this case, the uid of the modified shape is reused and the
-        modified shape is archived.
-        """
-        if not ancestor:  # Get new UID
-            uid = self._currentUID + 1
-            self._currentUID = uid
-        else:  # Re-use ancestor UID and archive older shape
-            uid = ancestor
-            self._ancestorDict[uid].append(objct)
-            if uid == self.activePartUID:  # Don't overlook this
-                self.activePart = objct
-            if not name:
-                name = self._nameDict[ancestor] # Keep ancestor name
-            # Replace (in self.doc) old shape with new modified shape
-            self.replaceShape(uid, objct)
-        # Update appropriate dictionaries
-        if typ == 'p':
-            self.part_dict[uid] = objct  # <TopoDS_Shape>
-            if not name:
-                name = 'Part'   # Default name
-            if not ancestor:
-                if color:   # Quantity_Color()
-                    c = OCC.Display.OCCViewer.rgb_color(color.Red(),
-                                                        color.Green(),
-                                                        color.Blue())
-                else:
-                    c = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)  # default color
-                self._colorDict[uid] = c
-                # add item to treeView
-                self.addItemToTreeView(name, uid)
-                # Make new part active
-                self.setActivePart(uid)
-        elif typ == 'a':
-            if not name:
-                name = 'Assembly'   # Default name
-            self._assyDict[uid] = objct  # TopLoc_Location
-            # add item to treeView
-            self.addItemToTreeView(name, uid)
-            # Make new assembly active
-            self.setActiveAsy(uid)
-        self._nameDict[uid] = name
-        # Add new uid to draw list and sync w/ treeView
-        self.drawList.append(uid)
-        self.syncCheckedToDrawList()
-        return uid
-
-    def get_wp_uid(self, wp_objct):
-        """
-        Method for assigning a unique ID (serial number) to a new workplane.
-        """
-
-        # Update appropriate dictionaries
-        uid = "wp%i" % self._wpNmbr
-        self._wpNmbr += 1
-        self.wp_dict[uid] = wp_objct # wpObject
-        # add item to treeView
-        self.addItemToTreeView(uid, uid)  # name = uid
-        # Make new workplane active
-        self.setActiveWp(uid)
-        # Add new uid to draw list and sync w/ treeView
-        self.drawList.append(uid)
-        self.syncCheckedToDrawList()
-        return uid
-
     def addItemToTreeView(self, name, uid):
         itemName = [name, str(uid)]
-        item = QTreeWidgetItem(self.treeViewRoot, itemName)
+        item = QTreeWidgetItem(self.assy_root, itemName)
         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
         item.setCheckState(0, Qt.Checked)
 
@@ -813,7 +780,7 @@ class MainWindow(QMainWindow):
             self.currOpLabel.setText("Current Operation: None ")
             self.statusBar().showMessage('')
             self.canva._display.SetSelectionModeNeutral()
-            self.redraw()
+            # self.redraw()
 
     #############################################
     #
@@ -827,38 +794,11 @@ class MainWindow(QMainWindow):
     def eraseAll(self):
         context = self.canva._display.Context
         context.RemoveAll(True)
-        self.drawList = []
+        self.draw_list = []
         self.syncCheckedToDrawList()
 
-    def redraw(self):
+    def redraw_wp(self):
         context = self.canva._display.Context
-        if not self.registeredCallback:
-            self.canva._display.SetSelectionModeNeutral()
-            context.SetAutoActivateSelection(True)
-        context.RemoveAll(True)
-        # Removed 'if uid in self.drawList:' test
-        logger.debug("Number of parts in part_dict: %s", len(self.part_dict))
-        pprint.pprint(self.part_dict)
-        for uid in self.part_dict:
-            if uid in self._transparencyDict:
-                transp = self._transparencyDict[uid]
-            else:
-                transp = 0.0
-            part_data = self.part_dict[uid]
-            shape = part_data['shape']
-            name = part_data['name']
-            color = part_data['color']
-            try:
-                aisShape = AIS_Shape(shape)
-                context.Display(aisShape, True)
-                context.SetColor(aisShape, color, True)
-                # Set shape transparency, a float from 0.0 to 1.0
-                context.SetTransparency(aisShape, transp, True)
-                drawer = aisShape.DynamicHilightAttributes()
-                context.HilightWithColor(aisShape, drawer, True)
-            except AttributeError as e:
-                print(e)
-            
         for uid in self.wp_dict:
             wp = self.wp_dict[uid]
             border = wp.border
@@ -901,37 +841,65 @@ class MainWindow(QMainWindow):
                 self.canva._display.DisplayShape(edge, color="WHITE")
             self.canva._display.Repaint()
 
+    def redraw(self):
+        context = self.canva._display.Context
+        if not self.registeredCallback:
+            self.canva._display.SetSelectionModeNeutral()
+            context.SetAutoActivateSelection(True)
+        context.RemoveAll(True)
+        # Removed 'if uid in self.draw_list:' test
+        for uid in self.part_dict:
+            if uid in self._transparencyDict:
+                transp = self._transparencyDict[uid]
+            else:
+                transp = 0.0
+            part_data = self.part_dict[uid]
+            shape = part_data['shape']
+            name = part_data['name']
+            color = part_data['color']
+            try:
+                aisShape = AIS_Shape(shape)
+                context.Display(aisShape, True)
+                context.SetColor(aisShape, color, True)
+                # Set shape transparency, a float from 0.0 to 1.0
+                context.SetTransparency(aisShape, transp, True)
+                drawer = aisShape.DynamicHilightAttributes()
+                context.HilightWithColor(aisShape, drawer, True)
+            except AttributeError as e:
+                print(e)
+        self.redraw_wp()
+
     def drawAll(self):
-        self.drawList = []
+        self.draw_list = []
         for k in self.part_dict:
-            self.drawList.append(k)
+            self.draw_list.append(k)
         for k in self.wp_dict:
-            self.drawList.append(k)
+            self.draw_list.append(k)
         self.syncCheckedToDrawList()
         self.redraw()
 
     def drawOnlyActivePart(self):
         self.eraseAll()
         uid = self.activePartUID
-        self.drawList.append(uid)
+        self.draw_list.append(uid)
         self.canva._display.DisplayShape(self.part_dict[uid])
         self.syncCheckedToDrawList()
         self.redraw()
 
     def drawOnlyPart(self, key):
         self.eraseAll()
-        self.drawList.append(key)
+        self.draw_list.append(key)
         self.syncCheckedToDrawList()
         self.redraw()
 
-    def drawAddPart(self, key): # Add part to drawList
-        self.drawList.append(key)
+    def drawAddPart(self, key): # Add part to draw_list
+        self.draw_list.append(key)
         self.syncCheckedToDrawList()
         self.redraw()
 
-    def drawHidePart(self, key): # Remove part from drawList
-        if key in self.drawList:
-            self.drawList.remove(key)
+    def drawHidePart(self, key): # Remove part from draw_list
+        if key in self.draw_list:
+            self.draw_list.remove(key)
             self.syncCheckedToDrawList()
             self.redraw()
 
