@@ -338,9 +338,8 @@ class MainWindow(QMainWindow):
         dl = []
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             if item.checkState(0) == 2:
-                strUID = item.text(1)
-                uid = int(strUID)
-                if (uid in self.part_dict.keys()) or (uid in self.wp_dict.keys()):
+                uid = item.text(1)
+                if (uid in self.part_dict) or (uid in self.wp_dict):
                     dl.append(uid)
         return dl
 
@@ -390,8 +389,7 @@ class MainWindow(QMainWindow):
         """Show info for item clicked in treeView."""
         if item:
             name = item.text(0)
-            strUID = item.text(1)
-            uid = int(strUID)
+            uid = item.text(1)
             try:
                 label = self._labelDict[uid]
             except KeyError as e:
@@ -423,8 +421,7 @@ class MainWindow(QMainWindow):
         """From tree view item, set (part, wp or assy) to be active."""
         if item:
             name = item.text(0)
-            strUID = item.text(1)
-            uid = int(strUID)
+            uid = item.text(1)
             print(f"Part selected: {name}, UID: {uid}")
             pd, ad, wd = self.sortViewItems()
             if uid in pd:
@@ -465,8 +462,7 @@ class MainWindow(QMainWindow):
     def setTransparent(self):
         item = self.itemClicked
         if item:
-            strUID = item.text(1)
-            uid = int(strUID)
+            uid = item.text(1)
             if uid in self.part_dict:
                 self._transparencyDict[uid] = 0.6
                 self.redraw()
@@ -475,8 +471,7 @@ class MainWindow(QMainWindow):
     def setOpaque(self):
         item = self.itemClicked
         if item:
-            strUID = item.text(1)
-            uid = int(strUID)
+            uid = item.text(1)
             if uid in self.part_dict:
                 self._transparencyDict.pop(uid)
                 self.redraw()
@@ -487,8 +482,7 @@ class MainWindow(QMainWindow):
         sbText = '' # status bar text
         if item:
             name = item.text(0)
-            strUID = item.text(1)
-            uid = int(strUID)
+            uid = item.text(1)
             prompt = 'Enter new name for part %s' % name
             newName, OK = QInputDialog.getText(self, 'Input Dialog',
                                                prompt, text=name)
@@ -518,20 +512,44 @@ class MainWindow(QMainWindow):
             self.unitscale = self._unitDict[self.units]
             self.unitsLabel.setText("Units: %s " % self.units)
 
+    def get_uid_from_entry(self, entry):
+        """Generate uid from label entry
+
+        In order to distinguish among multiple instances of shared data
+        a uid is comprised of 'entry.serial_number', starting with 0.
+        """
+        if entry in self._share_dict:
+            value = self._share_dict[entry]
+        else:
+            value = -1
+        value += 1
+        # update serial number in self._share_dict
+        self._share_dict[entry] = value
+        return entry + '.' + str(value)
+
     def parse_doc(self, new_tree=False):
-        """parse self.doc, generate part_dict & (optionally) new tree view items."""
+        """Parse self.doc, generate part_dict & new tree view items.
+
+        self.doc is the data model containing both the 3D shapes and the
+        assembly structure. By calling this function whenever self.doc is
+        modified, a new self.part_dict is generated and (optionally) the
+        tree view is updated. If, for example, a part is being modified
+        (its 3D config or its name or color), it would not be neccesary to
+        update the tree view."""
 
         if new_tree:
-            # Remove all existing tree view items except root item
+            # Remove all existing tree view items
             self.clearTree()
-        # Initialize
-        self.part_dict = {}  # {entry: {'shape': , 'loc_stk': , 'name': , 'color': }}
-        self.label_dict = {}  # {entry: label}
+            # Initialize self._share_dict
+            self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
+
+        # To be used by redraw()
+        self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
 
         # Temporary use during unpacking
-        self.parent_dict = {'0:1:1': self.treeViewRoot}  # {entry: item}
-        self.assy_uid_stack = ['0:1:1']
-        self.assy_loc_stack = []
+        self.tree_view_item_dict = {'0:1:1': self.treeViewRoot}  # {entry: item}
+        self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
+        self.assy_loc_stack = []  # [applicable location vectors]
 
         # Find root label of self.doc
         labels = TDF_LabelSequence()
@@ -550,15 +568,16 @@ class MainWindow(QMainWindow):
 
         loc = shape_tool.GetLocation(root_label)  # <TopLoc_Location>
         self.assy_loc_stack.append(loc)
-        self.assy_uid_stack.append(root_entry)
+        self.assy_entry_stack.append(root_entry)
 
         if new_tree:
             # create node in tree view
             item_name = [root_name, root_entry]
             item = QTreeWidgetItem(parent_item, item_name)
             item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+            item.setCheckState(0, Qt.Checked)
             self.treeView.expandItem(item)
-            self.parent_dict[root_entry] = item
+            self.tree_view_item_dict[root_entry] = item
 
         top_comps = TDF_LabelSequence() # Components of Top Assy
         subchilds = False
@@ -578,11 +597,12 @@ class MainWindow(QMainWindow):
         shape or assembly."""
 
         for j in range(comps.Length()):
-            logger.debug("Assy_uid_stack: %s", self.assy_uid_stack)
+            logger.debug("Assy_entry_stack: %s", self.assy_entry_stack)
             logger.debug("loop %i of %i", j+1, comps.Length())
             c_label = comps.Value(j+1)  # component label <class 'TDF_Label'>
             c_name = c_label.GetLabelName()
             c_entry = c_label.EntryDumpToString()
+            c_uid = self.get_uid_from_entry(c_entry)
             c_shape = self.shape_tool.GetShape(c_label)
             logger.debug("Component number %i", j+1)
             logger.debug("Component name: %s", c_name)
@@ -590,25 +610,30 @@ class MainWindow(QMainWindow):
             if new_tree:
                 # create node in tree view
                 item_name = [c_name, c_entry]
-                parent = self.parent_dict[self.assy_uid_stack[-1]]
+                parent = self.tree_view_item_dict[self.assy_entry_stack[-1]]
                 item = QTreeWidgetItem(parent, item_name)
                 item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+                item.setCheckState(0, Qt.Checked)
                 self.treeView.expandItem(item)
-                self.parent_dict[c_entry] = item
+                self.tree_view_item_dict[c_entry] = item
             ref_label = TDF_Label()  # label of referred shape (or assembly)
             is_ref = shape_tool.GetReferredShape(c_label, ref_label)
             if is_ref:  # I think all components are references 
                 ref_entry = ref_label.EntryDumpToString()
+                ref_uid = self.get_uid_from_entry(ref_entry)
                 ref_name = ref_label.GetLabelName()
                 ref_shape = shape_tool.GetShape(ref_label)
             if shape_tool.IsSimpleShape(ref_label):
                 temp_assy_loc_stack = list(self.assy_loc_stack)
                 temp_assy_loc_stack.reverse()
                 color = self.getColor(c_shape)
-                self.part_dict[c_entry] = {'shape': c_shape,
-                                           'loc_stk': temp_assy_loc_stack,
-                                           'color': color,
-                                           'name': c_name}
+                # Differentiate among parts with same entry values
+                # by using uid = 'entry.serial_nmbr'
+                for loc in temp_assy_loc_stack:
+                    c_shape.Move(loc)
+                self.part_dict[c_uid] = {'shape': c_shape,
+                                         'color': color,
+                                         'name': c_name}
                     
             elif self.shape_tool.IsAssembly(ref_label):
                 logger.debug("Referred item is an Assembly")
@@ -616,8 +641,8 @@ class MainWindow(QMainWindow):
                 aLoc = TopLoc_Location()
                 aLoc = self.shape_tool.GetLocation(c_label)
                 self.assy_loc_stack.append(aLoc)
-                self.assy_uid_stack.append(ref_entry)
-                self.parent_dict[ref_entry] = item
+                self.assy_entry_stack.append(ref_entry)
+                self.tree_view_item_dict[ref_entry] = item
                 r_comps = TDF_LabelSequence() # Components of Assy
                 subchilds = False
                 isAssy = self.shape_tool.GetComponents(ref_label, r_comps, subchilds)
@@ -631,7 +656,7 @@ class MainWindow(QMainWindow):
                     self.parse_components(r_comps, shape_tool, new_tree)
             else:
                 print("I was wrong: All components are *not* references.")
-        self.assy_uid_stack.pop()
+        self.assy_entry_stack.pop()
         self.assy_loc_stack.pop()
 
     def getColor(self, shape):
@@ -821,19 +846,16 @@ class MainWindow(QMainWindow):
                 transp = 0.0
             part_data = self.part_dict[uid]
             shape = part_data['shape']
-            loc_stk = part_data['loc_stk']
             name = part_data['name']
             color = part_data['color']
             try:
-                for loc in loc_stk:
-                    shape.Move(loc)
-                    aisShape = AIS_Shape(shape)
-                    context.Display(aisShape, True)
-                    context.SetColor(aisShape, color, True)
-                    # Set shape transparency, a float from 0.0 to 1.0
-                    context.SetTransparency(aisShape, transp, True)
-                    drawer = aisShape.DynamicHilightAttributes()
-                    context.HilightWithColor(aisShape, drawer, True)
+                aisShape = AIS_Shape(shape)
+                context.Display(aisShape, True)
+                context.SetColor(aisShape, color, True)
+                # Set shape transparency, a float from 0.0 to 1.0
+                context.SetTransparency(aisShape, transp, True)
+                drawer = aisShape.DynamicHilightAttributes()
+                context.HilightWithColor(aisShape, drawer, True)
             except AttributeError as e:
                 print(e)
             
@@ -953,51 +975,6 @@ class MainWindow(QMainWindow):
         self.parse_doc(new_tree=True)
         self.redraw()
 
-    """ Template for creating tree view items
-            tree = stepImporter.tree
-            tempTreeDict = {}   # uid:asyPrtTreeItem (used temporarily during unpack)
-            treedump = tree.expand_tree(mode=tree.DEPTH)
-            for uid in treedump:  # type(uid) == int
-                node = tree.get_node(uid)
-                name = node.tag
-                itemName = [name, str(uid)]
-                parentUid = node.bpointer
-                if node.data['a']:  # Assembly
-                    if not parentUid: # This is the top level item
-                        parentItem = self.treeViewRoot
-                    else:
-                        parentItem = tempTreeDict[parentUid]
-                    item = QTreeWidgetItem(parentItem, itemName)
-                    item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-                    self.treeView.expandItem(item)
-                    tempTreeDict[uid] = item
-                    Loc = node.data['l'] # Location object
-                    self._assyDict[uid] = Loc
-                else:   # Part
-                    # add item to asyPrtTree treeView
-                    if not parentUid: # This is the top level item
-                        parentItem = self.treeViewRoot
-                    else:
-                        parentItem = tempTreeDict[parentUid]
-                    item = QTreeWidgetItem(parentItem, itemName)
-                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-                    item.setCheckState(0, Qt.Checked)
-                    tempTreeDict[uid] = item
-                    color = node.data['c']
-                    shape = node.data['s']
-                    # Update dictionaries
-                    self.part_dict[uid] = shape
-                    self._nameDict[uid] = name
-                    if color:
-                        c = OCC.Display.OCCViewer.rgb_color(color.Red(), color.Green(), color.Blue())
-                    else:
-                        c = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)   # default color
-                    self._colorDict[uid] = c
-                    self.activePartUID = uid           # Set as active part
-                    self.activePart = shape
-                    self.drawList.append(uid)   # Add to draw list
-
-    """
     def saveStepActPrt(self):
         prompt = 'Choose filename for step file.'
         fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
