@@ -587,6 +587,7 @@ class MainWindow(QMainWindow):
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(tmodel.doc)
             self.doc = tmodel.doc
+            os.remove(fname)
 
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry
