@@ -26,6 +26,7 @@ import logging
 import os, os.path
 import pprint
 import sys
+from treemodel import TreeModel
 from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
@@ -43,7 +44,7 @@ from OCC.Core.Interface import Interface_Static_SetCVal
 from OCC.Core.Prs3d import Prs3d_LineAspect
 from OCC.Core.Quantity import (Quantity_Color, Quantity_NOC_GRAY,
                                Quantity_NOC_DARKGREEN, Quantity_NOC_MAGENTA1)
-from OCC.Core.STEPCAFControl import STEPCAFControl_Writer
+from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Writer
 from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
@@ -65,7 +66,6 @@ used_backend = OCC.Display.backend.load_backend()
 import myDisplay.qtDisplay as qtDisplay
 from OCC import VERSION
 import rpnCalculator
-import stepXD
 from version import APP_VERSION
 print("OCC version: %s" % VERSION)
 
@@ -256,6 +256,7 @@ class MainWindow(QMainWindow):
         app = XCAFApp_Application_GetApplication()
         app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
         # type(doc.Main()) = <class 'OCC.Core.TDF.TDF_Label'>
         # doc.Main().EntryDumpToString() 0:1
         # shape_tool is at label entry = 0:1:1
@@ -265,6 +266,7 @@ class MainWindow(QMainWindow):
         self.doc = doc
         self.rootLabel = rootLabel
         self.shape_tool = shape_tool
+        self.color_tool = color_tool
         self.label_dict[0] = rootLabel
 
     def createDockWidget(self):
@@ -312,6 +314,12 @@ class MainWindow(QMainWindow):
     # 'treeView' (QTreeWidget) related methods:
     #
     #############################################
+
+    def addItemToTreeView(self, name, uid):
+        itemName = [name, str(uid)]
+        item = QTreeWidgetItem(self.assy_root, itemName)
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+        item.setCheckState(0, Qt.Checked)
 
     def clearTree(self):
         """Remove all tree view widget items and replace root item"""
@@ -408,15 +416,24 @@ class MainWindow(QMainWindow):
             name = item.text(0)
             uid = item.text(1)
             try:
-                label = self.label_dict[uid]
+                label = self.label_dict.get(uid)
             except KeyError as e:
                 print(f"Not working for this item: {e}")
                 return
+            print(uid)
             cname = label.GetLabelName()  # component name
+            print(cname)  # prints blank line
             try:
                 cEntry = label.EntryDumpToString()
+                print(cEntry)  # prints 'This label is null.'
+                print(cEntry)  # prints 'This label is null.'
+                return
                 rlabel = TDF_Label()  # label of referred shape
                 isRef = self.shape_tool.GetReferredShape(label, rlabel)
+                """
+                Standard_NullObject
+                A null Label has no attribute.
+                """
                 if isRef:
                     rname = rlabel.GetLabelName()
                     rEntry = rlabel.EntryDumpToString()
@@ -518,17 +535,6 @@ class MainWindow(QMainWindow):
     #
     #############################################
 
-    def launchCalc(self):
-        if not self.calculator:
-            self.calculator = rpnCalculator.Calculator(self)
-            self.calculator.show()
-
-    def setUnits(self, units):
-        if units in self._unitDict.keys():
-            self.units = units
-            self.unitscale = self._unitDict[self.units]
-            self.unitsLabel.setText("Units: %s " % self.units)
-
     def get_wp_uid(self, wp_objct):
         """
         Assign a uid to a new workplane & add to tree view (2D).
@@ -550,6 +556,38 @@ class MainWindow(QMainWindow):
         self.syncCheckedToDrawList()
         return uid
 
+    def doc_linter(self):
+        """Clean self.doc by cycling through a save/load STEP cycle.
+
+        In the process, create self.shape_tool and self.color_tool.
+        1. Doesn't work: TypeError: in method 'STEPCAFControl_Writer_Write',
+            argument 2 of type 'char const *'
+        2. Doesn't matter: This function isn't used."""
+
+        # Create a file object to save to
+        fname = "deleteme.txt"
+        # Initialize STEP exporter
+        WS = XSControl_WorkSession()
+        step_writer = STEPCAFControl_Writer(WS, False)
+        # Transfer shapes and write file
+        step_writer.Transfer(self.doc, STEPControl_AsIs)
+        status = step_writer.Write(fname)
+        assert status == IFSelect_RetDone
+        # Create new TreeModel and read STEP data
+        tmodel = TreeModel("DOC")
+        self.shape_tool = tmodel.shape_tool
+        self.color_tool = tmodel.color_tool
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
+            self.doc = tmodel.doc
+
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry
 
@@ -565,8 +603,8 @@ class MainWindow(QMainWindow):
         self._share_dict[entry] = value
         return entry + '.' + str(value)
 
-    def parse_doc(self, new_tree=False):
-        """Parse self.doc, generate part_dict & new tree view items (3D).
+    def parse_doc(self, tree=None):
+        """Parse self.doc, generate new part_dict & new tree view items.
 
         self.doc is the data model containing both the 3D shapes and the
         assembly structure. By calling this function whenever self.doc is
@@ -575,12 +613,15 @@ class MainWindow(QMainWindow):
         (its 3D config or its name or color), it would not be neccesary to
         update the tree view."""
 
+        new_tree = True
+        if tree is None:
+            new_tree = False
         if new_tree:
-            # Remove all existing tree view items
+            # Remove all existing widget items from tree view
             self.clearTree()
-            # Initialize self._share_dict
-            self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
-            self.assy_list = []  # assy uid's
+        # Initialize self._share_dict
+        self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
+        self.assy_list = []  # assy uid's
         # To be used by redraw()
         self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
         self.label_dict = {}  # {uid: label}
@@ -589,9 +630,11 @@ class MainWindow(QMainWindow):
         self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
         self.assy_loc_stack = []  # [applicable location vectors]
 
+        shape_tool = self.shape_tool
+        color_tool = self.color_tool
+
         # Find root label of self.doc
         labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         shape_tool.GetShapes(labels)
         root_label = labels.Value(1) # First label at root
         nbr = labels.Length()  # number of labels at root
@@ -626,9 +669,9 @@ class MainWindow(QMainWindow):
         if top_comps.Length():
             logger.debug("")
             logger.debug("Parsing components of label entry %s)", root_entry)
-            self.parse_components(top_comps, shape_tool, new_tree)
+            self.parse_components(top_comps, shape_tool, color_tool, new_tree)
 
-    def parse_components(self, comps, shape_tool, new_tree):
+    def parse_components(self, comps, shape_tool, color_tool, new_tree):
         """Parse components from comps (LabelSequence).
 
         Components of an assembly are, by definition, references which refer
@@ -644,7 +687,7 @@ class MainWindow(QMainWindow):
             c_name = c_label.GetLabelName()
             c_entry = c_label.EntryDumpToString()
             c_uid = self.get_uid_from_entry(c_entry)
-            c_shape = self.shape_tool.GetShape(c_label)
+            c_shape = shape_tool.GetShape(c_label)
             self.label_dict[c_uid] = c_label
             logger.debug("Component number %i", j+1)
             logger.debug("Component name: %s", c_name)
@@ -668,7 +711,8 @@ class MainWindow(QMainWindow):
             if shape_tool.IsSimpleShape(ref_label):
                 temp_assy_loc_stack = list(self.assy_loc_stack)
                 temp_assy_loc_stack.reverse()
-                color = self.getColor(c_shape)
+                color = Quantity_Color()
+                color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
                 # Differentiate among parts with same entry values
                 # by using uid = 'entry.serial_nmbr'
                 for loc in temp_assy_loc_stack:
@@ -696,24 +740,11 @@ class MainWindow(QMainWindow):
                     logger.debug("")
                     logger.debug("Parsing components of label entry %s)",
                                  ref_entry)
-                    self.parse_components(r_comps, shape_tool, new_tree)
+                    self.parse_components(r_comps, shape_tool, color_tool, new_tree)
             else:
                 print("I was wrong: All components are *not* references.")
         self.assy_entry_stack.pop()
         self.assy_loc_stack.pop()
-
-    def getColor(self, shape):
-        # Get the part color
-        color = Quantity_Color()
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
-        return color
-
-    def addItemToTreeView(self, name, uid):
-        itemName = [name, str(uid)]
-        item = QTreeWidgetItem(self.assy_root, itemName)
-        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-        item.setCheckState(0, Qt.Checked)
 
     def appendToStack(self):  # called when <ret> is pressed on line edit
         self.lineEditStack.append(self.lineEdit.text())
@@ -925,28 +956,65 @@ class MainWindow(QMainWindow):
         if not fname:
             print("Load step cancelled")
             return
-        name = os.path.basename(fname).split('.')[0]
-        nextUID = self._currentUID
-        stepImporter = stepXD.StepImporter(fname)
+        tmodel = TreeModel("DOC")
+        step_shape_tool = tmodel.shape_tool
+        step_color_tool = tmodel.color_tool
 
-        stepdoc = stepImporter.doc
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
 
-        step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(stepdoc.Main())
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
+        # Get root label of step data
         labels = TDF_LabelSequence()
         step_shape_tool.GetShapes(labels)
-        logger.info('Number of labels at STEP_root : %i', labels.Length())
         try:
             steprootLabel = labels.Value(1) # First label at root
             # 'paste' this onto root label of self.doc
             copyLabel = TDF_CopyLabel(steprootLabel, self.rootLabel)
             copyLabel.Perform()
-            shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-            shape_tool.UpdateAssemblies()
+            self.shape_tool.UpdateAssemblies()
         except RuntimeError as e:
             print(e)
             return
-        self.parse_doc(new_tree=True)
+        # Repair self.doc by cycling through save/load
+        self.doc_linter()
+        # Build new self.part_dict & tree view
+        self.parse_doc(tree=True)
         self.drawAll()
+        self.fitAll()
+
+    def loadStepTest(self):
+        """Get OCAF document from STEP file and save to win.doc"""
+
+        prompt = 'Select STEP file to import'
+        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
+                                                 "STEP files (*.stp *.STP *.step)")
+        fname, _ = fnametuple
+        logger.debug("Load file name: %s", fname)
+        if not fname:
+            print("Load step cancelled")
+            return
+        tmodel = TreeModel("DOC")
+        self.shape_tool = tmodel.shape_tool
+        self.color_tool = tmodel.color_tool
+
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
+            self.doc = tmodel.doc
 
     def saveStepActPrt(self):
         prompt = 'Choose filename for step file.'
@@ -1138,6 +1206,17 @@ class MainWindow(QMainWindow):
     # 3D Measure functons...
     #
     #############################################
+
+    def launchCalc(self):
+        if not self.calculator:
+            self.calculator = rpnCalculator.Calculator(self)
+            self.calculator.show()
+
+    def setUnits(self, units):
+        if units in self._unitDict.keys():
+            self.units = units
+            self.unitscale = self._unitDict[self.units]
+            self.unitsLabel.setText("Units: %s " % self.units)
 
     def distPtPt(self):
         if len(self.ptStack) == 2:
