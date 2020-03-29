@@ -38,10 +38,11 @@ class StepAnalyzer():
     def __init__(self, document=None, filename=None):
         """Supply one or the other: document or STEP filename."""
 
-        self.uid = 1
         self.indent = 0
         self.output = ""
         self.fname = filename
+        # Initialize self._share_dict
+        self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
         if filename:
             self.doc = self.read_file(filename)
         elif document:
@@ -71,6 +72,21 @@ class StepAnalyzer():
             step_reader.Transfer(doc)
         return doc
 
+    def get_uid_from_entry(self, entry):
+        """Generate uid from label entry
+
+        In order to distinguish among multiple instances of shared data
+        a uid is comprised of 'entry.serial_number', starting with 0.
+        """
+        if entry in self._share_dict:
+            value = self._share_dict[entry]
+        else:
+            value = -1
+        value += 1
+        # update serial number in self._share_dict
+        self._share_dict[entry] = value
+        return entry + '.' + str(value)
+
     def dump(self):
         """Return assembly structure in indented outline form.
 
@@ -93,13 +109,14 @@ class StepAnalyzer():
         # Get information from root label
         name = rootlabel.GetLabelName()
         entry = rootlabel.EntryDumpToString()
+        uid = self.get_uid_from_entry(entry)
         is_assy = self.shape_tool.IsAssembly(rootlabel)
         if is_assy:
             # If 1st label at root holds an assembly, it is the Top Assy.
             # Through this label, the entire assembly is accessible.
             # There is no need to explicitly examine other labels at root.
-            self.output += f"{self.uid}\t[{entry}] {name}\t"
-            self.uid += 1
+            self.output += f"{uid}\t[{entry}] {name}\t"
+
             self.indent += 2
             top_comps = TDF_LabelSequence() # Components of Top Assy
             subchilds = False
@@ -122,15 +139,15 @@ class StepAnalyzer():
             c_label = comps.Value(j+1)  # component label <class 'TDF_Label'>
             c_name = c_label.GetLabelName()
             c_entry = c_label.EntryDumpToString()
+            uid = self.get_uid_from_entry(c_entry)
             ref_label = TDF_Label()  # label of referred shape (or assembly)
             is_ref = self.shape_tool.GetReferredShape(c_label, ref_label)
             if is_ref:  # just in case all components are not references 
                 ref_entry = ref_label.EntryDumpToString()
                 ref_name = ref_label.GetLabelName()
                 indent = "\t" * self.indent
-                self.output += f"{self.uid}{indent}[{c_entry}] {c_name}"
+                self.output += f"{uid}{indent}[{c_entry}] {c_name}"
                 self.output += f" => [{ref_entry}] {ref_name}\n"
-                self.uid += 1
                 if self.shape_tool.IsAssembly(ref_label):
                     self.indent += 1
                     ref_comps = TDF_LabelSequence() # Components of Assy

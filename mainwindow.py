@@ -25,6 +25,7 @@ from collections import defaultdict
 import logging
 import os, os.path
 import pprint
+import stepanalyzer
 import sys
 from treemodel import TreeModel
 from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
@@ -241,9 +242,9 @@ class MainWindow(QMainWindow):
         self.activeAsyUID = 0
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
-        self.label_dict = {}
         self.createDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
+        
 
     def createDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1.
@@ -267,7 +268,6 @@ class MainWindow(QMainWindow):
         self.rootLabel = rootLabel
         self.shape_tool = shape_tool
         self.color_tool = color_tool
-        self.label_dict[0] = rootLabel
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -415,33 +415,12 @@ class MainWindow(QMainWindow):
         if item:
             name = item.text(0)
             uid = item.text(1)
-            try:
-                label = self.label_dict.get(uid)
-            except KeyError as e:
-                print(f"Not working for this item: {e}")
-                return
-            print(uid)
-            cname = label.GetLabelName()  # component name
-            print(cname)  # prints blank line
-            try:
-                cEntry = label.EntryDumpToString()
-                print(cEntry)  # prints 'This label is null.'
-                print(cEntry)  # prints 'This label is null.'
-                return
-                rlabel = TDF_Label()  # label of referred shape
-                isRef = self.shape_tool.GetReferredShape(label, rlabel)
-                """
-                Standard_NullObject
-                A null Label has no attribute.
-                """
-                if isRef:
-                    rname = rlabel.GetLabelName()
-                    rEntry = rlabel.EntryDumpToString()
-                    print(f"UID: {uid}\t{cname}[{cEntry}] ==> {rname}[{rEntry}]")
-                else:
-                    print(f"UID: {uid}\t{cname}[{cEntry}]")
-            except RuntimeError as e:
-                print(e)
+            sa = stepanalyzer.StepAnalyzer(document=self.doc)
+            dumpdata = sa.dump()
+            lines = dumpdata.split('\n')
+            for line in lines:
+                if uid in line:
+                    print(line)
 
     def setClickedActive(self):
         """Set item clicked in treeView Active."""
@@ -625,7 +604,6 @@ class MainWindow(QMainWindow):
         self.assy_list = []  # assy uid's
         # To be used by redraw()
         self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
-        self.label_dict = {}  # {uid: label}
         # Temporary use during unpacking
         self.tree_view_item_dict = {'0:1:1': self.assy_root}  # {entry: item}
         self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
@@ -644,7 +622,6 @@ class MainWindow(QMainWindow):
         root_name = root_label.GetLabelName()
         root_entry = root_label.EntryDumpToString()
         root_uid = self.get_uid_from_entry(root_entry)
-        self.label_dict[root_uid] = root_label
         parent_item = self.assy_root
         # First label at root holds an assembly & it is the Top Assy.
         # Through this label, the entire assembly is accessible.
@@ -689,7 +666,6 @@ class MainWindow(QMainWindow):
             c_entry = c_label.EntryDumpToString()
             c_uid = self.get_uid_from_entry(c_entry)
             c_shape = shape_tool.GetShape(c_label)
-            self.label_dict[c_uid] = c_label
             logger.debug("Component number %i", j+1)
             logger.debug("Component name: %s", c_name)
             logger.debug("Component entry: %s", c_entry)
@@ -776,7 +752,6 @@ class MainWindow(QMainWindow):
         """Change active assembly status in coordinated manner."""
         # modify status in self
         self.activeAsyUID = uid
-        self.activeAsy = self.label_dict[uid]
         # show as active in treeView
         self.showItemActive(uid)
 
@@ -1037,7 +1012,6 @@ class MainWindow(QMainWindow):
 
     def replaceShape(self, uid, shape):
         """Replace (in self.doc) ancestor shape with modified shape."""
-        label = self.label_dict[uid]
         color = self._colorDict[uid]
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
@@ -1071,7 +1045,6 @@ class MainWindow(QMainWindow):
         self.setLabelName(newLabel, newName)
         logger.info('Part %s added to root label', newName)
         shape_tool.UpdateAssemblies()
-        self.label_dict[self.activePartUID] = newLabel
 
     def addComponents(self):
         """Add all parts in _partDict as components of top assy in self.doc"""
@@ -1128,79 +1101,6 @@ class MainWindow(QMainWindow):
         step_writer.Transfer(self.doc, STEPControl_AsIs)
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
-
-    def dumpDoc(self):
-        print(type(self.doc))
-        logger.info("Analyzing doc")
-        labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        logger.info('Number of labels at root : %i', labels.Length())
-        try:
-            rootlabel = labels.Value(1) # First label at root
-        except RuntimeError:
-            return
-        name = rootlabel.GetLabelName()
-        logger.info('Name of root label: %s', name)
-        isAssy = shape_tool.IsAssembly(rootlabel)
-        logger.info("First label at root holds an assembly? %s", isAssy)
-        if isAssy:
-            # If first label at root holds an assembly, it is the Top Assembly.
-            # Through this label, the entire assembly is accessible.
-            # there is no need to examine other labels at root explicitly.
-            entry = rootlabel.EntryDumpToString()
-            logger.debug("Entry: %s", entry)
-            logger.debug("Top assy name: %s", name)
-            topComps = TDF_LabelSequence() # Components of Top Assy
-            subchilds = False
-            isAssy = shape_tool.GetComponents(rootlabel, topComps, subchilds)
-            logger.debug("Is Assembly? %s", isAssy)
-            logger.debug("Number of components: %s", topComps.Length())
-            logger.debug("Is Reference? %s", shape_tool.IsReference(rootlabel))
-            if topComps.Length():
-                self.findComponents(rootlabel, topComps)
-
-    def findComponents(self, label, comps):
-        """Discover components from comps (LabelSequence) of an assembly (label).
-
-        Components of an assembly are, by definition, references which refer to
-        either a shape or another assembly. Components are essentially 'instances'
-        of the referred shape or assembly, and carry a location vector specifing
-        the location of the referred shape or assembly.
-        """
-        logger.debug("")
-        logger.debug("Finding components of label entry %s)", label.EntryDumpToString())
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        for j in range(comps.Length()):
-            logger.debug("loop %i of %i", j+1, comps.Length())
-            cLabel = comps.Value(j+1)  # component label <class 'OCC.Core.TDF.TDF_Label'>
-            cShape = shape_tool.GetShape(cLabel)
-            logger.debug("Component number %i", j+1)
-            logger.debug("Component entry: %s", cLabel.EntryDumpToString())
-            name = cLabel.GetLabelName()
-            logger.debug("Component name: %s", name)
-            refLabel = TDF_Label()  # label of referred shape (or assembly)
-            isRef = shape_tool.GetReferredShape(cLabel, refLabel)
-            if isRef:  # I think all components are references, but just in case...
-                refShape = shape_tool.GetShape(refLabel)
-                refEntry = refLabel.EntryDumpToString()
-                leafName = name
-                logger.debug("Entry referred to: %s", refEntry)
-                refName = refLabel.GetLabelName()
-                logger.debug("Name of referred item: %s", refName)
-                if shape_tool.IsSimpleShape(refLabel):
-                    logger.debug("Referred item is a Shape")
-                elif shape_tool.IsAssembly(refLabel):
-                    logger.debug("Referred item is an Assembly")
-                    rComps = TDF_LabelSequence() # Components of Assy
-                    subchilds = False
-                    isAssy = shape_tool.GetComponents(refLabel, rComps, subchilds)
-                    logger.debug("Assy name: %s", name)
-                    logger.debug("Is Assembly? %s", isAssy)
-                    logger.debug("Number of components: %s", rComps.Length())
-                    if rComps.Length():
-                        self.findComponents(refLabel, rComps)
 
     #############################################
     #

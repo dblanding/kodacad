@@ -900,8 +900,7 @@ def printTreeView():
     while iterator.value():
         item = iterator.value()
         name = item.text(0)
-        strUID = item.text(1)
-        uid = int(strUID)
+        uid = item.text(1)
         pname = None
         parent = item.parent()
         if parent:
