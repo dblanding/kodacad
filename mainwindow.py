@@ -918,6 +918,12 @@ class MainWindow(QMainWindow):
     #
     #############################################
 
+    def copy_label(self, source_label, target_label):
+        copy_label = TDF_CopyLabel()
+        copy_label.Load(source_label, target_label)
+        copy_label.Perform()
+        return copy_label.IsDone()
+
     def loadStep(self):
         """Get OCAF document from STEP file and 'paste' onto win.doc"""
 
@@ -948,9 +954,7 @@ class MainWindow(QMainWindow):
         step_shape_tool.GetShapes(labels)
         try:
             steprootLabel = labels.Value(1) # First label at root
-            # 'paste' this onto root label of self.doc
-            copyLabel = TDF_CopyLabel(steprootLabel, self.rootLabel)
-            copyLabel.Perform()
+            self.copy_label(steprootLabel, self.rootLabel)
             self.shape_tool.UpdateAssemblies()
         except RuntimeError as e:
             print(e)
