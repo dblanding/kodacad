@@ -596,15 +596,13 @@ def delElC(shapeList, *args):
 def makeBox():
     name = 'Box'
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
-    uid = win.getNewPartUID(myBody, name=name)
-    win.addComponent()
+    win.addComponent(myBody, name, win.default_color)
     win.redraw()
 
 def makeCyl():
     name = 'Cylinder'
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
-    uid = win.getNewPartUID(myBody, name=name)
-    win.addComponent()
+    win.addComponent(myBody, name, win.default_color)
     win.redraw()
 
 def extrude():
