@@ -538,10 +538,7 @@ class MainWindow(QMainWindow):
     def doc_linter(self):
         """Clean self.doc by cycling through a save/load STEP cycle.
 
-        In the process, create self.shape_tool and self.color_tool.
-        1. Doesn't work: TypeError: in method 'STEPCAFControl_Writer_Write',
-            argument 2 of type 'char const *'
-        2. Doesn't matter: This function isn't used."""
+        Refresh: self.shape_tool, self.color_tool, self.root_label."""
 
         # Create a file object to save to
         fname = "deleteme.txt"
@@ -964,33 +961,6 @@ class MainWindow(QMainWindow):
         self.parse_doc(tree=True)
         self.drawAll()
         self.fitAll()
-
-    def loadStepTest(self):
-        """Get OCAF document from STEP file and save to win.doc"""
-
-        prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        logger.debug("Load file name: %s", fname)
-        if not fname:
-            print("Load step cancelled")
-            return
-        tmodel = TreeModel("DOC")
-        self.shape_tool = tmodel.shape_tool
-        self.color_tool = tmodel.color_tool
-
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-            self.doc = tmodel.doc
 
     def saveStepActPrt(self):
         prompt = 'Choose filename for step file.'
