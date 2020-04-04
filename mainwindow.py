@@ -1023,18 +1023,21 @@ class MainWindow(QMainWindow):
     def addComponent(self, shape, name, color):  # revised version
         """Add (new) shape to top assembly of self.doc."""
 
-        newLabel = self.shape_tool.AddComponent(self.rootLabel, shape, True)
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        newLabel = shape_tool.AddComponent(self.rootLabel, shape, True)
         # Get referrred label and apply color to it
         refLabel = TDF_Label()  # label of referred shape
-        isRef = self.shape_tool.GetReferredShape(newLabel, refLabel)
+        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
         if isRef:
-            self.color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
+            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
         self.setLabelName(newLabel, name)
         logger.info('Part %s added to root label', name)
-        self.shape_tool.UpdateAssemblies()
+        shape_tool.UpdateAssemblies()
         self.doc_linter()  # This gets color to work
         self.parse_doc(tree=True)
         self.syncDrawListToChecked()
+        self.redraw()
 
     def addComponents(self):
         """Add all parts in _partDict as components of top assy in self.doc"""

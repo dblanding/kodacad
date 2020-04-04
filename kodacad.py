@@ -619,10 +619,9 @@ def extrude():
         aPrismVec = wp.wVec * length
         myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(),
                                        aPrismVec).Shape()
-        uid = win.getNewPartUID(myBody, name=name)
+        win.addComponent(myBody, name, win.default_color)
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
-        win.addComponent()
     else:
         win.registerCallback(extrudeC)
         win.lineEdit.setFocus()
@@ -648,13 +647,13 @@ def revolve():
             return
         face = BRepBuilderAPI_MakeFace(wp.wire).Shape()
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
-        revolved_shape = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
-        uid = win.getNewPartUID(revolved_shape, name=name)
+        myBody = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
+        win.addComponent(myBody, name, win.default_color)
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
-        win.addComponent()
     else:
         win.registerCallback(revolveC)
+        display.SetSelectionModeVertex()
         win.lineEdit.setFocus()
         statusText = "Pick two points on revolve axis."
         win.statusBar().showMessage(statusText)
