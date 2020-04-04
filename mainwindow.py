@@ -997,8 +997,8 @@ class MainWindow(QMainWindow):
             shape_tool.SetShape(refLabel, shape)
             shape_tool.UpdateAssemblies()
 
-    def addComponent(self):  # earlier version
-        """Add active part to top assembly of self.doc."""
+    def addComponent(self, shape, name, color):
+        """Add new shape to top assembly of self.doc."""
         labels = TDF_LabelSequence()
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
@@ -1008,24 +1008,7 @@ class MainWindow(QMainWindow):
         except RuntimeError as e:
             print(e)
             return
-        newLabel = shape_tool.AddComponent(rootLabel, self.activePart, True)
-        color = self._colorDict[self.activePartUID]
-        # Get referrred label and apply color to it
-        refLabel = TDF_Label()  # label of referred shape
-        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
-        if isRef:
-            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
-        newName = self._nameDict[self.activePartUID]
-        self.setLabelName(newLabel, newName)
-        logger.info('Part %s added to root label', newName)
-        shape_tool.UpdateAssemblies()
-
-    def addComponent(self, shape, name, color):  # revised version
-        """Add (new) shape to top assembly of self.doc."""
-
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        newLabel = shape_tool.AddComponent(self.rootLabel, shape, True)
+        newLabel = shape_tool.AddComponent(rootLabel, shape, True)
         # Get referrred label and apply color to it
         refLabel = TDF_Label()  # label of referred shape
         isRef = shape_tool.GetReferredShape(newLabel, refLabel)
@@ -1037,7 +1020,6 @@ class MainWindow(QMainWindow):
         self.doc_linter()  # This gets color to work
         self.parse_doc(tree=True)
         self.syncDrawListToChecked()
-        self.redraw()
 
     def addComponents(self):
         """Add all parts in _partDict as components of top assy in self.doc"""
