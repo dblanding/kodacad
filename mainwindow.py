@@ -24,10 +24,7 @@
 from collections import defaultdict
 import logging
 import os, os.path
-import pprint
-import stepanalyzer
 import sys
-from treemodel import TreeModel
 from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
@@ -36,7 +33,7 @@ from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
                              QToolBar, QFileDialog, QAbstractItemView,
                              QInputDialog, QTreeWidgetItemIterator)
 from OCC.Core.AIS import AIS_Shape, AIS_Line, AIS_Circle
-from OCC.Core.BRep import BRep_Tool, BRep_Builder
+from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.CPnts import CPnts_AbscissaPoint_Length
 from OCC.Core.gp import gp_Vec
@@ -51,8 +48,7 @@ from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_CopyLabel
-from OCC.Core.TopoDS import (topods_Edge, topods_Vertex, TopoDS_Shape,
-                             TopoDS_Compound)
+from OCC.Core.TopoDS import topods_Edge, topods_Vertex, TopoDS_Compound
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
@@ -64,9 +60,11 @@ import OCC.Display.backend
 used_backend = OCC.Display.backend.load_backend()
 # from OCC.Display import qtDisplay
 # import local version instead (allows changing rotate/pan/zoom controls)
-import myDisplay.qtDisplay as qtDisplay
 from OCC import VERSION
+import myDisplay.qtDisplay as qtDisplay
 import rpnCalculator
+import stepanalyzer
+from treemodel import TreeModel
 from version import APP_VERSION
 print("OCC version: %s" % VERSION)
 
@@ -305,7 +303,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):    # things that need to happen on exit
         try:
             self.calculator.close()
-        except:
+        except AttributeError:
             pass
         event.accept()
 
@@ -328,7 +326,7 @@ class MainWindow(QMainWindow):
         self.repopulate_2D_tree_view()
 
     def create_root_items(self):
-        # Root Items in TreeView
+        """Create '2D' & '3D' root items in treeView."""
         root_item = ['/', '0']  # [name, uid]
         tree_view_root = QTreeWidgetItem(self.treeView, root_item)
         self.treeView.expandItem(tree_view_root)
@@ -347,7 +345,7 @@ class MainWindow(QMainWindow):
             item = QTreeWidgetItem(self.wp_root, itemName)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(0, Qt.Checked)
-        
+
     def contextMenu(self, point):
         self.menu = QMenu()
         action = self.popMenu.exec_(self.mapToGlobal(point))
@@ -685,7 +683,7 @@ class MainWindow(QMainWindow):
                 self.tree_view_item_dict[c_entry] = item
             ref_label = TDF_Label()  # label of referred shape (or assembly)
             is_ref = shape_tool.GetReferredShape(c_label, ref_label)
-            if is_ref:  # I think all components are references 
+            if is_ref:  # I think all components are references
                 ref_entry = ref_label.EntryDumpToString()
                 ref_uid = self.get_uid_from_entry(ref_entry)
                 ref_name = ref_label.GetLabelName()
@@ -702,7 +700,6 @@ class MainWindow(QMainWindow):
                 self.part_dict[c_uid] = {'shape': c_shape,
                                          'color': color,
                                          'name': c_name}
-                    
             elif self.shape_tool.IsAssembly(ref_label):
                 logger.debug("Referred item is an Assembly")
                 # Location vector is carried by component
