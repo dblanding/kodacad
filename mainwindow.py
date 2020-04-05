@@ -538,7 +538,7 @@ class MainWindow(QMainWindow):
     def doc_linter(self):
         """Clean self.doc by cycling through a save/load STEP cycle.
 
-        Refresh: self.shape_tool, self.color_tool, self.root_label."""
+        Refresh: self.shape_tool, self.color_tool, self.rootLabel."""
 
         # Create a file object to save to
         fname = "deleteme.txt"
@@ -564,6 +564,14 @@ class MainWindow(QMainWindow):
             step_reader.Transfer(tmodel.doc)
             self.doc = tmodel.doc
             os.remove(fname)
+        # Find root label of self.doc & save as self.rootLabel
+        labels = TDF_LabelSequence()
+        self.shape_tool.GetShapes(labels)
+        try:
+            self.rootLabel = labels.Value(1) # First label at root
+        except RuntimeError as e:
+            print(e)
+            return
 
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry
@@ -1020,36 +1028,6 @@ class MainWindow(QMainWindow):
         self.doc_linter()  # This gets color to work
         self.parse_doc(tree=True)
         self.syncDrawListToChecked()
-
-    def addComponents(self):
-        """Add all parts in _partDict as components of top assy in self.doc"""
-
-        labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        logger.info('Number of labels at root : %i', labels.Length())
-        try:
-            rootlabel = labels.Value(1) # First label at root
-        except RuntimeError:
-            return
-        # Set name of rootlabel to new value
-        self.setLabelName(rootlabel, "Step")
-        # Add component parts to assembly
-        for uid, part in self.part_dict.items():
-            newLabel = shape_tool.AddComponent(rootlabel, part, True)
-            color = self._colorDict[uid]
-            # Get referrred label and apply color to it
-            refLabel = TDF_Label()  # label of referred shape
-            isRef = shape_tool.GetReferredShape(newLabel, refLabel)
-            if isRef:
-                color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
-            name = self._nameDict[uid]
-            self.setLabelName(newLabel, name)
-            logger.info('Component part %s added', name)
-
-        # myAssembly->UpdateAssemblies();
-        shape_tool.UpdateAssemblies()
 
     def getLabelName(self, label):
         return label.GetLabelName()
