@@ -850,6 +850,9 @@ def dumpDoc():
     dumpdata = sa.dump()
     print(dumpdata)
 
+def parseDoc():
+    win.parse_doc(tree=True)
+
 def topoDumpAP():
     Topology.dumpTopology(win.activePart)
 
@@ -943,6 +946,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Modify Active Part', "Fuse", fuse)
     win.add_menu('Utility')
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
+    win.add_function_to_menu('Utility', "parse doc", parseDoc)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(current UID)", printCurrUID)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
