@@ -612,8 +612,8 @@ class MainWindow(QMainWindow):
         self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
         self.assy_loc_stack = []  # [applicable location vectors]
 
-        shape_tool = self.shape_tool
-        color_tool = self.color_tool
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
 
         # Find root label of self.doc
         labels = TDF_LabelSequence()
@@ -688,38 +688,38 @@ class MainWindow(QMainWindow):
                 ref_uid = self.get_uid_from_entry(ref_entry)
                 ref_name = ref_label.GetLabelName()
                 ref_shape = shape_tool.GetShape(ref_label)
-            if shape_tool.IsSimpleShape(ref_label):
-                temp_assy_loc_stack = list(self.assy_loc_stack)
-                temp_assy_loc_stack.reverse()
-                color = Quantity_Color()
-                color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
-                # Differentiate among parts with same entry values
-                # by using uid = 'entry.serial_nmbr'
-                for loc in temp_assy_loc_stack:
-                    c_shape.Move(loc)
-                self.part_dict[c_uid] = {'shape': c_shape,
-                                         'color': color,
-                                         'name': c_name}
-            elif self.shape_tool.IsAssembly(ref_label):
-                logger.debug("Referred item is an Assembly")
-                # Location vector is carried by component
-                aLoc = TopLoc_Location()
-                aLoc = self.shape_tool.GetLocation(c_label)
-                self.assy_loc_stack.append(aLoc)
-                self.assy_entry_stack.append(ref_entry)
-                self.tree_view_item_dict[ref_entry] = item
-                self.assy_list.append(c_uid)
-                r_comps = TDF_LabelSequence() # Components of Assy
-                subchilds = False
-                isAssy = self.shape_tool.GetComponents(ref_label, r_comps, subchilds)
-                logger.debug("Assy name: %s", ref_name)
-                logger.debug("Is Assembly? %s", isAssy)
-                logger.debug("Number of components: %s", r_comps.Length())
-                if r_comps.Length():
-                    logger.debug("")
-                    logger.debug("Parsing components of label entry %s)",
-                                 ref_entry)
-                    self.parse_components(r_comps, shape_tool, color_tool, new_tree)
+                if shape_tool.IsSimpleShape(ref_label):
+                    temp_assy_loc_stack = list(self.assy_loc_stack)
+                    temp_assy_loc_stack.reverse()
+                    color = Quantity_Color()
+                    color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
+                    # Differentiate among parts with same entry values
+                    # by using uid = 'entry.serial_nmbr'
+                    for loc in temp_assy_loc_stack:
+                        c_shape.Move(loc)
+                    self.part_dict[c_uid] = {'shape': c_shape,
+                                             'color': color,
+                                             'name': c_name}
+                elif self.shape_tool.IsAssembly(ref_label):
+                    logger.debug("Referred item is an Assembly")
+                    # Location vector is carried by component
+                    aLoc = TopLoc_Location()
+                    aLoc = self.shape_tool.GetLocation(c_label)
+                    self.assy_loc_stack.append(aLoc)
+                    self.assy_entry_stack.append(ref_entry)
+                    self.tree_view_item_dict[ref_entry] = item
+                    self.assy_list.append(c_uid)
+                    r_comps = TDF_LabelSequence() # Components of Assy
+                    subchilds = False
+                    isAssy = self.shape_tool.GetComponents(ref_label, r_comps, subchilds)
+                    logger.debug("Assy name: %s", ref_name)
+                    logger.debug("Is Assembly? %s", isAssy)
+                    logger.debug("Number of components: %s", r_comps.Length())
+                    if r_comps.Length():
+                        logger.debug("")
+                        logger.debug("Parsing components of label entry %s)",
+                                     ref_entry)
+                        self.parse_components(r_comps, shape_tool, color_tool, new_tree)
             else:
                 print("I was wrong: All components are *not* references.")
         self.assy_entry_stack.pop()
@@ -954,6 +954,8 @@ class MainWindow(QMainWindow):
         if status == IFSelect_RetDone:
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(tmodel.doc)
+        self.doc = tmodel.doc
+        '''
         # Get root label of step data
         labels = TDF_LabelSequence()
         step_shape_tool.GetShapes(labels)
@@ -966,6 +968,7 @@ class MainWindow(QMainWindow):
             return
         # Repair self.doc by cycling through save/load
         self.doc_linter()
+        '''
         # Build new self.part_dict & tree view
         self.parse_doc(tree=True)
         self.drawAll()
