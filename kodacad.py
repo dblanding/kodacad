@@ -24,6 +24,7 @@
 
 import logging
 import math
+import pprint
 import sys
 from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
 from PyQt5.QtGui import QIcon, QPixmap
@@ -771,7 +772,7 @@ def fillet(event=None):
             mkFillet.Add(filletR, edge)
         try:
             newPart = mkFillet.Shape()
-            win.getNewPartUID(newPart, ancestor=wrkPrtUID)
+            win.replaceShape(newPart)
             win.statusBar().showMessage('Fillet operation complete')
         except RuntimeError as e:
             print(f"Unable to make Fillet. {e}")
@@ -845,6 +846,9 @@ def shellC(shapeList, *args):  # callback (collector) for shell
 #
 #############################################
 
+def print_uid_dict():
+    pprint.pprint(win.uid_dict)
+
 def dumpDoc():
     sa = stepanalyzer.StepAnalyzer(document=win.doc)
     dumpdata = sa.dump()
@@ -868,11 +872,10 @@ def printCurrUID():
 
 def printActiveAsyInfo():
     uid = win.activeAsyUID
-    label = win._labelDict[uid]
     try:
-        name = label.GetLabelName()
-    except AttributeError:
-        name = "Error getting name of Active assembly"
+        name = win.uid_dict[uid]['name']
+    except KeyError:
+        name = None
     print(f"Active Assembly Name: {name} \t UID: {uid}")
 
 def printActiveWpInfo():
@@ -881,7 +884,10 @@ def printActiveWpInfo():
 
 def printActivePartInfo():
     uid = win.activePartUID
-    name = win._nameDict.get(uid)
+    try:
+        name = win.uid_dict[uid]['name']
+    except KeyError:
+        name = None
     print(f"Active Part Name: {name} \t UID: {uid}")
 
 def printPartsInActiveAssy():
@@ -952,6 +958,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Modify Active Part', "Shell", shell)
     win.add_function_to_menu('Modify Active Part', "Fuse", fuse)
     win.add_menu('Utility')
+    win.add_function_to_menu('Utility', "print uid_dict", print_uid_dict)
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "parse doc", parseDoc)
     win.add_function_to_menu('Utility', "add box", addBox)

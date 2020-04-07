@@ -70,7 +70,7 @@ print("OCC version: %s" % VERSION)
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG) # set to DEBUG | INFO | ERROR
+logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
 
 
 class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
@@ -227,8 +227,9 @@ class MainWindow(QMainWindow):
         self.activePart = None  # <TopoDS_Shape> object
         self.activePartUID = 0
         self.part_dict = {}     # k = uid, v = part_data_dict
+        self.uid_dict = {}  # {uid: {keys: 'entry', 'name', 'ref_entry'}}
         self.transparency_dict = {}  # k = uid, v = part display transparency
-        self.ancestor_dict = defaultdict(list)  # k = uid, v = [list of ancestorUIDs]
+        self.ancestor_dict = defaultdict(list)  # k = entry, v = [list of ancestorUIDs]
 
         self.activeWp = None    # WorkPlane object
         self.activeWpUID = 0
@@ -411,12 +412,9 @@ class MainWindow(QMainWindow):
         if item:
             name = item.text(0)
             uid = item.text(1)
-            sa = stepanalyzer.StepAnalyzer(document=self.doc)
-            dumpdata = sa.dump()
-            lines = dumpdata.split('\n')
-            for line in lines:
-                if uid in line:
-                    print(line)
+            entry = self.uid_dict[uid]['entry']
+            ref_ent = self.uid_dict[uid]['ref_entry']
+            print(f"uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
 
     def setClickedActive(self):
         """Set item clicked in treeView Active."""
@@ -620,18 +618,19 @@ class MainWindow(QMainWindow):
         nbr = labels.Length()  # number of labels at root
         logger.debug('Number of labels at doc root : %i', nbr)
         # Get root label information
+        # First label at root holds an assembly & it is the Top Assy.
+        # Through this label, the entire assembly is accessible.
+        # There is no need to explicitly examine other labels at root.
         root_name = root_label.GetLabelName()
         root_entry = root_label.EntryDumpToString()
         root_uid = self.get_uid_from_entry(root_entry)
         parent_item = self.assy_root
-        # First label at root holds an assembly & it is the Top Assy.
-        # Through this label, the entire assembly is accessible.
-        # There is no need to explicitly examine other labels at root.
-
         loc = shape_tool.GetLocation(root_label)  # <TopLoc_Location>
         self.assy_loc_stack.append(loc)
         self.assy_entry_stack.append(root_entry)
-
+        self.uid_dict = {root_uid: {'entry': root_entry,
+                                    'name': root_name,
+                                    'ref_entry': None}}
         if new_tree:
             # create node in tree view
             item_name = [root_name, root_uid]
@@ -682,10 +681,12 @@ class MainWindow(QMainWindow):
             ref_label = TDF_Label()  # label of referred shape (or assembly)
             is_ref = shape_tool.GetReferredShape(c_label, ref_label)
             if is_ref:  # I think all components are references
-                ref_entry = ref_label.EntryDumpToString()
-                ref_uid = self.get_uid_from_entry(ref_entry)
                 ref_name = ref_label.GetLabelName()
                 ref_shape = shape_tool.GetShape(ref_label)
+                ref_entry = ref_label.EntryDumpToString()
+                self.uid_dict[c_uid] = {'entry': c_entry,
+                                        'name': c_name,
+                                        'ref_entry': ref_entry}
                 if shape_tool.IsSimpleShape(ref_label):
                     temp_assy_loc_stack = list(self.assy_loc_stack)
                     temp_assy_loc_stack.reverse()
@@ -719,7 +720,7 @@ class MainWindow(QMainWindow):
                                      ref_entry)
                         self.parse_components(r_comps, shape_tool, color_tool, new_tree)
             else:
-                print("I was wrong: All components are *not* references.")
+                print(f"I was wrong: All components are *not* references {c_uid}")
         self.assy_entry_stack.pop()
         self.assy_loc_stack.pop()
 
@@ -1034,18 +1035,21 @@ class MainWindow(QMainWindow):
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
 
-    def replaceShape(self, uid, shape):
-        """Replace (in self.doc) ancestor shape with modified shape."""
-        color = self.default_color
+    def replaceShape(self, modshape):
+        """Replace active part shape with modified shape."""
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        # Get referrred label and apply color to it
-        refLabel = TDF_Label()  # label of referred shape
-        isRef = shape_tool.GetReferredShape(label, refLabel)
-        if isRef:
-            #color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
-            shape_tool.SetShape(refLabel, shape)
-            shape_tool.UpdateAssemblies()
+        # get ancestor label, entry & shape
+        n = int(self.uid_dict[self.activePartUID]['ref_entry'].split(':')[-1])
+        labels = TDF_LabelSequence()
+        shape_tool.GetShapes(labels)
+        ancestor_label = labels.Value(n) # label of ancestor shape
+        ancestor_entry = ancestor_label.EntryDumpToString()
+        ancestor_shape = shape_tool.GetShape(ancestor_label)
+        # Todo: Save record of shapes in ancestor_dict
+        # Replace shape in self.doc
+        shape_tool.SetShape(ancestor_label, modshape)
+        shape_tool.UpdateAssemblies()
 
     def addComponent(self, shape, name, color):
         """Add new shape to top assembly of self.doc."""
