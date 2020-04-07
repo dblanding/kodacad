@@ -227,10 +227,8 @@ class MainWindow(QMainWindow):
         self.activePart = None  # <TopoDS_Shape> object
         self.activePartUID = 0
         self.part_dict = {}     # k = uid, v = part_data_dict
-        self._nameDict = {}     # k = uid, v = partName
-        self._colorDict = {}    # k = uid, v = part display color
-        self._transparencyDict = {}  # k = uid, v = part display transparency
-        self._ancestorDict = defaultdict(list)  # k = uid, v = [list of ancestorUIDs]
+        self.transparency_dict = {}  # k = uid, v = part display transparency
+        self.ancestor_dict = defaultdict(list)  # k = uid, v = [list of ancestorUIDs]
 
         self.activeWp = None    # WorkPlane object
         self.activeWpUID = 0
@@ -475,7 +473,7 @@ class MainWindow(QMainWindow):
         if item:
             uid = item.text(1)
             if uid in self.part_dict:
-                self._transparencyDict[uid] = 0.6
+                self.transparency_dict[uid] = 0.6
                 self.redraw()
             self.itemClicked = None
 
@@ -484,7 +482,7 @@ class MainWindow(QMainWindow):
         if item:
             uid = item.text(1)
             if uid in self.part_dict:
-                self._transparencyDict.pop(uid)
+                self.transparency_dict.pop(uid)
                 self.redraw()
             self.itemClicked = None
 
@@ -863,8 +861,8 @@ class MainWindow(QMainWindow):
         context.RemoveAll(True)
         for uid in self.part_dict:
             if uid in self.draw_list:
-                if uid in self._transparencyDict:
-                    transp = self._transparencyDict[uid]
+                if uid in self.transparency_dict:
+                    transp = self.transparency_dict[uid]
                 else:
                     transp = 0.0
                 part_data = self.part_dict[uid]
@@ -974,6 +972,50 @@ class MainWindow(QMainWindow):
         self.drawAll()
         self.fitAll()
 
+    def loadStepTwo(self):
+        """Get OCAF document from STEP file and 'paste' onto label2"""
+
+        prompt = 'Select STEP file to import'
+        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
+                                                 "STEP files (*.stp *.STP *.step)")
+        fname, _ = fnametuple
+        logger.debug("Load file name: %s", fname)
+        if not fname:
+            print("Load step cancelled")
+            return
+        tmodel = TreeModel("DOC")
+        step_shape_tool = tmodel.shape_tool
+        step_color_tool = tmodel.color_tool
+
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
+        # Get root label of step data
+        step_labels = TDF_LabelSequence()
+        step_shape_tool.GetShapes(step_labels)
+        steprootLabel = step_labels.Value(1)
+        # Get target label
+        labels = TDF_LabelSequence()
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        shape_tool.GetShapes(labels)
+        targetLabel = labels.Value(2)
+        self.copy_label(steprootLabel, targetLabel)
+        self.shape_tool.UpdateAssemblies()
+        # Repair self.doc by cycling through save/load
+        self.doc_linter()
+        # Build new self.part_dict & tree view
+        self.parse_doc(tree=True)
+        self.drawAll()
+        self.fitAll()
+
     def saveStepActPrt(self):
         prompt = 'Choose filename for step file.'
         fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
@@ -994,14 +1036,14 @@ class MainWindow(QMainWindow):
 
     def replaceShape(self, uid, shape):
         """Replace (in self.doc) ancestor shape with modified shape."""
-        color = self._colorDict[uid]
+        color = self.default_color
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         # Get referrred label and apply color to it
         refLabel = TDF_Label()  # label of referred shape
         isRef = shape_tool.GetReferredShape(label, refLabel)
         if isRef:
-            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
+            #color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
             shape_tool.SetShape(refLabel, shape)
             shape_tool.UpdateAssemblies()
 
@@ -1023,6 +1065,27 @@ class MainWindow(QMainWindow):
         if isRef:
             color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
         self.setLabelName(newLabel, name)
+        logger.info('Part %s added to root label', name)
+        shape_tool.UpdateAssemblies()
+        self.doc_linter()  # This gets color to work
+        self.parse_doc(tree=True)
+        self.syncDrawListToChecked()
+
+    def add2RodAy(self, shape, name, color):
+        """Add shape as a component of label whose entry is 0:1:1:2."""
+        labels = TDF_LabelSequence()
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        shape_tool.GetShapes(labels)
+        targetLabel = labels.Value(2) # second label at root
+        newLabel = shape_tool.AddComponent(targetLabel, shape, True)
+        # Get referrred label and apply color to it
+        refLabel = TDF_Label()  # label of referred shape
+        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
+        if isRef:
+            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
+        self.setLabelName(newLabel, name)
+        self.setLabelName(refLabel, 'BOX')
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
         self.doc_linter()  # This gets color to work

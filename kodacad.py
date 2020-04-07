@@ -853,6 +853,13 @@ def dumpDoc():
 def parseDoc():
     win.parse_doc(tree=True)
 
+def addBox():
+    """Test: add box to a non-root label"""
+    name = 'box_1'
+    myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
+    win.add2RodAy(myBody, name, win.default_color)
+    win.redraw()
+
 def topoDumpAP():
     Topology.dumpTopology(win.activePart)
 
@@ -947,6 +954,8 @@ if __name__ == '__main__':
     win.add_menu('Utility')
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "parse doc", parseDoc)
+    win.add_function_to_menu('Utility', "add box", addBox)
+    win.add_function_to_menu('Utility', "Load Step2", win.loadStepTwo)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(current UID)", printCurrUID)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
