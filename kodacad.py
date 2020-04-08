@@ -621,6 +621,7 @@ def extrude():
         myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(),
                                        aPrismVec).Shape()
         win.addComponent(myBody, name, win.default_color)
+        win.redraw()
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
     else:
@@ -650,6 +651,7 @@ def revolve():
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
         myBody = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
         win.addComponent(myBody, name, win.default_color)
+        win.redraw()
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
     else:
@@ -712,7 +714,7 @@ def mill():
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(),
                                        aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
-        uid = win.getNewPartUID(newPart, ancestor=wrkPrtUID)
+        win.replaceShape(newPart)
         win.statusBar().showMessage('Mill operation complete')
         win.clearCallback()
     else:
@@ -743,7 +745,7 @@ def pull():
         tool = BRepPrimAPI_MakePrism(pullProfile.Shape(),
                                        aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
-        uid = win.getNewPartUID(newPart, ancestor=wrkPrtUID)
+        win.replaceShape(newPart)
         win.statusBar().showMessage('Pull operation complete')
         win.clearCallback()
     else:
@@ -810,7 +812,7 @@ def fuse():
         workpart = win.activePart
         wrkPrtUID = win.activePartUID
         newPart = BRepAlgoAPI_Fuse(workpart, shape).Shape()
-        win.getNewPartUID(newPart, ancestor=wrkPrtUID)
+        win.replaceShape(newPart)
         win.statusBar().showMessage('Fuse operation complete')
         win.clearCallback()
     else:
@@ -835,7 +837,7 @@ def shell(event=None):
         wrkPrtUID = win.activePartUID
         shellT = float(text) * win.unitscale
         newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.e-3).Shape()
-        win.getNewPartUID(newPart, ancestor=wrkPrtUID)
+        win.replaceShape(newPart)
         win.statusBar().showMessage('Shell operation complete')
         win.clearCallback()
     else:
