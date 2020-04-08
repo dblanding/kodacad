@@ -759,11 +759,23 @@ def pullC(shapeList, *args):
 
 def fillet(event=None):
     if (win.lineEditStack and win.edgeStack):
+        topo = Topology.Topo(win.activePart)
         text = win.lineEditStack.pop()
         filletR = float(text) * win.unitscale
         edges = []
+        # Test if edge(s) selected are in active part
         for edge in win.edgeStack:
-            edges.append(edge)
+            try:
+                if edge in topo.edges():
+                    edges.append(edge)
+                else:
+                    print("Selected edge(s) must be in Active Part.")
+                    win.clearCallback()
+                    return
+            except ValueError:
+                print("You must first set the Active Part.")
+                win.clearCallback()
+                return
         win.edgeStack = []
         workPart = win.activePart
         wrkPrtUID = win.activePartUID
@@ -902,8 +914,8 @@ def printPartsInActiveAssy():
 def printActPart():
     uid = win.activePartUID
     if uid:
-        name = win._nameDict[uid]
-        print("Active Part: %s [uid=%i]" % (name, int(uid)))
+        name = win.uid_dict[uid]['name']
+        print(f"Active Part: {name} [{uid}]")
     else:
         print(None)
 

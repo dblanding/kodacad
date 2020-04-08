@@ -213,9 +213,7 @@ class MainWindow(QMainWindow):
         status.addPermanentWidget(self.unitsLabel)
         status.showMessage("Ready", 5000)
 
-        self._currentUID = 0
         self.draw_list = []     # list of part uid's to be displayed
-        self.hide_list = []     # list of uid's
         self.floatStack = []    # storage stack for floating point values
         self.xyPtStack = []     # storage stack for 2d points (x, y)
         self.ptStack = []       # storage stack for gp_Pnts
@@ -226,10 +224,10 @@ class MainWindow(QMainWindow):
 
         self.activePart = None  # <TopoDS_Shape> object
         self.activePartUID = 0
-        self.part_dict = {}     # k = uid, v = part_data_dict
-        self.uid_dict = {}  # {uid: {keys: 'entry', 'name', 'ref_entry'}}
-        self.transparency_dict = {}  # k = uid, v = part display transparency
-        self.ancestor_dict = defaultdict(list)  # k = entry, v = [list of ancestorUIDs]
+        self.part_dict = {}     # {uid: {dict w/ keys: 'shape', 'name', 'color'}
+        self.uid_dict = {}      # {uid: {dict w/ keys: 'entry', 'name', 'ref_entry'}}
+        self.transparency_dict = {}  # {uid: part display transparency}
+        self.ancestor_dict = defaultdict(list)  # {uid: [list of ancestor shapes]}
 
         self.activeWp = None    # WorkPlane object
         self.activeWpUID = 0
@@ -239,7 +237,7 @@ class MainWindow(QMainWindow):
         self.activeAsyUID = 0
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
-        self.createDoc()   # <class 'OCC.Core.TDocStd.TDocStd_Document'>
+        self.createDoc()        # <class 'OCC.Core.TDocStd.TDocStd_Document'>
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
         self.default_color = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)
 
@@ -583,14 +581,14 @@ class MainWindow(QMainWindow):
         return entry + '.' + str(value)
 
     def parse_doc(self, tree=None):
-        """Parse self.doc, generate new part_dict & new tree view items.
+        """Generate new part_dict, uid_dict (& optional) tree view items.
 
         self.doc is the data model containing both the 3D shapes and the
-        assembly structure. By calling this function whenever self.doc is
-        modified, a new self.part_dict is generated and (optionally) the
-        tree view is updated. If, for example, a part is being modified
-        (its 3D config or its name or color), it would not be neccesary to
-        update the tree view."""
+        assembly structure. This function reads self.doc and generates new
+        updated versions of self.part_dict, self.uid_dict and (optionally)
+        the tree view. If, for example, a part shape is being modified (or
+        its name or color), there would be no need to update the tree view.
+        """
 
         new_tree = True
         if tree is None:
@@ -706,7 +704,8 @@ class MainWindow(QMainWindow):
                     aLoc = self.shape_tool.GetLocation(c_label)
                     self.assy_loc_stack.append(aLoc)
                     self.assy_entry_stack.append(ref_entry)
-                    self.tree_view_item_dict[ref_entry] = item
+                    if new_tree:
+                        self.tree_view_item_dict[ref_entry] = item
                     self.assy_list.append(c_uid)
                     r_comps = TDF_LabelSequence() # Components of Assy
                     subchilds = False
@@ -737,7 +736,7 @@ class MainWindow(QMainWindow):
         """Change active part status in coordinated manner."""
         # modify status in self
         self.activePartUID = uid
-        self.activePart = self.part_dict[uid]
+        self.activePart = self.part_dict[uid]['shape']
         # show as active in treeView
         self.showItemActive(uid)
 
@@ -895,7 +894,7 @@ class MainWindow(QMainWindow):
         self.eraseAll()
         uid = self.activePartUID
         self.draw_list.append(uid)
-        self.canva._display.DisplayShape(self.part_dict[uid])
+        self.canva._display.DisplayShape(self.part_dict[uid]['shape'])
         self.syncCheckedToDrawList()
         self.redraw()
 
@@ -1037,19 +1036,23 @@ class MainWindow(QMainWindow):
 
     def replaceShape(self, modshape):
         """Replace active part shape with modified shape."""
+        oldshape = self.activePart
+        uid = self.activePartUID
+        # Save oldshape to ancestorDict
+        self.ancestor_dict[uid].append(oldshape)
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        # get ancestor label, entry & shape
-        n = int(self.uid_dict[self.activePartUID]['ref_entry'].split(':')[-1])
+        # shape is stored at label entry '0:1:1:n'
+        n = int(self.uid_dict[uid]['ref_entry'].split(':')[-1])
         labels = TDF_LabelSequence()
         shape_tool.GetShapes(labels)
-        ancestor_label = labels.Value(n) # label of ancestor shape
-        ancestor_entry = ancestor_label.EntryDumpToString()
-        ancestor_shape = shape_tool.GetShape(ancestor_label)
-        # Todo: Save record of shapes in ancestor_dict
-        # Replace shape in self.doc
-        shape_tool.SetShape(ancestor_label, modshape)
+        label = labels.Value(n)  # nth label at root
+        # Replace oldshape in self.doc
+        shape_tool.SetShape(label, modshape)
         shape_tool.UpdateAssemblies()
+        self.parse_doc()  # generate new part_dict
+        self.setActivePart(uid)  # Refresh shape in self.activePart
+        self.redraw()
 
     def addComponent(self, shape, name, color):
         """Add new shape to top assembly of self.doc."""
@@ -1074,6 +1077,10 @@ class MainWindow(QMainWindow):
         self.doc_linter()  # This gets color to work
         self.parse_doc(tree=True)
         self.syncDrawListToChecked()
+        # Get uid of new component and set active
+        entry = newLabel.EntryDumpToString()
+        uid = entry + '.0'  # this is ind of lame
+        self.setActivePart(uid)
 
     def add2RodAy(self, shape, name, color):
         """Add shape as a component of label whose entry is 0:1:1:2."""
