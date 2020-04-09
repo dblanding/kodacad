@@ -371,7 +371,7 @@ class MainWindow(QMainWindow):
         """Returns list of uid's of checked (part) items in treeView"""
         dl = []
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-            if item.checkState(0) == 2:
+            if item.checkState(0) == Qt.Checked:
                 uid = item.text(1)
                 if (uid in self.part_dict) or (uid in self.wp_dict):
                     dl.append(uid)
@@ -1090,10 +1090,10 @@ class MainWindow(QMainWindow):
         shape_tool.UpdateAssemblies()
         self.doc_linter()  # This gets color to work
         self.parse_doc(tree=True)
-        self.syncDrawListToChecked()
-        # Get uid of new component and set active
+        # Get uid of new component, add to drawlist and set active
         entry = newLabel.EntryDumpToString()
-        uid = entry + '.0'  # this is ind of lame
+        uid = entry + '.0'  # this is sort of lame
+        self.drawAddPart(uid)
         self.setActivePart(uid)
 
     def add2RodAy(self, shape, name, color):
