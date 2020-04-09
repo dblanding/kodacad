@@ -84,9 +84,8 @@ class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
     sync. There are some moves that need to be prohibited, such as moving an
     item into a child relationship with an item that is not an assembly.
     Currently, 'drag and drop' changes in the GUI are not propagated to the
-    XCAF data model.
-    IDEA: As an alternative to 'drag & drop', consider adding an option to
-    the RMB pop-up to change the parent of a QTreeWidgetItem.
+    XCAF data model. As an alternative to 'drag & drop', consider adding an
+    option to the RMB pop-up to change the parent of a QTreeWidgetItem.
     """
 
     def __init__(self, parent=None):
@@ -152,6 +151,21 @@ class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
         return True
 
 class MainWindow(QMainWindow):
+    """Main GUI window containing a tree view of assy/parts and a 3D display.
+
+    self.doc holds the 3D CAD model in OCAF TDocStd_Document format.
+    It is read by parse_doc and parse_components methods, generating the
+    items in the tree view and building uid_dict and part_dict to store the
+    data with more convenient access.
+    Each tree view item represents a label in the OCAF document and has a uid
+    comprising the label entry appended with a '.' and an integer. The integer
+    is needed to make it unique (allowing to distinguish between different
+    instances of shared data).
+    The tree view represents the hierarchical structure of the top assembly
+    and its components. Each componenent refers to a label at the root level
+    which is either a part or another assembly.
+    """
+
     def __init__(self, *args):
         super().__init__()
         self.canva = qtDisplay.qtViewer3d(self)
