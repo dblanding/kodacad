@@ -941,8 +941,11 @@ class MainWindow(QMainWindow):
         copy_label.Perform()
         return copy_label.IsDone()
 
-    def loadStep(self):
-        """Get OCAF document from STEP file and 'paste' onto win.doc"""
+    def loadStepAtRoot(self):
+        """Get OCAF document from STEP file and assign it to win.doc.
+
+        This works as a surrogate for loading a CAD project that has previously
+        been saved as a STEP file."""
 
         prompt = 'Select STEP file to import'
         fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
@@ -967,7 +970,38 @@ class MainWindow(QMainWindow):
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(tmodel.doc)
         self.doc = tmodel.doc
-        '''
+        # Build new self.part_dict & tree view
+        self.parse_doc(tree=True)
+        self.drawAll()
+        self.fitAll()
+
+    def loadStep(self):
+        """Get OCAF document from STEP file and 'paste' onto win.doc
+
+        Todo: Get this working."""
+
+        prompt = 'Select STEP file to import'
+        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
+                                                 "STEP files (*.stp *.STP *.step)")
+        fname, _ = fnametuple
+        logger.debug("Load file name: %s", fname)
+        if not fname:
+            print("Load step cancelled")
+            return
+        tmodel = TreeModel("DOC")
+        step_shape_tool = tmodel.shape_tool
+        step_color_tool = tmodel.color_tool
+
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
         # Get root label of step data
         labels = TDF_LabelSequence()
         step_shape_tool.GetShapes(labels)
@@ -980,14 +1014,18 @@ class MainWindow(QMainWindow):
             return
         # Repair self.doc by cycling through save/load
         self.doc_linter()
-        '''
         # Build new self.part_dict & tree view
         self.parse_doc(tree=True)
         self.drawAll()
         self.fitAll()
 
     def loadStepTwo(self):
-        """Get OCAF document from STEP file and 'paste' onto label2"""
+        """Get OCAF document from STEP file and 'paste' onto 0:1:1:1:1
+
+        First create a box, resulting in box component at first label under root.
+        Then run this to see if the step file being loaded replaces the box.
+        Doesn't work. The name 'Box' of [0:1:1:1:1] is changed to the name of
+        the step root assembly, but the referred shape is unchanged."""
 
         prompt = 'Select STEP file to import'
         fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
@@ -1015,13 +1053,19 @@ class MainWindow(QMainWindow):
         step_labels = TDF_LabelSequence()
         step_shape_tool.GetShapes(step_labels)
         steprootLabel = step_labels.Value(1)
-        # Get target label
+        # Get target label of self.doc
         labels = TDF_LabelSequence()
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         shape_tool.GetShapes(labels)
-        targetLabel = labels.Value(2)
-        self.copy_label(steprootLabel, targetLabel)
+        rootLabel = labels.Value(1)
+        # Get first component label under rootLabel
+        root_comps = TDF_LabelSequence() # Components of rootLabel
+        subchilds = False
+        is_assy = shape_tool.GetComponents(rootLabel, root_comps, subchilds)
+        if is_assy:
+            targetLabel = root_comps.Value(1)  # forst label under root
+            self.copy_label(steprootLabel, targetLabel)
         self.shape_tool.UpdateAssemblies()
         # Repair self.doc by cycling through save/load
         self.doc_linter()
