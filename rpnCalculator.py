@@ -24,7 +24,7 @@
 
 import math
 import sys
-from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QToolButton, QDialog, QGridLayout,
                              QLineEdit, QLayout, QSizePolicy)
 
@@ -58,7 +58,7 @@ class Calculator(QDialog):
         super(Calculator, self).__init__(parent)
         self.caller = parent
         self.setWindowTitle("RPN Calculator")
-    
+
         self.x = 0
         self.y = 0
         self.z = 0
@@ -149,7 +149,7 @@ class Calculator(QDialog):
                   clr=mygold, colspan=8)
         self.butn('Sqrt x', 10, 24, lambda state, op='math.sqrt(x)': self.func(op), clr=mygold)
         self.butn('y^x', 10, 30, lambda state, op='y**x': self.func(op), clr=mygold)
-        
+
         self.butn('Dist', 11, 0, self.caller.distPtPt, clr=mygray, colspan=8)
         self.butn('Len', 11, 8, self.caller.edgeLen, clr=mygray, colspan=8)
         self.butn('Rad', 11, 16, self.noop, clr=mygray, colspan=8)
@@ -166,7 +166,7 @@ class Calculator(QDialog):
 
     def display(self):
         d = QLineEdit('0')
-        d.setAlignment(QtCore.Qt.AlignRight)
+        d.setAlignment(Qt.AlignRight)
         d.setMaxLength(18)
         font = d.font()
         font.setPointSize(font.pointSize() + 2)

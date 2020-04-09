@@ -23,7 +23,8 @@
 
 from collections import defaultdict
 import logging
-import os, os.path
+import os
+import os.path
 import sys
 from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QBrush, QColor
@@ -63,7 +64,6 @@ used_backend = OCC.Display.backend.load_backend()
 from OCC import VERSION
 import myDisplay.qtDisplay as qtDisplay
 import rpnCalculator
-import stepanalyzer
 from treemodel import TreeModel
 from version import APP_VERSION
 print("OCC version: %s" % VERSION)
@@ -186,8 +186,6 @@ class MainWindow(QMainWindow):
         self.wgToolBar = QToolBar("2D")  # Geom Profile toolbar
         self.addToolBar(Qt.RightToolBarArea, self.wgToolBar)
         self.wgToolBar.setMovable(True)
-        if sys.platform == 'darwin':
-            QtGui.qt_mac_set_native_menubar(False)
         self.menu_bar = self.menuBar()
         self._menus = {}
         self._menu_methods = {}
@@ -251,7 +249,7 @@ class MainWindow(QMainWindow):
         self.activeAsyUID = 0
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
-        self.createDoc()        # <class 'OCC.Core.TDocStd.TDocStd_Document'>
+        self.doc, self.shape_tool, self.color_tool, self.rootLabel = self.createDoc()
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
         self.default_color = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)
 
@@ -273,10 +271,7 @@ class MainWindow(QMainWindow):
         # Create empty rootLabel entry = 0:1:1:1
         rootLabel = shape_tool.NewShape()
         self.setLabelName(rootLabel, "/")
-        self.doc = doc
-        self.rootLabel = rootLabel
-        self.shape_tool = shape_tool
-        self.color_tool = color_tool
+        return (doc, shape_tool, color_tool, rootLabel)
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)

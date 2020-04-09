@@ -30,19 +30,14 @@ from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
 from PyQt5.QtGui import QIcon, QPixmap
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
-from OCC.Core.BRepBuilderAPI import (BRepBuilderAPI_MakeEdge,
-                                     BRepBuilderAPI_MakeFace,
-                                     BRepBuilderAPI_MakeWire)
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace
 from OCC.Core.BRepFilletAPI import BRepFilletAPI_MakeFillet
 from OCC.Core.BRepPrimAPI import (BRepPrimAPI_MakeBox, BRepPrimAPI_MakePrism,
                                   BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeRevol)
 from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_MakeThickSolid
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
-from OCC.Core.TColgp import TColgp_Array1OfPnt
-from OCC.Core.TopAbs import TopAbs_EDGE
-from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopoDS import (TopoDS_Vertex, TopoDS_Edge,
-                             topods_Edge, topods_Face, topods_Vertex)
+from OCC.Core.TopoDS import (TopoDS_Vertex, topods_Edge,
+                             topods_Face, topods_Vertex)
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.TopTools import TopTools_ListOfShape
 from OCCUtils import Topology
@@ -548,7 +543,6 @@ def delCl():
     as type <AIS_InteractiveObject> but haven't figured out how to get
     the type <AIS_Line> (or the cline or Geom_Line that was used to make
     it)."""
-    wp = win.activeWp
     win.registerCallback(delClC)
     statusText = "Select a construction element to delete."
     win.statusBar().showMessage(statusText)
@@ -708,11 +702,10 @@ def mill():
             return
         wire = wp.wire
         workPart = win.activePart
-        wrkPrtUID = win.activePartUID
         punchProfile = BRepBuilderAPI_MakeFace(wire)
         aPrismVec = wp.wVec * -depth
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(),
-                                       aPrismVec).Shape()
+                                     aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
         win.replaceShape(newPart)
         win.statusBar().showMessage('Mill operation complete')
@@ -739,11 +732,10 @@ def pull():
             return
         wire = wp.wire
         workPart = win.activePart
-        wrkPrtUID = win.activePartUID
         pullProfile = BRepBuilderAPI_MakeFace(wire)
         aPrismVec = wp.wVec * length
         tool = BRepPrimAPI_MakePrism(pullProfile.Shape(),
-                                       aPrismVec).Shape()
+                                     aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
         win.replaceShape(newPart)
         win.statusBar().showMessage('Pull operation complete')
@@ -780,7 +772,6 @@ def fillet(event=None):
                 return
         win.edgeStack = []
         workPart = win.activePart
-        wrkPrtUID = win.activePartUID
         mkFillet = BRepFilletAPI_MakeFillet(workPart)
         for edge in edges:
             mkFillet.Add(filletR, edge)
@@ -810,7 +801,6 @@ def fuse():
     if win.shapeStack:
         shape = win.shapeStack.pop()
         workpart = win.activePart
-        wrkPrtUID = win.activePartUID
         newPart = BRepAlgoAPI_Fuse(workpart, shape).Shape()
         win.replaceShape(newPart)
         win.statusBar().showMessage('Fuse operation complete')
@@ -834,7 +824,6 @@ def shell(event=None):
             faces.Append(face)
         win.faceStack = []
         workPart = win.activePart
-        wrkPrtUID = win.activePartUID
         shellT = float(text) * win.unitscale
         newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.e-3).Shape()
         win.replaceShape(newPart)
@@ -879,10 +868,8 @@ def addBox():
     win.redraw()
 
 def topoDumpAP():
-    Topology.dumpTopology(win.activePart)
-
-def printCurrUID():
-    print(win._currentUID)
+    if win.activePart:
+        Topology.dumpTopology(win.activePart)
 
 def printActiveAsyInfo():
     uid = win.activeAsyUID
@@ -909,7 +896,7 @@ def printPartsInActiveAssy():
     leafNodes = win.treeModel.leaves(win.activeAsyUID)
     for node in leafNodes:
         pid = node.identifier
-        if pid in win._partDict:
+        if pid in win.part_dict:
             asyPrtTree.append(pid)
     print(asyPrtTree)
 
@@ -978,7 +965,6 @@ if __name__ == '__main__':
     win.add_function_to_menu('Utility', "add box", addBox)
     win.add_function_to_menu('Utility', "Load Step2", win.loadStepTwo)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
-    win.add_function_to_menu('Utility', "print(current UID)", printCurrUID)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
     win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)
     win.add_function_to_menu('Utility', "print(Active Asy Info)", printActiveAsyInfo)
