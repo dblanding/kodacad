@@ -236,8 +236,8 @@ class MainWindow(QMainWindow):
 
         self.activePart = None  # <TopoDS_Shape> object
         self.activePartUID = 0
-        self.part_dict = {}     # {uid: {dict w/ keys: 'shape', 'name', 'color'}
-        self.uid_dict = {}      # {uid: {dict w/ keys: 'entry', 'name', 'ref_entry'}}
+        self.part_dict = {}     # {uid: {dict keys: 'shape', 'name', 'color', 'loc'}}
+        self.uid_dict = {}      # {uid: {dict keys: 'entry', 'name', 'ref_entry'}}
         self.transparency_dict = {}  # {uid: part display transparency}
         self.ancestor_dict = defaultdict(list)  # {uid: [list of ancestor shapes]}
 
@@ -707,12 +707,24 @@ class MainWindow(QMainWindow):
                         c_shape.Move(res_loc)
                     else:
                         res_loc = None
+                    # It is possible for this component to both specify a
+                    # location 'c_loc' and refer directly to a top level shape.
+                    # If this component *does* specify a location 'c_loc',
+                    # it will be applied to the referred shape without being
+                    # included in temp_assy_loc_stack. But in order to keep
+                    # track of the total location from the root shape to the
+                    # instance, it needs to be accounted for (by mutiplying
+                    # res_loc by it) before saving it to part_dict.
+                    c_loc = None
+                    c_loc = self.shape_tool.GetLocation(c_label)
+                    if c_loc:
+                        loc = res_loc.Multiplied(c_loc)
                     color = Quantity_Color()
                     color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
                     self.part_dict[c_uid] = {'shape': c_shape,
                                              'color': color,
                                              'name': c_name,
-                                             'loc': res_loc}
+                                             'loc': loc}
                 elif self.shape_tool.IsAssembly(ref_label):
                     logger.debug("Referred item is an Assembly")
                     # Location vector is carried by component
@@ -1097,10 +1109,10 @@ class MainWindow(QMainWindow):
     def replaceShape(self, modshape):
         """Replace active part shape with modified shape.
 
-        The shape being modified is a located instance of a referred shape
-        at doc root. It is the referred shape at doc root that needs to be
-        modified, so the modified shape needs to be first 'un-moved' back
-        to the location of the referred shape, then saved."""
+        The active part is a located instance of a referred shape stored
+        at doc root. The user doesn't have access to this root shape. In order
+        to modify the referred shape, the instance shape is modified, then
+        moved back to the original location at doc root, then saved."""
         oldshape = self.activePart
         uid = self.activePartUID
         # Save oldshape to ancestorDict
@@ -1112,7 +1124,9 @@ class MainWindow(QMainWindow):
         labels = TDF_LabelSequence()
         shape_tool.GetShapes(labels)
         label = labels.Value(n)  # nth label at root
-        # If shape instance has been moved, 'unmove' it back where it started
+
+        # If shape instance was moved from its root location to its instance
+        # location, 'unmove' it to relocate it back to the root location.
         if self.part_dict[uid]['loc']:
             modshape.Move(self.part_dict[uid]['loc'].Inverted())
         # Replace oldshape in self.doc
