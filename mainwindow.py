@@ -613,7 +613,7 @@ class MainWindow(QMainWindow):
         # Temporary use during unpacking
         self.tree_view_item_dict = {'0:1:1': self.assy_root}  # {entry: item}
         self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
-        self.assy_loc_stack = []  # [applicable location vectors]
+        self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
 
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
@@ -1099,7 +1099,8 @@ class MainWindow(QMainWindow):
 
         The shape being modified is a located instance of a referred shape
         at doc root. It is the referred shape at doc root that needs to be
-        modified, so the modified instance needs to be first 'un-moved'."""
+        modified, so the modified shape needs to be first 'un-moved' back
+        to the location of the referred shape, then saved."""
         oldshape = self.activePart
         uid = self.activePartUID
         # Save oldshape to ancestorDict
