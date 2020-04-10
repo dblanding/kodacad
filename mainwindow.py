@@ -502,12 +502,34 @@ class MainWindow(QMainWindow):
                                                prompt, text=name)
             if OK:
                 item.setText(0, newName)
-                sbText = "Part name changed to %s" % newName
-                self._nameDict[uid] = newName
+                print(f"UID= {uid}, name = {newName}")
         self.treeView.clearSelection()
         self.itemClicked = None
-        # Todo: update name in treeModel
-        self.statusBar().showMessage(sbText, 5000)
+        self.set_label_name(uid, newName)
+
+    def set_label_name(self, uid, name):
+        """Change the name of component with uid."""
+        entry, _ = uid.split('.')
+        entry_parts = entry.split(':')
+        if len(entry_parts) == 4:  # first label at root
+            j = 1
+            k = None
+        elif len(entry_parts) == 5:  # part is a component of label at root
+            j = int(entry_parts[3])  # number of label at root
+            k = int(entry_parts[4])  # component number
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        labels = TDF_LabelSequence()  # labels at root of self.doc
+        shape_tool.GetShapes(labels)
+        label = labels.Value(j)
+        comps = TDF_LabelSequence()  # Components of root_label
+        subchilds = False
+        is_assy = shape_tool.GetComponents(label, comps, subchilds)
+        target_label = comps.Value(k)
+        self.setLabelName(target_label, name)
+        shape_tool.UpdateAssemblies()
+        print(f"Name {name} set for part with uid = {uid}.")
+        self.parse_doc(tree=True)
 
     #############################################
     #
