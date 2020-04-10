@@ -696,16 +696,23 @@ class MainWindow(QMainWindow):
                                         'ref_entry': ref_entry}
                 if shape_tool.IsSimpleShape(ref_label):
                     temp_assy_loc_stack = list(self.assy_loc_stack)
-                    temp_assy_loc_stack.reverse()
+                    # Multiply locations in stack sequentially to a result
+                    if len(temp_assy_loc_stack) > 1:
+                        res_loc = temp_assy_loc_stack.pop(0)
+                        for loc in temp_assy_loc_stack:
+                            res_loc = res_loc.Multiplied(loc)
+                        c_shape.Move(res_loc)
+                    elif len(temp_assy_loc_stack) == 1:
+                        res_loc = temp_assy_loc_stack.pop()
+                        c_shape.Move(res_loc)
+                    else:
+                        res_loc = None
                     color = Quantity_Color()
                     color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
-                    # Differentiate among parts with same entry values
-                    # by using uid = 'entry.serial_nmbr'
-                    for loc in temp_assy_loc_stack:
-                        c_shape.Move(loc)
                     self.part_dict[c_uid] = {'shape': c_shape,
                                              'color': color,
-                                             'name': c_name}
+                                             'name': c_name,
+                                             'loc': res_loc}
                 elif self.shape_tool.IsAssembly(ref_label):
                     logger.debug("Referred item is an Assembly")
                     # Location vector is carried by component
@@ -1088,7 +1095,11 @@ class MainWindow(QMainWindow):
         assert status == IFSelect_RetDone
 
     def replaceShape(self, modshape):
-        """Replace active part shape with modified shape."""
+        """Replace active part shape with modified shape.
+
+        The shape being modified is a located instance of a referred shape
+        at doc root. It is the referred shape at doc root that needs to be
+        modified, so the modified instance needs to be first 'un-moved'."""
         oldshape = self.activePart
         uid = self.activePartUID
         # Save oldshape to ancestorDict
@@ -1100,6 +1111,9 @@ class MainWindow(QMainWindow):
         labels = TDF_LabelSequence()
         shape_tool.GetShapes(labels)
         label = labels.Value(n)  # nth label at root
+        # If shape instance has been moved, 'unmove' it back where it started
+        if self.part_dict[uid]['loc']:
+            modshape.Move(self.part_dict[uid]['loc'].Inverted())
         # Replace oldshape in self.doc
         shape_tool.SetShape(label, modshape)
         shape_tool.UpdateAssemblies()
