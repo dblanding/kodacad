@@ -647,7 +647,7 @@ class MainWindow(QMainWindow):
         nbr = labels.Length()  # number of labels at root
         logger.debug('Number of labels at doc root : %i', nbr)
         # Get root label information
-        # First label at root holds an assembly & it is the Top Assy.
+        # If first label at root holds an assembly, it is the Top Assy.
         # Through this label, the entire assembly is accessible.
         # There is no need to explicitly examine other labels at root.
         root_name = root_label.GetLabelName()
@@ -673,10 +673,12 @@ class MainWindow(QMainWindow):
         top_comps = TDF_LabelSequence() # Components of Top Assy
         subchilds = False
         is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
-        if top_comps.Length():
+        if top_comps.Length():  # if is_assy:
             logger.debug("")
             logger.debug("Parsing components of label entry %s)", root_entry)
             self.parse_components(top_comps, shape_tool, color_tool, new_tree)
+        else:
+            print("Something is wrong.")
 
     def parse_components(self, comps, shape_tool, color_tool, new_tree):
         """Parse components from comps (LabelSequence).
@@ -1054,6 +1056,46 @@ class MainWindow(QMainWindow):
         self.parse_doc(tree=True)
         self.drawAll()
         self.fitAll()
+
+    def loadStep(self):
+        """Get OCAF document from STEP file and add (as component) to doc root.
+
+        This is the way to open step files containing a single shape at root."""
+
+        prompt = 'Select STEP file to import'
+        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
+                                                 "STEP files (*.stp *.STP *.step)")
+        fname, _ = fnametuple
+        logger.debug("Load file name: %s", fname)
+        if not fname:
+            print("Load step cancelled")
+            return
+        tmodel = TreeModel("DOC")
+        step_shape_tool = tmodel.shape_tool
+        step_color_tool = tmodel.color_tool
+
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
+        # Get root label of step data
+        labels = TDF_LabelSequence()
+        step_shape_tool.GetShapes(labels)
+        for j in range(labels.Length()):
+            label = labels.Value(j+1)
+            shape = step_shape_tool.GetShape(label)
+            color = Quantity_Color()
+            name = label.GetLabelName()
+            step_color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
+            isSimpleShape = step_shape_tool.IsSimpleShape(label)
+            if isSimpleShape:
+                self.addComponent(shape, name, color)
 
     def loadStepTwo(self):
         """Get OCAF document from STEP file and 'paste' onto 0:1:1:1:1

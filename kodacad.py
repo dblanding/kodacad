@@ -940,6 +940,7 @@ if __name__ == '__main__':
     win = MainWindow()
     win.add_menu('File')
     win.add_function_to_menu('File', "Load STEP (Doc)", win.loadStepAtRoot)
+    win.add_function_to_menu('File', "Load STEP", win.loadStep)
     win.add_function_to_menu('File', "Save STEP (Doc)", win.saveStepDoc)
     win.add_function_to_menu('File', "Save STEP (Act Prt)", win.saveStepActPrt)
     win.add_menu('Workplane')
