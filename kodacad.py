@@ -964,7 +964,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "parse doc", parseDoc)
     win.add_function_to_menu('Utility', "add box", addBox)
-    win.add_function_to_menu('Utility', "Load Step2", win.loadStepTwo)
+    win.add_function_to_menu('Utility', "Load Step @ 2", win.loadStepAt2)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
     win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)

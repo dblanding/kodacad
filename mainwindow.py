@@ -1014,50 +1014,6 @@ class MainWindow(QMainWindow):
         self.fitAll()
 
     def loadStep(self):
-        """Get OCAF document from STEP file and 'paste' onto win.doc
-
-        Todo: Get this working."""
-
-        prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        logger.debug("Load file name: %s", fname)
-        if not fname:
-            print("Load step cancelled")
-            return
-        tmodel = TreeModel("DOC")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
-
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-        # Get root label of step data
-        labels = TDF_LabelSequence()
-        step_shape_tool.GetShapes(labels)
-        try:
-            steprootLabel = labels.Value(1) # First label at root
-            self.copy_label(steprootLabel, self.rootLabel)
-            self.shape_tool.UpdateAssemblies()
-        except RuntimeError as e:
-            print(e)
-            return
-        # Repair self.doc by cycling through save/load
-        self.doc_linter()
-        # Build new self.part_dict & tree view
-        self.parse_doc(tree=True)
-        self.drawAll()
-        self.fitAll()
-
-    def loadStep(self):
         """Get OCAF document from STEP file and add (as component) to doc root.
 
         This is the way to open step files containing a single shape at root."""
@@ -1097,13 +1053,15 @@ class MainWindow(QMainWindow):
             if isSimpleShape:
                 self.addComponent(shape, name, color)
 
-    def loadStepTwo(self):
-        """Get OCAF document from STEP file and 'paste' onto 0:1:1:1:1
+    def loadStepAt2(self):
+        """Get OCAF document from STEP file and 'paste' root label onto 0:1:1:2
 
-        First create a box, resulting in box component at first label under root.
+        First create a box, resulting in a box component under doc root that
+        refers to the actual TopoDS_Shape at label 0:1:1:2.
         Then run this to see if the step file being loaded replaces the box.
-        Doesn't work. The name 'Box' of [0:1:1:1:1] is changed to the name of
-        the step root assembly, but the referred shape is unchanged."""
+        This actually worked! The name 'Box' at component 0:1:1:1:1 stayed the
+        same but the top assembly 'as1' of the step file 'as1-oc-214.stp' came
+        in starting at 0:1:1:2."""
 
         prompt = 'Select STEP file to import'
         fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
@@ -1133,17 +1091,12 @@ class MainWindow(QMainWindow):
         steprootLabel = step_labels.Value(1)
         # Get target label of self.doc
         labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        rootLabel = labels.Value(1)
-        # Get first component label under rootLabel
-        root_comps = TDF_LabelSequence() # Components of rootLabel
-        subchilds = False
-        is_assy = shape_tool.GetComponents(rootLabel, root_comps, subchilds)
-        if is_assy:
-            targetLabel = root_comps.Value(1)  # forst label under root
-            self.copy_label(steprootLabel, targetLabel)
+        shape_tool_1 = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool_1 = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        shape_tool_1.GetShapes(labels)
+        targetLabel = labels.Value(2)
+        # Copy source label to target label
+        self.copy_label(steprootLabel, targetLabel)
         self.shape_tool.UpdateAssemblies()
         # Repair self.doc by cycling through save/load
         self.doc_linter()
@@ -1227,27 +1180,6 @@ class MainWindow(QMainWindow):
         uid = entry + '.0'  # this is sort of lame
         self.drawAddPart(uid)
         self.setActivePart(uid)
-
-    def add2RodAy(self, shape, name, color):
-        """Add shape as a component of label whose entry is 0:1:1:2."""
-        labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        targetLabel = labels.Value(2) # second label at root
-        newLabel = shape_tool.AddComponent(targetLabel, shape, True)
-        # Get referrred label and apply color to it
-        refLabel = TDF_Label()  # label of referred shape
-        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
-        if isRef:
-            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
-        self.setLabelName(newLabel, name)
-        self.setLabelName(refLabel, 'BOX')
-        logger.info('Part %s added to root label', name)
-        shape_tool.UpdateAssemblies()
-        self.doc_linter()  # This gets color to work
-        self.parse_doc(tree=True)
-        self.syncDrawListToChecked()
 
     def getLabelName(self, label):
         return label.GetLabelName()
