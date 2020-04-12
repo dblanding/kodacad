@@ -36,6 +36,7 @@ from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
 from OCC.Core.AIS import AIS_Shape, AIS_Line, AIS_Circle
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
+from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.CPnts import CPnts_AbscissaPoint_Length
 from OCC.Core.gp import gp_Vec
 from OCC.Core.IFSelect import IFSelect_RetDone
@@ -558,18 +559,20 @@ class MainWindow(QMainWindow):
         self.syncCheckedToDrawList()
         return uid
 
-    def doc_linter(self):
+    def doc_linter(self, doc=None):
         """Clean self.doc by cycling through a save/load STEP cycle.
 
         Refresh: self.shape_tool, self.color_tool, self.rootLabel."""
 
+        if doc == None:
+            doc = self.doc
         # Create a file object to save to
         fname = "deleteme.txt"
         # Initialize STEP exporter
         WS = XSControl_WorkSession()
         step_writer = STEPCAFControl_Writer(WS, False)
         # Transfer shapes and write file
-        step_writer.Transfer(self.doc, STEPControl_AsIs)
+        step_writer.Transfer(doc, STEPControl_AsIs)
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
         # Create new TreeModel and read STEP data
@@ -585,16 +588,8 @@ class MainWindow(QMainWindow):
         if status == IFSelect_RetDone:
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(tmodel.doc)
-            self.doc = tmodel.doc
             os.remove(fname)
-        # Find root label of self.doc & save as self.rootLabel
-        labels = TDF_LabelSequence()
-        self.shape_tool.GetShapes(labels)
-        try:
-            self.rootLabel = labels.Value(1) # First label at root
-        except RuntimeError as e:
-            print(e)
-            return
+        return tmodel.doc
 
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry
@@ -1099,7 +1094,76 @@ class MainWindow(QMainWindow):
         self.copy_label(steprootLabel, targetLabel)
         self.shape_tool.UpdateAssemblies()
         # Repair self.doc by cycling through save/load
-        self.doc_linter()
+        self.doc = self.doc_linter()
+        # Build new self.part_dict & tree view
+        self.parse_doc(tree=True)
+        self.drawAll()
+        self.fitAll()
+
+    def loadStepAtEnd(self):
+        """Paste step root label onto last+1 label at self.doc root
+
+        Add a simple box component to the first label at self.doc root.
+        Set the component name to be the name of the step file.
+        Then assign the label of the referred shape to 'targetLabel'.
+        Finally, copy step root label onto 'targetLabel'.
+
+        This works when copying file 'as1-oc-214.stp' to 0:1:1:2 (n=2) but does
+        not get part color at higher values of n. Also doesn't work with file
+        'as1_pe_203.stp' loaded at any value of n. ???
+        """
+
+        prompt = 'Select STEP file to import'
+        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
+                                                 "STEP files (*.stp *.STP *.step)")
+        fname, _ = fnametuple  # /path/to/some/filename.ext
+        base = os.path.basename(fname)
+        filename, ext = os.path.splitext(base)
+        logger.debug("Load file name: %s", fname)
+        if not fname:
+            print("Load step cancelled")
+            return
+        # Get the step data
+        tmodel = TreeModel("STEP")
+        step_shape_tool = tmodel.shape_tool
+        step_color_tool = tmodel.color_tool
+
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
+        # Delint tmodel.doc & make new tools
+        step_doc = self.doc_linter(tmodel.doc)
+        step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
+        step_color_tool = XCAFDoc_DocumentTool_ColorTool(step_doc.Main())
+
+        # Get root label of step data
+        step_labels = TDF_LabelSequence()
+        step_shape_tool.GetShapes(step_labels)
+        steprootLabel = step_labels.Value(1)
+        # Make a simple box and add it as a component
+        myBody = BRepPrimAPI_MakeBox(4, 4, 4).Shape()
+        self.addComponent(myBody, filename, self.default_color)
+        step_shape_tool.UpdateAssemblies()
+        # Get target label of self.doc
+        labels = TDF_LabelSequence()
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        shape_tool.GetShapes(labels)
+        n = labels.Length()
+        print(n)
+        targetLabel = labels.Value(n)  # The last label (just added)
+        # Copy source label to target label
+        self.copy_label(steprootLabel, targetLabel)
+        shape_tool.UpdateAssemblies()
+        # Repair self.doc by cycling through save/load
+        self.doc = self.doc_linter()
         # Build new self.part_dict & tree view
         self.parse_doc(tree=True)
         self.drawAll()
@@ -1173,7 +1237,7 @@ class MainWindow(QMainWindow):
         self.setLabelName(newLabel, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
-        self.doc_linter()  # This gets color to work
+        self.doc = self.doc_linter()  # This gets color to work
         self.parse_doc(tree=True)
         # Get uid of new component, add to drawlist and set active
         entry = newLabel.EntryDumpToString()
