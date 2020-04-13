@@ -504,33 +504,9 @@ class MainWindow(QMainWindow):
             if OK:
                 item.setText(0, newName)
                 print(f"UID= {uid}, name = {newName}")
-        self.treeView.clearSelection()
-        self.itemClicked = None
-        self.set_label_name(uid, newName)
-
-    def set_label_name(self, uid, name):
-        """Change the name of component with uid."""
-        entry, _ = uid.split('.')
-        entry_parts = entry.split(':')
-        if len(entry_parts) == 4:  # first label at root
-            j = 1
-            k = None
-        elif len(entry_parts) == 5:  # part is a component of label at root
-            j = int(entry_parts[3])  # number of label at root
-            k = int(entry_parts[4])  # component number
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        labels = TDF_LabelSequence()  # labels at root of self.doc
-        shape_tool.GetShapes(labels)
-        label = labels.Value(j)
-        comps = TDF_LabelSequence()  # Components of root_label
-        subchilds = False
-        is_assy = shape_tool.GetComponents(label, comps, subchilds)
-        target_label = comps.Value(k)
-        self.setLabelName(target_label, name)
-        shape_tool.UpdateAssemblies()
-        print(f"Name {name} set for part with uid = {uid}.")
-        self.parse_doc(tree=True)
+                self.treeView.clearSelection()
+                self.itemClicked = None
+                self.change_label_name(uid, newName)
 
     #############################################
     #
@@ -558,185 +534,6 @@ class MainWindow(QMainWindow):
         self.draw_list.append(uid)
         self.syncCheckedToDrawList()
         return uid
-
-    def get_uid_from_entry(self, entry):
-        """Generate uid from label entry
-
-        In order to distinguish among multiple instances of shared data
-        a uid is comprised of 'entry.serial_number', starting with 0.
-        """
-        if entry in self._share_dict:
-            value = self._share_dict[entry]
-        else:
-            value = -1
-        value += 1
-        # update serial number in self._share_dict
-        self._share_dict[entry] = value
-        return entry + '.' + str(value)
-
-    def parse_doc(self, tree=None):
-        """Generate new part_dict, uid_dict (& optional) tree view items.
-
-        self.doc is the data model containing both the 3D shapes and the
-        assembly structure. This function reads self.doc and generates new
-        updated versions of self.part_dict, self.uid_dict and (optionally)
-        the tree view. If, for example, a part shape is being modified (or
-        its name or color), there would be no need to update the tree view.
-        """
-
-        new_tree = True
-        if tree is None:
-            new_tree = False
-        if new_tree:
-            # Remove all existing widget items from tree view
-            self.clearTree()
-        # Initialize self._share_dict
-        self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
-        self.assy_list = []  # assy uid's
-        # To be used by redraw()
-        self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
-        # Temporary use during unpacking
-        self.tree_view_item_dict = {'0:1:1': self.assy_root}  # {entry: item}
-        self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
-        self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
-
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-
-        # Find root label of self.doc
-        labels = TDF_LabelSequence()
-        shape_tool.GetShapes(labels)
-        root_label = labels.Value(1) # First label at root
-        nbr = labels.Length()  # number of labels at root
-        logger.debug('Number of labels at doc root : %i', nbr)
-        # Get root label information
-        # If first label at root holds an assembly, it is the Top Assy.
-        # Through this label, the entire assembly is accessible.
-        # There is no need to explicitly examine other labels at root.
-        root_name = root_label.GetLabelName()
-        root_entry = root_label.EntryDumpToString()
-        root_uid = self.get_uid_from_entry(root_entry)
-        parent_item = self.assy_root
-        loc = shape_tool.GetLocation(root_label)  # <TopLoc_Location>
-        self.assy_loc_stack.append(loc)
-        self.assy_entry_stack.append(root_entry)
-        self.uid_dict = {root_uid: {'entry': root_entry,
-                                    'name': root_name,
-                                    'ref_entry': None}}
-        if new_tree:
-            # create node in tree view
-            item_name = [root_name, root_uid]
-            item = QTreeWidgetItem(parent_item, item_name)
-            item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-            item.setCheckState(0, Qt.Checked)
-            self.treeView.expandItem(item)
-            self.tree_view_item_dict[root_entry] = item
-            self.assy_list.append(root_uid)
-
-        top_comps = TDF_LabelSequence() # Components of Top Assy
-        subchilds = False
-        is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
-        if top_comps.Length():  # if is_assy:
-            logger.debug("")
-            logger.debug("Parsing components of label entry %s)", root_entry)
-            self.parse_components(top_comps, shape_tool, color_tool, new_tree)
-        else:
-            print("Something is wrong.")
-
-    def parse_components(self, comps, shape_tool, color_tool, new_tree):
-        """Parse components from comps (LabelSequence).
-
-        Components of an assembly are, by definition, references which refer
-        to either a simple shape or a compound shape (an assembly).
-        Components are essentially 'instances' of the referred shape or assembly
-        and carry a location vector specifing the location of the referred
-        shape or assembly."""
-
-        for j in range(comps.Length()):
-            logger.debug("Assy_entry_stack: %s", self.assy_entry_stack)
-            logger.debug("loop %i of %i", j+1, comps.Length())
-            c_label = comps.Value(j+1)  # component label <class 'TDF_Label'>
-            c_name = c_label.GetLabelName()
-            c_entry = c_label.EntryDumpToString()
-            c_uid = self.get_uid_from_entry(c_entry)
-            c_shape = shape_tool.GetShape(c_label)
-            logger.debug("Component number %i", j+1)
-            logger.debug("Component name: %s", c_name)
-            logger.debug("Component entry: %s", c_entry)
-            if new_tree:
-                # create node in tree view
-                item_name = [c_name, c_uid]
-                parent = self.tree_view_item_dict[self.assy_entry_stack[-1]]
-                item = QTreeWidgetItem(parent, item_name)
-                item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-                item.setCheckState(0, Qt.Checked)
-                self.treeView.expandItem(item)
-                self.tree_view_item_dict[c_entry] = item
-            ref_label = TDF_Label()  # label of referred shape (or assembly)
-            is_ref = shape_tool.GetReferredShape(c_label, ref_label)
-            if is_ref:  # I think all components are references
-                ref_name = ref_label.GetLabelName()
-                ref_shape = shape_tool.GetShape(ref_label)
-                ref_entry = ref_label.EntryDumpToString()
-                self.uid_dict[c_uid] = {'entry': c_entry,
-                                        'name': c_name,
-                                        'ref_entry': ref_entry}
-                if shape_tool.IsSimpleShape(ref_label):
-                    temp_assy_loc_stack = list(self.assy_loc_stack)
-                    # Multiply locations in stack sequentially to a result
-                    if len(temp_assy_loc_stack) > 1:
-                        res_loc = temp_assy_loc_stack.pop(0)
-                        for loc in temp_assy_loc_stack:
-                            res_loc = res_loc.Multiplied(loc)
-                        c_shape.Move(res_loc)
-                    elif len(temp_assy_loc_stack) == 1:
-                        res_loc = temp_assy_loc_stack.pop()
-                        c_shape.Move(res_loc)
-                    else:
-                        res_loc = None
-                    # It is possible for this component to both specify a
-                    # location 'c_loc' and refer directly to a top level shape.
-                    # If this component *does* specify a location 'c_loc',
-                    # it will be applied to the referred shape without being
-                    # included in temp_assy_loc_stack. But in order to keep
-                    # track of the total location from the root shape to the
-                    # instance, it needs to be accounted for (by mutiplying
-                    # res_loc by it) before saving it to part_dict.
-                    c_loc = None
-                    c_loc = shape_tool.GetLocation(c_label)
-                    if c_loc:
-                        loc = res_loc.Multiplied(c_loc)
-                    color = Quantity_Color()
-                    color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
-                    self.part_dict[c_uid] = {'shape': c_shape,
-                                             'color': color,
-                                             'name': c_name,
-                                             'loc': loc}
-                elif shape_tool.IsAssembly(ref_label):
-                    logger.debug("Referred item is an Assembly")
-                    # Location vector is carried by component
-                    aLoc = TopLoc_Location()
-                    aLoc = shape_tool.GetLocation(c_label)
-                    self.assy_loc_stack.append(aLoc)
-                    self.assy_entry_stack.append(ref_entry)
-                    if new_tree:
-                        self.tree_view_item_dict[ref_entry] = item
-                    self.assy_list.append(c_uid)
-                    r_comps = TDF_LabelSequence() # Components of Assy
-                    subchilds = False
-                    isAssy = shape_tool.GetComponents(ref_label, r_comps, subchilds)
-                    logger.debug("Assy name: %s", ref_name)
-                    logger.debug("Is Assembly? %s", isAssy)
-                    logger.debug("Number of components: %s", r_comps.Length())
-                    if r_comps.Length():
-                        logger.debug("")
-                        logger.debug("Parsing components of label entry %s)",
-                                     ref_entry)
-                        self.parse_components(r_comps, shape_tool, color_tool, new_tree)
-            else:
-                print(f"I was wrong: All components are *not* references {c_uid}")
-        self.assy_entry_stack.pop()
-        self.assy_loc_stack.pop()
 
     def appendToStack(self):  # called when <ret> is pressed on line edit
         self.lineEditStack.append(self.lineEdit.text())
@@ -933,10 +730,244 @@ class MainWindow(QMainWindow):
 
     #############################################
     #
+    # 3D Measure functons...
+    #
+    #############################################
+
+    def launchCalc(self):
+        if not self.calculator:
+            self.calculator = rpnCalculator.Calculator(self)
+            self.calculator.show()
+
+    def setUnits(self, units):
+        if units in self._unitDict.keys():
+            self.units = units
+            self.unitscale = self._unitDict[self.units]
+            self.unitsLabel.setText("Units: %s " % self.units)
+
+    def distPtPt(self):
+        if len(self.ptStack) == 2:
+            p2 = self.ptStack.pop()
+            p1 = self.ptStack.pop()
+            vec = gp_Vec(p1, p2)
+            dist = vec.Magnitude()
+            dist = dist / self.unitscale
+            self.calculator.putx(dist)
+            self.distPtPt()
+        else:
+            self.registerCallback(self.distPtPtC)
+            # How to enable selecting intersection points on WP?
+            self.canva._display.SetSelectionModeVertex()
+            statusText = "Select 2 points to measure distance."
+            self.statusBar().showMessage(statusText)
+
+    def distPtPtC(self, shapeList, *args):  # callback (collector) for distPtPt
+        logger.debug('Edges selected: %s', shapeList)
+        logger.debug('args: %s', args)  # args = x, y mouse coords
+        for shape in shapeList:
+            vrtx = topods_Vertex(shape)
+            gpPt = BRep_Tool.Pnt(vrtx) # convert vertex to gp_Pnt
+            self.ptStack.append(gpPt)
+        if len(self.ptStack) == 2:
+            self.distPtPt()
+
+    def edgeLen(self):
+        if self.edgeStack:
+            edge = self.edgeStack.pop()
+            edgelen = CPnts_AbscissaPoint_Length(BRepAdaptor_Curve(edge))
+            edgelen = edgelen / self.unitscale
+            self.calculator.putx(edgelen)
+            #self.redraw()
+            self.edgeLen()
+        else:
+            self.registerCallback(self.edgeLenC)
+            self.canva._display.SetSelectionModeEdge()
+            statusText = "Pick an edge to measure."
+            self.statusBar().showMessage(statusText)
+
+    def edgeLenC(self, shapeList, *args):  # callback (collector) for edgeLen
+        logger.debug('Edges selected: %s', shapeList)
+        logger.debug('args: %s', args)  # args = x, y mouse coords
+        for shape in shapeList:
+            edge = topods_Edge(shape)
+            self.edgeStack.append(edge)
+        if self.edgeStack:
+            self.edgeLen()
+
+    #############################################
+    #
     # Step Load / Save and
     # doc modification methods:
     #
     #############################################
+
+    def get_uid_from_entry(self, entry):
+        """Generate uid from label entry. format: 'entry.serial_number' """
+        if entry in self._share_dict:
+            value = self._share_dict[entry]
+        else:
+            value = -1
+        value += 1
+        # update serial number in self._share_dict
+        self._share_dict[entry] = value
+        return entry + '.' + str(value)
+
+    def parse_doc(self, tree=None):
+        """Generate new part_dict, uid_dict (& optionally) treeView items."""
+
+        new_tree = True
+        if tree is None:
+            new_tree = False
+        if new_tree:
+            # Remove all existing widget items from tree view
+            self.clearTree()
+        # Initialize self._share_dict
+        self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
+        self.assy_list = []  # assy uid's
+        # To be used by redraw()
+        self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
+        # Temporary use during unpacking
+        self.tree_view_item_dict = {'0:1:1': self.assy_root}  # {entry: item}
+        self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
+        self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
+
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+
+        # Find root label of self.doc
+        labels = TDF_LabelSequence()
+        shape_tool.GetShapes(labels)
+        root_label = labels.Value(1) # First label at root
+        nbr = labels.Length()  # number of labels at root
+        logger.debug('Number of labels at doc root : %i', nbr)
+        # Get root label information
+        # If first label at root holds an assembly, it is the Top Assy.
+        # Through this label, the entire assembly is accessible.
+        # There is no need to explicitly examine other labels at root.
+        root_name = root_label.GetLabelName()
+        root_entry = root_label.EntryDumpToString()
+        root_uid = self.get_uid_from_entry(root_entry)
+        parent_item = self.assy_root
+        loc = shape_tool.GetLocation(root_label)  # <TopLoc_Location>
+        self.assy_loc_stack.append(loc)
+        self.assy_entry_stack.append(root_entry)
+        self.uid_dict = {root_uid: {'entry': root_entry,
+                                    'name': root_name,
+                                    'ref_entry': None}}
+        if new_tree:
+            # create node in tree view
+            item_name = [root_name, root_uid]
+            item = QTreeWidgetItem(parent_item, item_name)
+            item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+            item.setCheckState(0, Qt.Checked)
+            self.treeView.expandItem(item)
+            self.tree_view_item_dict[root_entry] = item
+            self.assy_list.append(root_uid)
+
+        top_comps = TDF_LabelSequence() # Components of Top Assy
+        subchilds = False
+        is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
+        if top_comps.Length():  # if is_assy:
+            logger.debug("")
+            logger.debug("Parsing components of label entry %s)", root_entry)
+            self.parse_components(top_comps, shape_tool, color_tool, new_tree)
+        else:
+            print("Something is wrong.")
+
+    def parse_components(self, comps, shape_tool, color_tool, new_tree):
+        """Parse components from comps (LabelSequence).
+
+        Components of an assembly are, by definition, references which refer
+        to either a simple shape or a compound shape (an assembly).
+        Components are essentially 'instances' of the referred shape or assembly
+        and carry a location vector specifing the location of the referred
+        shape or assembly."""
+
+        for j in range(comps.Length()):
+            logger.debug("Assy_entry_stack: %s", self.assy_entry_stack)
+            logger.debug("loop %i of %i", j+1, comps.Length())
+            c_label = comps.Value(j+1)  # component label <class 'TDF_Label'>
+            c_name = c_label.GetLabelName()
+            c_entry = c_label.EntryDumpToString()
+            c_uid = self.get_uid_from_entry(c_entry)
+            c_shape = shape_tool.GetShape(c_label)
+            logger.debug("Component number %i", j+1)
+            logger.debug("Component name: %s", c_name)
+            logger.debug("Component entry: %s", c_entry)
+            if new_tree:
+                # create node in tree view
+                item_name = [c_name, c_uid]
+                parent = self.tree_view_item_dict[self.assy_entry_stack[-1]]
+                item = QTreeWidgetItem(parent, item_name)
+                item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+                item.setCheckState(0, Qt.Checked)
+                self.treeView.expandItem(item)
+                self.tree_view_item_dict[c_entry] = item
+            ref_label = TDF_Label()  # label of referred shape (or assembly)
+            is_ref = shape_tool.GetReferredShape(c_label, ref_label)
+            if is_ref:  # I think all components are references
+                ref_name = ref_label.GetLabelName()
+                ref_shape = shape_tool.GetShape(ref_label)
+                ref_entry = ref_label.EntryDumpToString()
+                self.uid_dict[c_uid] = {'entry': c_entry,
+                                        'name': c_name,
+                                        'ref_entry': ref_entry}
+                if shape_tool.IsSimpleShape(ref_label):
+                    temp_assy_loc_stack = list(self.assy_loc_stack)
+                    # Multiply locations in stack sequentially to a result
+                    if len(temp_assy_loc_stack) > 1:
+                        res_loc = temp_assy_loc_stack.pop(0)
+                        for loc in temp_assy_loc_stack:
+                            res_loc = res_loc.Multiplied(loc)
+                        c_shape.Move(res_loc)
+                    elif len(temp_assy_loc_stack) == 1:
+                        res_loc = temp_assy_loc_stack.pop()
+                        c_shape.Move(res_loc)
+                    else:
+                        res_loc = None
+                    # It is possible for this component to both specify a
+                    # location 'c_loc' and refer directly to a top level shape.
+                    # If this component *does* specify a location 'c_loc',
+                    # it will be applied to the referred shape without being
+                    # included in temp_assy_loc_stack. But in order to keep
+                    # track of the total location from the root shape to the
+                    # instance, it needs to be accounted for (by mutiplying
+                    # res_loc by it) before saving it to part_dict.
+                    c_loc = None
+                    c_loc = shape_tool.GetLocation(c_label)
+                    if c_loc:
+                        loc = res_loc.Multiplied(c_loc)
+                    color = Quantity_Color()
+                    color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
+                    self.part_dict[c_uid] = {'shape': c_shape,
+                                             'color': color,
+                                             'name': c_name,
+                                             'loc': loc}
+                elif shape_tool.IsAssembly(ref_label):
+                    logger.debug("Referred item is an Assembly")
+                    # Location vector is carried by component
+                    aLoc = TopLoc_Location()
+                    aLoc = shape_tool.GetLocation(c_label)
+                    self.assy_loc_stack.append(aLoc)
+                    self.assy_entry_stack.append(ref_entry)
+                    if new_tree:
+                        self.tree_view_item_dict[ref_entry] = item
+                    self.assy_list.append(c_uid)
+                    r_comps = TDF_LabelSequence() # Components of Assy
+                    subchilds = False
+                    isAssy = shape_tool.GetComponents(ref_label, r_comps, subchilds)
+                    logger.debug("Assy name: %s", ref_name)
+                    logger.debug("Is Assembly? %s", isAssy)
+                    logger.debug("Number of components: %s", r_comps.Length())
+                    if r_comps.Length():
+                        logger.debug("")
+                        logger.debug("Parsing components of label entry %s)",
+                                     ref_entry)
+                        self.parse_components(r_comps, shape_tool, color_tool, new_tree)
+            else:
+                print(f"I was wrong: All components are *not* references {c_uid}")
+        self.assy_entry_stack.pop()
+        self.assy_loc_stack.pop()
 
     def doc_linter(self, doc=None):
         """Clean self.doc by cycling through a STEP save/load cycle."""
@@ -1269,68 +1300,26 @@ class MainWindow(QMainWindow):
     def setLabelName(self, label, name):
         TDataStd_Name.Set(label, TCollection_ExtendedString(name))
 
-    #############################################
-    #
-    # 3D Measure functons...
-    #
-    #############################################
-
-    def launchCalc(self):
-        if not self.calculator:
-            self.calculator = rpnCalculator.Calculator(self)
-            self.calculator.show()
-
-    def setUnits(self, units):
-        if units in self._unitDict.keys():
-            self.units = units
-            self.unitscale = self._unitDict[self.units]
-            self.unitsLabel.setText("Units: %s " % self.units)
-
-    def distPtPt(self):
-        if len(self.ptStack) == 2:
-            p2 = self.ptStack.pop()
-            p1 = self.ptStack.pop()
-            vec = gp_Vec(p1, p2)
-            dist = vec.Magnitude()
-            dist = dist / self.unitscale
-            self.calculator.putx(dist)
-            self.distPtPt()
-        else:
-            self.registerCallback(self.distPtPtC)
-            # How to enable selecting intersection points on WP?
-            self.canva._display.SetSelectionModeVertex()
-            statusText = "Select 2 points to measure distance."
-            self.statusBar().showMessage(statusText)
-
-    def distPtPtC(self, shapeList, *args):  # callback (collector) for distPtPt
-        logger.debug('Edges selected: %s', shapeList)
-        logger.debug('args: %s', args)  # args = x, y mouse coords
-        for shape in shapeList:
-            vrtx = topods_Vertex(shape)
-            gpPt = BRep_Tool.Pnt(vrtx) # convert vertex to gp_Pnt
-            self.ptStack.append(gpPt)
-        if len(self.ptStack) == 2:
-            self.distPtPt()
-
-    def edgeLen(self):
-        if self.edgeStack:
-            edge = self.edgeStack.pop()
-            edgelen = CPnts_AbscissaPoint_Length(BRepAdaptor_Curve(edge))
-            edgelen = edgelen / self.unitscale
-            self.calculator.putx(edgelen)
-            #self.redraw()
-            self.edgeLen()
-        else:
-            self.registerCallback(self.edgeLenC)
-            self.canva._display.SetSelectionModeEdge()
-            statusText = "Pick an edge to measure."
-            self.statusBar().showMessage(statusText)
-
-    def edgeLenC(self, shapeList, *args):  # callback (collector) for edgeLen
-        logger.debug('Edges selected: %s', shapeList)
-        logger.debug('args: %s', args)  # args = x, y mouse coords
-        for shape in shapeList:
-            edge = topods_Edge(shape)
-            self.edgeStack.append(edge)
-        if self.edgeStack:
-            self.edgeLen()
+    def change_label_name(self, uid, name):
+        """Change the name of component with uid."""
+        entry, _ = uid.split('.')
+        entry_parts = entry.split(':')
+        if len(entry_parts) == 4:  # first label at root
+            j = 1
+            k = None
+        elif len(entry_parts) == 5:  # part is a component of label at root
+            j = int(entry_parts[3])  # number of label at root
+            k = int(entry_parts[4])  # component number
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        labels = TDF_LabelSequence()  # labels at root of self.doc
+        shape_tool.GetShapes(labels)
+        label = labels.Value(j)
+        comps = TDF_LabelSequence()  # Components of root_label
+        subchilds = False
+        is_assy = shape_tool.GetComponents(label, comps, subchilds)
+        target_label = comps.Value(k)
+        self.setLabelName(target_label, name)
+        shape_tool.UpdateAssemblies()
+        print(f"Name {name} set for part with uid = {uid}.")
+        self.parse_doc(tree=True)
