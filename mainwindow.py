@@ -938,12 +938,13 @@ class MainWindow(QMainWindow):
         self.redraw()
 
     def drawOnlyActivePart(self):
-        self.eraseAll()
         uid = self.activePartUID
-        self.draw_list.append(uid)
-        self.canva._display.DisplayShape(self.part_dict[uid]['shape'])
-        self.syncCheckedToDrawList()
-        self.redraw()
+        if uid:
+            self.eraseAll()
+            self.draw_list.append(uid)
+            self.canva._display.DisplayShape(self.part_dict[uid]['shape'])
+            self.syncCheckedToDrawList()
+            self.redraw()
 
     def drawOnlyPart(self, key):
         self.eraseAll()
@@ -1046,7 +1047,7 @@ class MainWindow(QMainWindow):
             step_color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
             isSimpleShape = step_shape_tool.IsSimpleShape(label)
             if isSimpleShape:
-                self.addComponent(shape, name, color)
+                _ = self.addComponent(shape, name, color)
 
     def loadStepAt2(self):
         """Get OCAF document from STEP file and 'paste' root label onto 0:1:1:2
@@ -1116,8 +1117,8 @@ class MainWindow(QMainWindow):
         prompt = 'Select STEP file to import'
         fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
                                                  "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple  # /path/to/some/filename.ext
-        base = os.path.basename(fname)
+        fname, _ = fnametuple  # fname = /path/to/some/filename.ext
+        base = os.path.basename(fname)  # filename.ext
         filename, ext = os.path.splitext(base)
         logger.debug("Load file name: %s", fname)
         if not fname:
@@ -1149,16 +1150,16 @@ class MainWindow(QMainWindow):
         steprootLabel = step_labels.Value(1)
         # Make a simple box and add it as a component
         myBody = BRepPrimAPI_MakeBox(4, 4, 4).Shape()
-        self.addComponent(myBody, filename, self.default_color)
+        _ = self.addComponent(myBody, filename, self.default_color)
         step_shape_tool.UpdateAssemblies()
         # Get target label of self.doc
-        labels = TDF_LabelSequence()
+        labels = TDF_LabelSequence()  # labels at root
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         shape_tool.GetShapes(labels)
-        n = labels.Length()
+        n = labels.Length()   # number of labels at root
         print(n)
-        targetLabel = labels.Value(n)  # The last label (just added)
+        targetLabel = labels.Value(n)  # of ref shape of comp just added
         # Copy source label to target label
         self.copy_label(steprootLabel, targetLabel)
         shape_tool.UpdateAssemblies()
@@ -1218,7 +1219,7 @@ class MainWindow(QMainWindow):
         self.redraw()
 
     def addComponent(self, shape, name, color):
-        """Add new shape to top assembly of self.doc."""
+        """Add new shape to top assembly of self.doc & return uid"""
         labels = TDF_LabelSequence()
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
@@ -1239,11 +1240,9 @@ class MainWindow(QMainWindow):
         shape_tool.UpdateAssemblies()
         self.doc = self.doc_linter()  # This gets color to work
         self.parse_doc(tree=True)
-        # Get uid of new component, add to drawlist and set active
         entry = newLabel.EntryDumpToString()
-        uid = entry + '.0'  # this is sort of lame
-        self.drawAddPart(uid)
-        self.setActivePart(uid)
+        uid = entry + '.0'  # this should work OK since it is new
+        return uid
 
     def getLabelName(self, label):
         return label.GetLabelName()

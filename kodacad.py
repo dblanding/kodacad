@@ -591,13 +591,17 @@ def delElC(shapeList, *args):
 def makeBox():
     name = 'Box'
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
-    win.addComponent(myBody, name, win.default_color)
+    uid = win.addComponent(myBody, name, win.default_color)
+    win.drawAddPart(uid)
+    win.setActivePart(uid)
     win.redraw()
 
 def makeCyl():
     name = 'Cylinder'
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
-    win.addComponent(myBody, name, win.default_color)
+    uid = win.addComponent(myBody, name, win.default_color)
+    win.drawAddPart(uid)
+    win.setActivePart(uid)
     win.redraw()
 
 def extrude():
@@ -614,7 +618,9 @@ def extrude():
         aPrismVec = wp.wVec * length
         myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(),
                                        aPrismVec).Shape()
-        win.addComponent(myBody, name, win.default_color)
+        uid = win.addComponent(myBody, name, win.default_color)
+        win.drawAddPart(uid)
+        win.setActivePart(uid)
         win.redraw()
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
@@ -644,7 +650,9 @@ def revolve():
         face = BRepBuilderAPI_MakeFace(wp.wire).Shape()
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
         myBody = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
-        win.addComponent(myBody, name, win.default_color)
+        uid = win.addComponent(myBody, name, win.default_color)
+        win.drawAddPart(uid)
+        win.setActivePart(uid)
         win.redraw()
         win.statusBar().showMessage('New part created.')
         win.clearCallback()
@@ -939,9 +947,9 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = MainWindow()
     win.add_menu('File')
-    win.add_function_to_menu('File', "Load STEP (Doc)", win.loadStepAtRoot)
-    win.add_function_to_menu('File', "Load STEP", win.loadStep)
-    win.add_function_to_menu('File', "Save STEP (Doc)", win.saveStepDoc)
+    win.add_function_to_menu('File', "Load STEP At Top", win.loadStepAtRoot)
+    win.add_function_to_menu('File', "Load STEP As Comp", win.loadStep)
+    win.add_function_to_menu('File', "Save STEP (Top)", win.saveStepDoc)
     win.add_function_to_menu('File', "Save STEP (Act Prt)", win.saveStepActPrt)
     win.add_menu('Workplane')
     win.add_function_to_menu('Workplane', "At Origin, XY Plane", makeWP)
@@ -964,7 +972,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "parse doc", parseDoc)
     win.add_function_to_menu('Utility', "add box", addBox)
-    win.add_function_to_menu('Utility', "Load Step @ End", win.loadStepAtEnd)
+    win.add_function_to_menu('Utility', "Load Step Under Top", win.loadStepAtEnd)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
     win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)
