@@ -250,7 +250,7 @@ class MainWindow(QMainWindow):
         self.activeAsyUID = 0
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
-        self.doc, self.shape_tool, self.color_tool, self.rootLabel = self.createDoc()
+        self.doc = self.createDoc()
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
         self.default_color = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)
 
@@ -272,7 +272,7 @@ class MainWindow(QMainWindow):
         # Create empty rootLabel entry = 0:1:1:1
         rootLabel = shape_tool.NewShape()
         self.setLabelName(rootLabel, "/")
-        return (doc, shape_tool, color_tool, rootLabel)
+        return doc
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -559,38 +559,6 @@ class MainWindow(QMainWindow):
         self.syncCheckedToDrawList()
         return uid
 
-    def doc_linter(self, doc=None):
-        """Clean self.doc by cycling through a save/load STEP cycle.
-
-        Refresh: self.shape_tool, self.color_tool, self.rootLabel."""
-
-        if doc == None:
-            doc = self.doc
-        # Create a file object to save to
-        fname = "deleteme.txt"
-        # Initialize STEP exporter
-        WS = XSControl_WorkSession()
-        step_writer = STEPCAFControl_Writer(WS, False)
-        # Transfer shapes and write file
-        step_writer.Transfer(doc, STEPControl_AsIs)
-        status = step_writer.Write(fname)
-        assert status == IFSelect_RetDone
-        # Create new TreeModel and read STEP data
-        tmodel = TreeModel("DOC")
-        self.shape_tool = tmodel.shape_tool
-        self.color_tool = tmodel.color_tool
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-            os.remove(fname)
-        return tmodel.doc
-
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry
 
@@ -735,7 +703,7 @@ class MainWindow(QMainWindow):
                     # instance, it needs to be accounted for (by mutiplying
                     # res_loc by it) before saving it to part_dict.
                     c_loc = None
-                    c_loc = self.shape_tool.GetLocation(c_label)
+                    c_loc = shape_tool.GetLocation(c_label)
                     if c_loc:
                         loc = res_loc.Multiplied(c_loc)
                     color = Quantity_Color()
@@ -744,11 +712,11 @@ class MainWindow(QMainWindow):
                                              'color': color,
                                              'name': c_name,
                                              'loc': loc}
-                elif self.shape_tool.IsAssembly(ref_label):
+                elif shape_tool.IsAssembly(ref_label):
                     logger.debug("Referred item is an Assembly")
                     # Location vector is carried by component
                     aLoc = TopLoc_Location()
-                    aLoc = self.shape_tool.GetLocation(c_label)
+                    aLoc = shape_tool.GetLocation(c_label)
                     self.assy_loc_stack.append(aLoc)
                     self.assy_entry_stack.append(ref_entry)
                     if new_tree:
@@ -756,7 +724,7 @@ class MainWindow(QMainWindow):
                     self.assy_list.append(c_uid)
                     r_comps = TDF_LabelSequence() # Components of Assy
                     subchilds = False
-                    isAssy = self.shape_tool.GetComponents(ref_label, r_comps, subchilds)
+                    isAssy = shape_tool.GetComponents(ref_label, r_comps, subchilds)
                     logger.debug("Assy name: %s", ref_name)
                     logger.debug("Is Assembly? %s", isAssy)
                     logger.debug("Number of components: %s", r_comps.Length())
@@ -965,15 +933,46 @@ class MainWindow(QMainWindow):
 
     #############################################
     #
-    # Step Load / Save methods:
+    # Step Load / Save and
+    # doc modification methods:
     #
     #############################################
 
+    def doc_linter(self, doc=None):
+        """Clean self.doc by cycling through a STEP save/load cycle."""
+
+        if doc == None:
+            doc = self.doc
+        # Create a file object to save to
+        fname = "deleteme.txt"
+        # Initialize STEP exporter
+        WS = XSControl_WorkSession()
+        step_writer = STEPCAFControl_Writer(WS, False)
+        # Transfer shapes and write file
+        step_writer.Transfer(doc, STEPControl_AsIs)
+        status = step_writer.Write(fname)
+        assert status == IFSelect_RetDone
+        # Create new TreeModel and read STEP data
+        tmodel = TreeModel("DOC")
+        shape_tool = tmodel.shape_tool
+        color_tool = tmodel.color_tool
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+        status = step_reader.ReadFile(fname)
+        if status == IFSelect_RetDone:
+            logger.info("Transfer doc to STEPCAFControl_Reader")
+            step_reader.Transfer(tmodel.doc)
+            os.remove(fname)
+        return tmodel.doc
+
     def copy_label(self, source_label, target_label):
-        copy_label = TDF_CopyLabel()
-        copy_label.Load(source_label, target_label)
-        copy_label.Perform()
-        return copy_label.IsDone()
+        cp_label = TDF_CopyLabel()
+        cp_label.Load(source_label, target_label)
+        cp_label.Perform()
+        return cp_label.IsDone()
 
     def loadStepAtRoot(self):
         """Get OCAF document from STEP file and assign it to win.doc.
@@ -1087,13 +1086,13 @@ class MainWindow(QMainWindow):
         steprootLabel = step_labels.Value(1)
         # Get target label of self.doc
         labels = TDF_LabelSequence()
-        shape_tool_1 = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool_1 = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool_1.GetShapes(labels)
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        shape_tool.GetShapes(labels)
         targetLabel = labels.Value(2)
         # Copy source label to target label
         self.copy_label(steprootLabel, targetLabel)
-        self.shape_tool.UpdateAssemblies()
+        shape_tool.UpdateAssemblies()
         # Repair self.doc by cycling through save/load
         self.doc = self.doc_linter()
         # Build new self.part_dict & tree view
@@ -1188,6 +1187,26 @@ class MainWindow(QMainWindow):
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
 
+    def saveStepDoc(self):
+        """Export self.doc to STEP file."""
+
+        prompt = 'Choose filename for step file.'
+        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
+                                                 "STEP files (*.stp *.STP *.step)")
+        fname, _ = fnametuple
+        if not fname:
+            print("Save step cancelled.")
+            return
+
+        # initialize STEP exporter
+        WS = XSControl_WorkSession()
+        step_writer = STEPCAFControl_Writer(WS, False)
+
+        # transfer shapes and write file
+        step_writer.Transfer(self.doc, STEPControl_AsIs)
+        status = step_writer.Write(fname)
+        assert status == IFSelect_RetDone
+
     def replaceShape(self, modshape):
         """Replace active part shape with modified shape.
 
@@ -1249,26 +1268,6 @@ class MainWindow(QMainWindow):
 
     def setLabelName(self, label, name):
         TDataStd_Name.Set(label, TCollection_ExtendedString(name))
-
-    def saveStepDoc(self):
-        """Export self.doc to STEP file."""
-
-        prompt = 'Choose filename for step file.'
-        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        if not fname:
-            print("Save step cancelled.")
-            return
-
-        # initialize STEP exporter
-        WS = XSControl_WorkSession()
-        step_writer = STEPCAFControl_Writer(WS, False)
-
-        # transfer shapes and write file
-        step_writer.Transfer(self.doc, STEPControl_AsIs)
-        status = step_writer.Write(fname)
-        assert status == IFSelect_RetDone
 
     #############################################
     #
