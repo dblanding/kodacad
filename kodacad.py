@@ -173,7 +173,8 @@ def processLineEdit():
         except ValueError as e:
             print(f"{e}")
 
-def clineH():   # Horizontal construction line
+def clineH():
+    """Horizontal construction line"""
     if win.xyPtStack:
         wp = win.activeWp
         p = win.xyPtStack.pop()
@@ -189,7 +190,8 @@ def clineH():   # Horizontal construction line
         statusText = "Select point or enter Y-value for horizontal cline."
         win.statusBar().showMessage(statusText)
 
-def clineHC(shapeList, *args):  # callback (collector) for clineH
+def clineHC(shapeList, *args):
+    """Callback (collector) for clineH"""
     add_vertex_to_xyPtStack(shapeList)
     if win.lineEditStack:
         processLineEdit()
@@ -200,7 +202,8 @@ def clineHC(shapeList, *args):  # callback (collector) for clineH
     if win.xyPtStack:
         clineH()
 
-def clineV():   # Vertical construction line
+def clineV():
+    """Vertical construction line"""
     if win.xyPtStack:
         wp = win.activeWp
         p = win.xyPtStack.pop()
@@ -216,7 +219,8 @@ def clineV():   # Vertical construction line
         statusText = "Select point or enter X-value for vertcal cline."
         win.statusBar().showMessage(statusText)
 
-def clineVC(shapeList, *args):  # callback (collector) for clineV
+def clineVC(shapeList, *args):
+    """Callback (collector) for clineV"""
     add_vertex_to_xyPtStack(shapeList)
     if win.lineEditStack:
         processLineEdit()
@@ -227,7 +231,8 @@ def clineVC(shapeList, *args):  # callback (collector) for clineV
     if win.xyPtStack:
         clineV()
 
-def clineHV():   # Horizontal + Vertical construction lines
+def clineHV():
+    """Horizontal + Vertical construction lines"""
     if win.xyPtStack:
         wp = win.activeWp
         p = win.xyPtStack.pop()
@@ -243,7 +248,8 @@ def clineHV():   # Horizontal + Vertical construction lines
         statusText = "Select point or enter x,y coords for H+V cline."
         win.statusBar().showMessage(statusText)
 
-def clineHVC(shapeList, *args):  # callback (collector) for clineHV
+def clineHVC(shapeList, *args):
+    """Callback (collector) for clineHV"""
     add_vertex_to_xyPtStack(shapeList)
     if win.lineEditStack:
         processLineEdit()
@@ -251,6 +257,7 @@ def clineHVC(shapeList, *args):  # callback (collector) for clineHV
         clineHV()
 
 def cline2Pts():
+    """Construction line through two points"""
     if len(win.xyPtStack) == 2:
         wp = win.activeWp
         p2 = win.xyPtStack.pop()
@@ -267,7 +274,8 @@ def cline2Pts():
         statusText = "Select 2 points for Construction Line."
         win.statusBar().showMessage(statusText)
 
-def cline2PtsC(shapeList, *args):  # callback (collector) for cline2Pts
+def cline2PtsC(shapeList, *args):
+    """Callback (collector) for cline2Pts"""
     add_vertex_to_xyPtStack(shapeList)
     if win.lineEditStack:
         processLineEdit()
@@ -275,6 +283,7 @@ def cline2PtsC(shapeList, *args):  # callback (collector) for cline2Pts
         cline2Pts()
 
 def clineAng():
+    """Construction line through a point and at an angle"""
     if (win.xyPtStack and win.floatStack):
         wp = win.activeWp
         text = win.floatStack.pop()
@@ -293,7 +302,8 @@ def clineAng():
         statusText = "Select point on WP (or enter x,y coords) then enter angle."
         win.statusBar().showMessage(statusText)
 
-def clineAngC(shapeList, *args):  # callback (collector) for clineAng
+def clineAngC(shapeList, *args):
+    """Callback (collector) for clineAng"""
     add_vertex_to_xyPtStack(shapeList)
     win.lineEdit.setFocus()
     if win.lineEditStack:
@@ -308,6 +318,7 @@ def clineAngBisec():
     pass
 
 def clineLinBisec():
+    """Linear bisector between two points"""
     if len(win.xyPtStack) == 2:
         wp = win.activeWp
         pnt2 = win.xyPtStack.pop()
@@ -319,7 +330,8 @@ def clineLinBisec():
         win.registerCallback(clineLinBisecC)
         display.SetSelectionModeVertex()
 
-def clineLinBisecC(shapeList, *args):  # callback (collector) for clineLinBisec
+def clineLinBisecC(shapeList, *args):
+    """Callback (collector) for clineLinBisec"""
     add_vertex_to_xyPtStack(shapeList)
     if len(win.xyPtStack) == 2:
         clineLinBisec()
@@ -337,7 +349,7 @@ def clineTan2():
     pass
 
 def ccirc():
-    """Create a c-circle from center & radius or center & Pnt on circle."""
+    """Create a c-circle from center & radius or center & Pnt on circle"""
     wp = win.activeWp
     if len(win.xyPtStack) == 2:
         p2 = win.xyPtStack.pop()
@@ -589,6 +601,7 @@ def delElC(shapeList, *args):
 #############################################
 
 def makeBox():
+    """Quick box (for debuggging)"""
     name = 'Box'
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
     uid = win.addComponent(myBody, name, win.default_color)
@@ -597,6 +610,7 @@ def makeBox():
     win.redraw()
 
 def makeCyl():
+    """Quick cylinder (for debuggging)"""
     name = 'Cylinder'
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
     uid = win.addComponent(myBody, name, win.default_color)
@@ -631,6 +645,7 @@ def extrude():
         win.statusBar().showMessage(statusText)
 
 def extrudeC(shapeList, *args):
+    """Callback (collector) for extrude"""
     win.lineEdit.setFocus()
     if len(win.lineEditStack) == 2:
         extrude()
@@ -664,6 +679,7 @@ def revolve():
         win.statusBar().showMessage(statusText)
 
 def revolveC(shapeList, *args):
+    """Callback (collector) for revolve"""
     for shape in shapeList:
         vrtx = topods_Vertex(shape)
         gpPt = BRep_Tool.Pnt(vrtx) # convert vertex to gp_Pnt
@@ -725,6 +741,7 @@ def mill():
         win.statusBar().showMessage(statusText)
 
 def millC(shapeList, *args):
+    """Callback (collector) for mill"""
     win.lineEdit.setFocus()
     if win.lineEditStack:
         mill()
@@ -755,6 +772,7 @@ def pull():
         win.statusBar().showMessage(statusText)
 
 def pullC(shapeList, *args):
+    """Callback (collector) for pull"""
     win.lineEdit.setFocus()
     if win.lineEditStack:
         pull()
@@ -796,7 +814,8 @@ def fillet(event=None):
         statusText = "Select edge(s) to fillet then specify fillet radius."
         win.statusBar().showMessage(statusText)
 
-def filletC(shapeList, *args):  # callback (collector) for fillet
+def filletC(shapeList, *args):
+    """Callback (collector) for fillet"""
     win.lineEdit.setFocus()
     for shape in shapeList:
         edge = topods_Edge(shape)
@@ -818,7 +837,8 @@ def fuse():
         statusText = "Select shape to fuse to active part."
         win.statusBar().showMessage(statusText)
 
-def fuseC(shapeList, *args):  # callback (collector) for fuse
+def fuseC(shapeList, *args):
+    """Callback (collector) for fuse"""
     for shape in shapeList:
         win.shapeStack.append(shape)
     if win.shapeStack:
@@ -843,7 +863,8 @@ def shell(event=None):
         statusText = "Select face(s) to remove then specify shell thickness."
         win.statusBar().showMessage(statusText)
 
-def shellC(shapeList, *args):  # callback (collector) for shell
+def shellC(shapeList, *args):
+    """Callback (collector) for shell"""
     win.lineEdit.setFocus()
     for shape in shapeList:
         face = topods_Face(shape)
