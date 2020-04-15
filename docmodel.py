@@ -24,8 +24,10 @@
 import logging
 import os
 import os.path
+from PyQt5.QtWidgets import QFileDialog
+from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
-from OCC.Core.Quantity import (Quantity_Color, Quantity_NOC_GRAY,
+from OCC.Core.Quantity import (Quantity_Color, Quantity_NOC_GRAY, Quantity_ColorRGBA,
                                Quantity_NOC_DARKGREEN, Quantity_NOC_MAGENTA1)
 from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Writer
 from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
@@ -207,8 +209,6 @@ class DocModel():
                     aLoc = shape_tool.GetLocation(c_label)
                     self.assy_loc_stack.append(aLoc)
                     self.assy_entry_stack.append(ref_entry)
-                    if new_tree:
-                        self.tree_view_item_dict[ref_entry] = item
                     self.parent_uid_stack.append(c_uid)
                     r_comps = TDF_LabelSequence() # Components of Assy
                     subchilds = False
@@ -219,7 +219,7 @@ class DocModel():
                     if r_comps.Length():
                         logger.debug("")
                         logger.debug("Parsing components of label entry %s)",  ref_entry)
-                        self.parse_components(r_comps, shape_tool, color_tool, new_tree)
+                        self.parse_components(r_comps, shape_tool, color_tool)
             else:
                 print(f"I was wrong: All components are *not* references {c_uid}")
         self.assy_entry_stack.pop()
@@ -263,7 +263,7 @@ class DocModel():
         return cp_label.IsDone()
 
     def loadStepAtRoot(self):
-        """Get OCAF document from STEP file and assign it to win.doc.
+        """Get OCAF document from STEP file and assign it to self.doc.
 
         This works as a surrogate for loading a CAD project that has previously
         been saved as a STEP file."""
@@ -293,8 +293,6 @@ class DocModel():
         self.doc = tmodel.doc
         # Build new self.part_dict & tree view
         self.parse_doc()
-        self.drawAll()
-        self.fitAll()
 
     def loadStep(self):
         """Get OCAF document from STEP file and add (as component) to doc root.
@@ -385,8 +383,6 @@ class DocModel():
         self.doc = self.doc_linter()
         # Build new self.part_dict & tree view
         self.parse_doc()
-        self.drawAll()
-        self.fitAll()
 
     def loadStepAtEnd(self):
         """Paste step root label onto last+1 label at self.doc root
@@ -437,7 +433,7 @@ class DocModel():
         steprootLabel = step_labels.Value(1)
         # Make a simple box and add it as a component
         myBody = BRepPrimAPI_MakeBox(4, 4, 4).Shape()
-        _ = self.addComponent(myBody, filename, self.default_color)
+        _ = self.addComponent(myBody, filename, Quantity_ColorRGBA())
         step_shape_tool.UpdateAssemblies()
         # Get target label of self.doc
         labels = TDF_LabelSequence()  # labels at root
@@ -454,8 +450,6 @@ class DocModel():
         self.doc = self.doc_linter()
         # Build new self.part_dict & tree view
         self.parse_doc()
-        self.drawAll()
-        self.fitAll()
 
     def saveStepActPrt(self):
         prompt = 'Choose filename for step file.'
