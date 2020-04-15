@@ -65,14 +65,14 @@ used_backend = OCC.Display.backend.load_backend()
 from OCC import VERSION
 import myDisplay.qtDisplay as qtDisplay
 import rpnCalculator
-from treemodel import TreeModel
+from docmodel import DocModel
 from version import APP_VERSION
 print("OCC version: %s" % VERSION)
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
 
+doc = DocModel()
 
 class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
     """ Display assembly structure.
@@ -152,20 +152,7 @@ class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
         return True
 
 class MainWindow(QMainWindow):
-    """Main GUI window containing a tree view of assy/parts and a 3D display.
-
-    self.doc holds the 3D CAD model in OCAF TDocStd_Document format.
-    It is read by parse_doc and parse_components methods, generating the
-    items in the tree view and building uid_dict and part_dict to store the
-    data with more convenient access.
-    Each tree view item represents a label in the OCAF document and has a uid
-    comprising the label entry appended with a '.' and an integer. The integer
-    is needed to make it unique (allowing to distinguish between different
-    instances of shared data).
-    The tree view represents the hierarchical structure of the top assembly
-    and its components. Each componenent refers to a label at the root level
-    which is either a part or another assembly.
-    """
+    """Main GUI window containing an assy tree view and a 3D display."""
 
     def __init__(self, *args):
         super().__init__()
@@ -237,8 +224,6 @@ class MainWindow(QMainWindow):
 
         self.activePart = None  # <TopoDS_Shape> object
         self.activePartUID = 0
-        self.part_dict = {}     # {uid: {dict keys: 'shape', 'name', 'color', 'loc'}}
-        self.uid_dict = {}      # {uid: {dict keys: 'entry', 'name', 'ref_entry'}}
         self.transparency_dict = {}  # {uid: part display transparency}
         self.ancestor_dict = defaultdict(list)  # {uid: [list of ancestor shapes]}
 
@@ -250,29 +235,8 @@ class MainWindow(QMainWindow):
         self.activeAsyUID = 0
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
-        self.doc = self.createDoc()
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
         self.default_color = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)
-
-    def createDoc(self):
-        """Create XCAF doc with an empty assembly at entry 0:1:1:1.
-
-        This is done only once in __init__."""
-
-        # Create the application and document with empty rootLabel
-        title = "Main document"
-        doc = TDocStd_Document(TCollection_ExtendedString(title))
-        app = XCAFApp_Application_GetApplication()
-        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
-        # type(doc.Main()) = <class 'OCC.Core.TDF.TDF_Label'>
-        # doc.Main().EntryDumpToString() 0:1
-        # shape_tool is at label entry = 0:1:1
-        # Create empty rootLabel entry = 0:1:1:1
-        rootLabel = shape_tool.NewShape()
-        self.setLabelName(rootLabel, "/")
-        return doc
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -319,6 +283,27 @@ class MainWindow(QMainWindow):
     # 'treeView' (QTreeWidget) related methods:
     #
     #############################################
+
+    def build_tree(self):
+        """Build new tree view (Do thus when doc is modified to affect tree view)"""
+        self.clearTree()
+        parent_item_dict = {}  # {uid: tree view item}
+        for uid, dic in doc.uid_dict.items():
+            # dic: {keys: 'entry', 'name', 'parent_uid', 'ref_entry'}
+            entry = dic['entry']
+            name = dic['name']
+            parent_uid = dic['parent_uid']
+            if parent_uid in parent_item_dict:
+                parent_item = parent_item_dict[parent_uid]
+            else:
+                parent_item = self.assy_root
+                parent_item_dict[uid] = parent_item
+            # create node in tree view
+            item_name = [name, uid]
+            item = QTreeWidgetItem(parent_item, item_name)
+            item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+            item.setCheckState(0, Qt.Checked)
+            self.treeView.expandItem(item)
 
     def addItemToTreeView(self, name, uid):
         itemName = [name, str(uid)]
@@ -369,7 +354,7 @@ class MainWindow(QMainWindow):
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             if item.checkState(0) == Qt.Checked:
                 uid = item.text(1)
-                if (uid in self.part_dict) or (uid in self.wp_dict):
+                if (uid in doc.part_dict) or (uid in self.wp_dict):
                     dl.append(uid)
         return dl
 
@@ -383,7 +368,7 @@ class MainWindow(QMainWindow):
     def syncCheckedToDrawList(self):
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             uid = item.text(1)
-            if (uid in self.part_dict) or (uid in self.wp_dict):
+            if (uid in doc.part_dict) or (uid in self.wp_dict):
                 if uid in self.draw_list:
                     item.setCheckState(0, Qt.Checked)
                 else:
@@ -400,7 +385,7 @@ class MainWindow(QMainWindow):
             item = iterator.value()
             name = item.text(0)
             uid = item.text(1)
-            if uid in self.part_dict:
+            if uid in doc.part_dict:
                 pdict[uid] = item
             elif uid in self.assy_list:
                 adict[uid] = item
@@ -420,8 +405,8 @@ class MainWindow(QMainWindow):
         if item:
             name = item.text(0)
             uid = item.text(1)
-            entry = self.uid_dict[uid]['entry']
-            ref_ent = self.uid_dict[uid]['ref_entry']
+            entry = doc.uid_dict[uid]['entry']
+            ref_ent = doc.uid_dict[uid]['ref_entry']
             print(f"uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
 
     def setClickedActive(self):
@@ -478,7 +463,7 @@ class MainWindow(QMainWindow):
         item = self.itemClicked
         if item:
             uid = item.text(1)
-            if uid in self.part_dict:
+            if uid in doc.part_dict:
                 self.transparency_dict[uid] = 0.6
                 self.redraw()
             self.itemClicked = None
@@ -487,7 +472,7 @@ class MainWindow(QMainWindow):
         item = self.itemClicked
         if item:
             uid = item.text(1)
-            if uid in self.part_dict:
+            if uid in doc.part_dict:
                 self.transparency_dict.pop(uid)
                 self.redraw()
             self.itemClicked = None
@@ -548,7 +533,7 @@ class MainWindow(QMainWindow):
         """Change active part status in coordinated manner."""
         # modify status in self
         self.activePartUID = uid
-        self.activePart = self.part_dict[uid]['shape']
+        self.activePart = doc.part_dict[uid]['shape']
         # show as active in treeView
         self.showItemActive(uid)
 
@@ -671,13 +656,13 @@ class MainWindow(QMainWindow):
             self.canva._display.SetSelectionModeNeutral()
             context.SetAutoActivateSelection(True)
         context.RemoveAll(True)
-        for uid in self.part_dict:
+        for uid in doc.part_dict:
             if uid in self.draw_list:
                 if uid in self.transparency_dict:
                     transp = self.transparency_dict[uid]
                 else:
                     transp = 0.0
-                part_data = self.part_dict[uid]
+                part_data = doc.part_dict[uid]
                 shape = part_data['shape']
                 name = part_data['name']
                 color = part_data['color']
@@ -695,7 +680,7 @@ class MainWindow(QMainWindow):
 
     def drawAll(self):
         self.draw_list = []
-        for k in self.part_dict:
+        for k in doc.part_dict:
             self.draw_list.append(k)
         for k in self.wp_dict:
             self.draw_list.append(k)
@@ -707,7 +692,7 @@ class MainWindow(QMainWindow):
         if uid:
             self.eraseAll()
             self.draw_list.append(uid)
-            self.canva._display.DisplayShape(self.part_dict[uid]['shape'])
+            self.canva._display.DisplayShape(doc.part_dict[uid]['shape'])
             self.syncCheckedToDrawList()
             self.redraw()
 
@@ -793,533 +778,3 @@ class MainWindow(QMainWindow):
             self.edgeStack.append(edge)
         if self.edgeStack:
             self.edgeLen()
-
-    #############################################
-    #
-    # Step Load / Save and
-    # doc modification methods:
-    #
-    #############################################
-
-    def get_uid_from_entry(self, entry):
-        """Generate uid from label entry. format: 'entry.serial_number' """
-        if entry in self._share_dict:
-            value = self._share_dict[entry]
-        else:
-            value = -1
-        value += 1
-        # update serial number in self._share_dict
-        self._share_dict[entry] = value
-        return entry + '.' + str(value)
-
-    def parse_doc(self, tree=None):
-        """Generate new part_dict, uid_dict (& optionally) treeView items."""
-
-        new_tree = True
-        if tree is None:
-            new_tree = False
-        if new_tree:
-            # Remove all existing widget items from tree view
-            self.clearTree()
-        # Initialize self._share_dict
-        self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
-        self.assy_list = []  # assy uid's
-        # To be used by redraw()
-        self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
-        # Temporary use during unpacking
-        self.tree_view_item_dict = {'0:1:1': self.assy_root}  # {entry: item}
-        self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
-        self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
-
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-
-        # Find root label of self.doc
-        labels = TDF_LabelSequence()
-        shape_tool.GetShapes(labels)
-        root_label = labels.Value(1) # First label at root
-        nbr = labels.Length()  # number of labels at root
-        logger.debug('Number of labels at doc root : %i', nbr)
-        # Get root label information
-        # If first label at root holds an assembly, it is the Top Assy.
-        # Through this label, the entire assembly is accessible.
-        # There is no need to explicitly examine other labels at root.
-        root_name = root_label.GetLabelName()
-        root_entry = root_label.EntryDumpToString()
-        root_uid = self.get_uid_from_entry(root_entry)
-        parent_item = self.assy_root
-        loc = shape_tool.GetLocation(root_label)  # <TopLoc_Location>
-        self.assy_loc_stack.append(loc)
-        self.assy_entry_stack.append(root_entry)
-        self.uid_dict = {root_uid: {'entry': root_entry,
-                                    'name': root_name,
-                                    'ref_entry': None}}
-        if new_tree:
-            # create node in tree view
-            item_name = [root_name, root_uid]
-            item = QTreeWidgetItem(parent_item, item_name)
-            item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-            item.setCheckState(0, Qt.Checked)
-            self.treeView.expandItem(item)
-            self.tree_view_item_dict[root_entry] = item
-            self.assy_list.append(root_uid)
-
-        top_comps = TDF_LabelSequence() # Components of Top Assy
-        subchilds = False
-        is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
-        if top_comps.Length():  # if is_assy:
-            logger.debug("")
-            logger.debug("Parsing components of label entry %s)", root_entry)
-            self.parse_components(top_comps, shape_tool, color_tool, new_tree)
-        else:
-            print("Something is wrong.")
-
-    def parse_components(self, comps, shape_tool, color_tool, new_tree):
-        """Parse components from comps (LabelSequence).
-
-        Components of an assembly are, by definition, references which refer
-        to either a simple shape or a compound shape (an assembly).
-        Components are essentially 'instances' of the referred shape or assembly
-        and carry a location vector specifing the location of the referred
-        shape or assembly."""
-
-        for j in range(comps.Length()):
-            logger.debug("Assy_entry_stack: %s", self.assy_entry_stack)
-            logger.debug("loop %i of %i", j+1, comps.Length())
-            c_label = comps.Value(j+1)  # component label <class 'TDF_Label'>
-            c_name = c_label.GetLabelName()
-            c_entry = c_label.EntryDumpToString()
-            c_uid = self.get_uid_from_entry(c_entry)
-            c_shape = shape_tool.GetShape(c_label)
-            logger.debug("Component number %i", j+1)
-            logger.debug("Component name: %s", c_name)
-            logger.debug("Component entry: %s", c_entry)
-            if new_tree:
-                # create node in tree view
-                item_name = [c_name, c_uid]
-                parent = self.tree_view_item_dict[self.assy_entry_stack[-1]]
-                item = QTreeWidgetItem(parent, item_name)
-                item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-                item.setCheckState(0, Qt.Checked)
-                self.treeView.expandItem(item)
-                self.tree_view_item_dict[c_entry] = item
-            ref_label = TDF_Label()  # label of referred shape (or assembly)
-            is_ref = shape_tool.GetReferredShape(c_label, ref_label)
-            if is_ref:  # I think all components are references
-                ref_name = ref_label.GetLabelName()
-                ref_shape = shape_tool.GetShape(ref_label)
-                ref_entry = ref_label.EntryDumpToString()
-                self.uid_dict[c_uid] = {'entry': c_entry,
-                                        'name': c_name,
-                                        'ref_entry': ref_entry}
-                if shape_tool.IsSimpleShape(ref_label):
-                    temp_assy_loc_stack = list(self.assy_loc_stack)
-                    # Multiply locations in stack sequentially to a result
-                    if len(temp_assy_loc_stack) > 1:
-                        res_loc = temp_assy_loc_stack.pop(0)
-                        for loc in temp_assy_loc_stack:
-                            res_loc = res_loc.Multiplied(loc)
-                        c_shape.Move(res_loc)
-                    elif len(temp_assy_loc_stack) == 1:
-                        res_loc = temp_assy_loc_stack.pop()
-                        c_shape.Move(res_loc)
-                    else:
-                        res_loc = None
-                    # It is possible for this component to both specify a
-                    # location 'c_loc' and refer directly to a top level shape.
-                    # If this component *does* specify a location 'c_loc',
-                    # it will be applied to the referred shape without being
-                    # included in temp_assy_loc_stack. But in order to keep
-                    # track of the total location from the root shape to the
-                    # instance, it needs to be accounted for (by mutiplying
-                    # res_loc by it) before saving it to part_dict.
-                    c_loc = None
-                    c_loc = shape_tool.GetLocation(c_label)
-                    if c_loc:
-                        loc = res_loc.Multiplied(c_loc)
-                    color = Quantity_Color()
-                    color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
-                    self.part_dict[c_uid] = {'shape': c_shape,
-                                             'color': color,
-                                             'name': c_name,
-                                             'loc': loc}
-                elif shape_tool.IsAssembly(ref_label):
-                    logger.debug("Referred item is an Assembly")
-                    # Location vector is carried by component
-                    aLoc = TopLoc_Location()
-                    aLoc = shape_tool.GetLocation(c_label)
-                    self.assy_loc_stack.append(aLoc)
-                    self.assy_entry_stack.append(ref_entry)
-                    if new_tree:
-                        self.tree_view_item_dict[ref_entry] = item
-                    self.assy_list.append(c_uid)
-                    r_comps = TDF_LabelSequence() # Components of Assy
-                    subchilds = False
-                    isAssy = shape_tool.GetComponents(ref_label, r_comps, subchilds)
-                    logger.debug("Assy name: %s", ref_name)
-                    logger.debug("Is Assembly? %s", isAssy)
-                    logger.debug("Number of components: %s", r_comps.Length())
-                    if r_comps.Length():
-                        logger.debug("")
-                        logger.debug("Parsing components of label entry %s)",
-                                     ref_entry)
-                        self.parse_components(r_comps, shape_tool, color_tool, new_tree)
-            else:
-                print(f"I was wrong: All components are *not* references {c_uid}")
-        self.assy_entry_stack.pop()
-        self.assy_loc_stack.pop()
-
-    def doc_linter(self, doc=None):
-        """Clean self.doc by cycling through a STEP save/load cycle."""
-
-        if doc == None:
-            doc = self.doc
-        # Create a file object to save to
-        fname = "deleteme.txt"
-        # Initialize STEP exporter
-        WS = XSControl_WorkSession()
-        step_writer = STEPCAFControl_Writer(WS, False)
-        # Transfer shapes and write file
-        step_writer.Transfer(doc, STEPControl_AsIs)
-        status = step_writer.Write(fname)
-        assert status == IFSelect_RetDone
-        # Create new TreeModel and read STEP data
-        tmodel = TreeModel("DOC")
-        shape_tool = tmodel.shape_tool
-        color_tool = tmodel.color_tool
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-            os.remove(fname)
-        return tmodel.doc
-
-    def copy_label(self, source_label, target_label):
-        cp_label = TDF_CopyLabel()
-        cp_label.Load(source_label, target_label)
-        cp_label.Perform()
-        return cp_label.IsDone()
-
-    def loadStepAtRoot(self):
-        """Get OCAF document from STEP file and assign it to win.doc.
-
-        This works as a surrogate for loading a CAD project that has previously
-        been saved as a STEP file."""
-
-        prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        logger.debug("Load file name: %s", fname)
-        if not fname:
-            print("Load step cancelled")
-            return
-        tmodel = TreeModel("DOC")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
-
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-        self.doc = tmodel.doc
-        # Build new self.part_dict & tree view
-        self.parse_doc(tree=True)
-        self.drawAll()
-        self.fitAll()
-
-    def loadStep(self):
-        """Get OCAF document from STEP file and add (as component) to doc root.
-
-        This is the way to open step files containing a single shape at root."""
-
-        prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        logger.debug("Load file name: %s", fname)
-        if not fname:
-            print("Load step cancelled")
-            return
-        tmodel = TreeModel("DOC")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
-
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-        # Get root label of step data
-        labels = TDF_LabelSequence()
-        step_shape_tool.GetShapes(labels)
-        for j in range(labels.Length()):
-            label = labels.Value(j+1)
-            shape = step_shape_tool.GetShape(label)
-            color = Quantity_Color()
-            name = label.GetLabelName()
-            step_color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
-            isSimpleShape = step_shape_tool.IsSimpleShape(label)
-            if isSimpleShape:
-                _ = self.addComponent(shape, name, color)
-
-    def loadStepAt2(self):
-        """Get OCAF document from STEP file and 'paste' root label onto 0:1:1:2
-
-        First create a box, resulting in a box component under doc root that
-        refers to the actual TopoDS_Shape at label 0:1:1:2.
-        Then run this to see if the step file being loaded replaces the box.
-        This actually worked! The name 'Box' at component 0:1:1:1:1 stayed the
-        same but the top assembly 'as1' of the step file 'as1-oc-214.stp' came
-        in starting at 0:1:1:2."""
-
-        prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        logger.debug("Load file name: %s", fname)
-        if not fname:
-            print("Load step cancelled")
-            return
-        tmodel = TreeModel("DOC")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
-
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-        # Get root label of step data
-        step_labels = TDF_LabelSequence()
-        step_shape_tool.GetShapes(step_labels)
-        steprootLabel = step_labels.Value(1)
-        # Get target label of self.doc
-        labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        targetLabel = labels.Value(2)
-        # Copy source label to target label
-        self.copy_label(steprootLabel, targetLabel)
-        shape_tool.UpdateAssemblies()
-        # Repair self.doc by cycling through save/load
-        self.doc = self.doc_linter()
-        # Build new self.part_dict & tree view
-        self.parse_doc(tree=True)
-        self.drawAll()
-        self.fitAll()
-
-    def loadStepAtEnd(self):
-        """Paste step root label onto last+1 label at self.doc root
-
-        Add a simple box component to the first label at self.doc root.
-        Set the component name to be the name of the step file.
-        Then assign the label of the referred shape to 'targetLabel'.
-        Finally, copy step root label onto 'targetLabel'.
-
-        This works when copying file 'as1-oc-214.stp' to 0:1:1:2 (n=2) but does
-        not get part color at higher values of n. Also doesn't work with file
-        'as1_pe_203.stp' loaded at any value of n. ???
-        """
-
-        prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple  # fname = /path/to/some/filename.ext
-        base = os.path.basename(fname)  # filename.ext
-        filename, ext = os.path.splitext(base)
-        logger.debug("Load file name: %s", fname)
-        if not fname:
-            print("Load step cancelled")
-            return
-        # Get the step data
-        tmodel = TreeModel("STEP")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
-
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-        # Delint tmodel.doc & make new tools
-        step_doc = self.doc_linter(tmodel.doc)
-        step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
-        step_color_tool = XCAFDoc_DocumentTool_ColorTool(step_doc.Main())
-
-        # Get root label of step data
-        step_labels = TDF_LabelSequence()
-        step_shape_tool.GetShapes(step_labels)
-        steprootLabel = step_labels.Value(1)
-        # Make a simple box and add it as a component
-        myBody = BRepPrimAPI_MakeBox(4, 4, 4).Shape()
-        _ = self.addComponent(myBody, filename, self.default_color)
-        step_shape_tool.UpdateAssemblies()
-        # Get target label of self.doc
-        labels = TDF_LabelSequence()  # labels at root
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        n = labels.Length()   # number of labels at root
-        print(n)
-        targetLabel = labels.Value(n)  # of ref shape of comp just added
-        # Copy source label to target label
-        self.copy_label(steprootLabel, targetLabel)
-        shape_tool.UpdateAssemblies()
-        # Repair self.doc by cycling through save/load
-        self.doc = self.doc_linter()
-        # Build new self.part_dict & tree view
-        self.parse_doc(tree=True)
-        self.drawAll()
-        self.fitAll()
-
-    def saveStepActPrt(self):
-        prompt = 'Choose filename for step file.'
-        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        if not fname:
-            print("Save step cancelled.")
-            return
-
-        # initialize the STEP exporter
-        step_writer = STEPControl_Writer()
-        Interface_Static_SetCVal("write.step.schema", "AP203")
-
-        # transfer shapes and write file
-        step_writer.Transfer(self.activePart, STEPControl_AsIs)
-        status = step_writer.Write(fname)
-        assert status == IFSelect_RetDone
-
-    def saveStepDoc(self):
-        """Export self.doc to STEP file."""
-
-        prompt = 'Choose filename for step file.'
-        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        if not fname:
-            print("Save step cancelled.")
-            return
-
-        # initialize STEP exporter
-        WS = XSControl_WorkSession()
-        step_writer = STEPCAFControl_Writer(WS, False)
-
-        # transfer shapes and write file
-        step_writer.Transfer(self.doc, STEPControl_AsIs)
-        status = step_writer.Write(fname)
-        assert status == IFSelect_RetDone
-
-    def replaceShape(self, modshape):
-        """Replace active part shape with modified shape.
-
-        The active part is a located instance of a referred shape stored
-        at doc root. The user doesn't have access to this root shape. In order
-        to modify the referred shape, the instance shape is modified, then
-        moved back to the original location at doc root, then saved."""
-        oldshape = self.activePart
-        uid = self.activePartUID
-        # Save oldshape to ancestorDict
-        self.ancestor_dict[uid].append(oldshape)
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        # shape is stored at label entry '0:1:1:n'
-        n = int(self.uid_dict[uid]['ref_entry'].split(':')[-1])
-        labels = TDF_LabelSequence()
-        shape_tool.GetShapes(labels)
-        label = labels.Value(n)  # nth label at root
-
-        # If shape instance was moved from its root location to its instance
-        # location, 'unmove' it to relocate it back to the root location.
-        if self.part_dict[uid]['loc']:
-            modshape.Move(self.part_dict[uid]['loc'].Inverted())
-        # Replace oldshape in self.doc
-        shape_tool.SetShape(label, modshape)
-        shape_tool.UpdateAssemblies()
-        self.parse_doc()  # generate new part_dict
-        self.setActivePart(uid)  # Refresh shape in self.activePart
-        self.redraw()
-
-    def addComponent(self, shape, name, color):
-        """Add new shape to top assembly of self.doc & return uid"""
-        labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        try:
-            rootLabel = labels.Value(1) # First label at root
-        except RuntimeError as e:
-            print(e)
-            return
-        newLabel = shape_tool.AddComponent(rootLabel, shape, True)
-        # Get referrred label and apply color to it
-        refLabel = TDF_Label()  # label of referred shape
-        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
-        if isRef:
-            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
-        self.setLabelName(newLabel, name)
-        logger.info('Part %s added to root label', name)
-        shape_tool.UpdateAssemblies()
-        self.doc = self.doc_linter()  # This gets color to work
-        self.parse_doc(tree=True)
-        entry = newLabel.EntryDumpToString()
-        uid = entry + '.0'  # this should work OK since it is new
-        return uid
-
-    def getLabelName(self, label):
-        return label.GetLabelName()
-
-    def setLabelName(self, label, name):
-        TDataStd_Name.Set(label, TCollection_ExtendedString(name))
-
-    def change_label_name(self, uid, name):
-        """Change the name of component with uid."""
-        entry, _ = uid.split('.')
-        entry_parts = entry.split(':')
-        if len(entry_parts) == 4:  # first label at root
-            j = 1
-            k = None
-        elif len(entry_parts) == 5:  # part is a component of label at root
-            j = int(entry_parts[3])  # number of label at root
-            k = int(entry_parts[4])  # component number
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        labels = TDF_LabelSequence()  # labels at root of self.doc
-        shape_tool.GetShapes(labels)
-        label = labels.Value(j)
-        comps = TDF_LabelSequence()  # Components of root_label
-        subchilds = False
-        is_assy = shape_tool.GetComponents(label, comps, subchilds)
-        target_label = comps.Value(k)
-        self.setLabelName(target_label, name)
-        shape_tool.UpdateAssemblies()
-        print(f"Name {name} set for part with uid = {uid}.")
-        self.parse_doc(tree=True)

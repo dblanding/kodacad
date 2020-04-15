@@ -41,7 +41,7 @@ from OCC.Core.TopoDS import (TopoDS_Vertex, topods_Edge,
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.TopTools import TopTools_ListOfShape
 from OCCUtils import Topology
-from mainwindow import MainWindow
+from mainwindow import MainWindow, doc
 import stepanalyzer
 import workplane
 
@@ -604,7 +604,8 @@ def makeBox():
     """Quick box (for debuggging)"""
     name = 'Box'
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
-    uid = win.addComponent(myBody, name, win.default_color)
+    uid = doc.addComponent(myBody, name, win.default_color)
+    win.build_tree()
     win.drawAddPart(uid)
     win.setActivePart(uid)
     win.redraw()
@@ -613,7 +614,8 @@ def makeCyl():
     """Quick cylinder (for debuggging)"""
     name = 'Cylinder'
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
-    uid = win.addComponent(myBody, name, win.default_color)
+    uid = doc.addComponent(myBody, name, win.default_color)
+    win.build_tree()
     win.drawAddPart(uid)
     win.setActivePart(uid)
     win.redraw()
@@ -632,7 +634,8 @@ def extrude():
         aPrismVec = wp.wVec * length
         myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(),
                                        aPrismVec).Shape()
-        uid = win.addComponent(myBody, name, win.default_color)
+        uid = doc.addComponent(myBody, name, win.default_color)
+        win.build_tree()
         win.drawAddPart(uid)
         win.setActivePart(uid)
         win.redraw()
@@ -665,7 +668,8 @@ def revolve():
         face = BRepBuilderAPI_MakeFace(wp.wire).Shape()
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
         myBody = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
-        uid = win.addComponent(myBody, name, win.default_color)
+        uid = doc.addComponent(myBody, name, win.default_color)
+        win.build_tree()
         win.drawAddPart(uid)
         win.setActivePart(uid)
         win.redraw()
@@ -731,7 +735,7 @@ def mill():
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(),
                                      aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
-        win.replaceShape(newPart)
+        doc.replaceShape(newPart)
         win.statusBar().showMessage('Mill operation complete')
         win.clearCallback()
     else:
@@ -762,7 +766,7 @@ def pull():
         tool = BRepPrimAPI_MakePrism(pullProfile.Shape(),
                                      aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
-        win.replaceShape(newPart)
+        doc.replaceShape(newPart)
         win.statusBar().showMessage('Pull operation complete')
         win.clearCallback()
     else:
@@ -803,7 +807,7 @@ def fillet(event=None):
             mkFillet.Add(filletR, edge)
         try:
             newPart = mkFillet.Shape()
-            win.replaceShape(newPart)
+            doc.replaceShape(newPart)
             win.statusBar().showMessage('Fillet operation complete')
         except RuntimeError as e:
             print(f"Unable to make Fillet. {e}")
@@ -829,7 +833,7 @@ def fuse():
         shape = win.shapeStack.pop()
         workpart = win.activePart
         newPart = BRepAlgoAPI_Fuse(workpart, shape).Shape()
-        win.replaceShape(newPart)
+        doc.replaceShape(newPart)
         win.statusBar().showMessage('Fuse operation complete')
         win.clearCallback()
     else:
@@ -854,7 +858,7 @@ def shell(event=None):
         workPart = win.activePart
         shellT = float(text) * win.unitscale
         newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.e-3).Shape()
-        win.replaceShape(newPart)
+        doc.replaceShape(newPart)
         win.statusBar().showMessage('Shell operation complete')
         win.clearCallback()
     else:
@@ -882,7 +886,7 @@ def print_uid_dict():
     pprint.pprint(win.uid_dict)
 
 def dumpDoc():
-    sa = stepanalyzer.StepAnalyzer(document=win.doc)
+    sa = stepanalyzer.StepAnalyzer(document=doc.doc)
     dumpdata = sa.dump()
     print(dumpdata)
 
@@ -968,10 +972,10 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = MainWindow()
     win.add_menu('File')
-    win.add_function_to_menu('File', "Load STEP At Top", win.loadStepAtRoot)
-    win.add_function_to_menu('File', "Load STEP As Comp", win.loadStep)
-    win.add_function_to_menu('File', "Save STEP (Top)", win.saveStepDoc)
-    win.add_function_to_menu('File', "Save STEP (Act Prt)", win.saveStepActPrt)
+    win.add_function_to_menu('File', "Load STEP At Top", doc.loadStepAtRoot)
+    win.add_function_to_menu('File', "Load STEP As Comp", doc.loadStep)
+    win.add_function_to_menu('File', "Save STEP (Top)", doc.saveStepDoc)
+    win.add_function_to_menu('File', "Save STEP (Act Prt)", doc.saveStepActPrt)
     win.add_menu('Workplane')
     win.add_function_to_menu('Workplane', "At Origin, XY Plane", makeWP)
     win.add_function_to_menu('Workplane', "On face", wpOnFace)
@@ -993,7 +997,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "parse doc", parseDoc)
     win.add_function_to_menu('Utility', "add box", addBox)
-    win.add_function_to_menu('Utility', "Load Step Under Top", win.loadStepAtEnd)
+    win.add_function_to_menu('Utility', "Load Step Under Top", doc.loadStepAtEnd)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
     win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)
