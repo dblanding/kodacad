@@ -287,11 +287,9 @@ class MainWindow(QMainWindow):
     def build_tree(self):
         """Build new tree view from doc.uid_dict.
 
-        This ought to be done whenever doc.doc is modified in a way that causes
-        the tree view to change. The tree view represents the hierarchical
-        structure of the top assembly and its components. The tree sjould be
-        rebuilt if the name of one of its items were changed. Also, if new
-        geometry is created or loaded."""
+        This needs to be done whenever doc.doc is modified in a way that would
+        reuslt in a change in the tree view. The tree view represents the
+        hierarchical structure of the top assembly and its components."""
         self.clearTree()
         parent_item_dict = {}  # {uid: tree view item}
         for uid, dic in doc.uid_dict.items():
@@ -299,17 +297,18 @@ class MainWindow(QMainWindow):
             entry = dic['entry']
             name = dic['name']
             parent_uid = dic['parent_uid']
-            if parent_uid in parent_item_dict:
-                parent_item = parent_item_dict[parent_uid]
-            else:
+            if parent_uid not in parent_item_dict:
                 parent_item = self.assy_root
-                parent_item_dict[uid] = parent_item
+            else:
+                parent_item = parent_item_dict[parent_uid]
+
             # create node in tree view
             item_name = [name, uid]
             item = QTreeWidgetItem(parent_item, item_name)
             item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
             item.setCheckState(0, Qt.Checked)
             self.treeView.expandItem(item)
+            parent_item_dict[uid] = item
 
     def addItemToTreeView(self, name, uid):
         itemName = [name, str(uid)]

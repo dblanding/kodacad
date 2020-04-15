@@ -291,7 +291,7 @@ class DocModel():
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(tmodel.doc)
         self.doc = tmodel.doc
-        # Build new self.part_dict & tree view
+        # Build new self.part_dict & self.uid_dict
         self.parse_doc()
 
     def loadStep(self):
@@ -381,7 +381,7 @@ class DocModel():
         shape_tool.UpdateAssemblies()
         # Repair self.doc by cycling through save/load
         self.doc = self.doc_linter()
-        # Build new self.part_dict & tree view
+        # Build new self.part_dict & self.uid_dict
         self.parse_doc()
 
     def loadStepAtEnd(self):

@@ -893,6 +893,30 @@ def shellC(shapeList, *args):
 
 #############################################
 #
+#  Load Step functions
+#
+#############################################
+
+def loadStepAtTop():
+    doc.loadStepAtRoot()
+    win.build_tree()
+    win.drawAll()
+    win.fitAll()
+
+def loadStep():
+    doc.loadStep()
+    win.build_tree()
+    win.drawAll()
+    win.fitAll()
+
+def loadStepAtEnd():
+    doc.loadStepAtEnd()
+    win.build_tree()
+    win.drawAll()
+    win.fitAll()
+
+#############################################
+#
 #  Info & Utility functions
 #
 #############################################
@@ -907,13 +931,6 @@ def dumpDoc():
 
 def parseDoc():
     win.parse_doc(tree=True)
-
-def addBox():
-    """Test: add box to a non-root label"""
-    name = 'box_1'
-    myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
-    win.add2RodAy(myBody, name, win.default_color)
-    win.redraw()
 
 def topoDumpAP():
     if win.activePart:
@@ -987,10 +1004,9 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = MainWindow()
     win.add_menu('File')
-    win.add_function_to_menu('File', "Load STEP At Top", doc.loadStepAtRoot)
-    win.add_function_to_menu('File', "Load STEP As Comp", doc.loadStep)
+    win.add_function_to_menu('File', "Load STEP At Top", loadStepAtTop)
+    win.add_function_to_menu('File', "Load STEP As Comp", loadStep)
     win.add_function_to_menu('File', "Save STEP (Top)", doc.saveStepDoc)
-    win.add_function_to_menu('File', "Save STEP (Act Prt)", doc.saveStepActPrt)
     win.add_menu('Workplane')
     win.add_function_to_menu('Workplane', "At Origin, XY Plane", makeWP)
     win.add_function_to_menu('Workplane', "On face", wpOnFace)
@@ -1011,8 +1027,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Utility', "print uid_dict", print_uid_dict)
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "parse doc", parseDoc)
-    win.add_function_to_menu('Utility', "add box", addBox)
-    win.add_function_to_menu('Utility', "Load Step Under Top", doc.loadStepAtEnd)
+    win.add_function_to_menu('Utility', "Load Step Under Top", loadStepAtEnd)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
     win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)
