@@ -55,9 +55,7 @@ class DocModel():
     comprising the label entry appended with a '.' and an integer. The integer
     is needed to make it unique (allowing to distinguish between different
     instances of shared data).
-    The tree view represents the hierarchical structure of the top assembly
-    and its components. Each componenent refers to a label at the root level
-    which is either a part or another assembly."""
+    """
 
     def __init__(self):
         self.doc = self.createDoc()
@@ -497,17 +495,13 @@ class DocModel():
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
 
-    def replaceShape(self, modshape):
-        """Replace active part shape with modified shape.
+    def replaceShape(self, uid, modshape):
+        """Replace referred shape with modshape of component with uid 
 
-        The active part is a located instance of a referred shape stored
+        The modified part is a located instance of a referred shape stored
         at doc root. The user doesn't have access to this root shape. In order
-        to modify the referred shape, the instance shape is modified, then
-        moved back to the original location at doc root, then saved."""
-        oldshape = self.activePart
-        uid = self.activePartUID
-        # Save oldshape to ancestorDict
-        self.ancestor_dict[uid].append(oldshape)
+        to modify this referred shape, the modified instance shape is moved
+        back to the original location at doc root, then saved."""
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         # shape is stored at label entry '0:1:1:n'
@@ -524,8 +518,6 @@ class DocModel():
         shape_tool.SetShape(label, modshape)
         shape_tool.UpdateAssemblies()
         self.parse_doc()  # generate new part_dict
-        self.setActivePart(uid)  # Refresh shape in self.activePart
-        self.redraw()
 
     def addComponent(self, shape, name, color):
         """Add new shape to top assembly of self.doc & return uid"""

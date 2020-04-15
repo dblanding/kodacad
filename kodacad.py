@@ -730,12 +730,15 @@ def mill():
             return
         wire = wp.wire
         workPart = win.activePart
+        uid = win.activePartUID
         punchProfile = BRepBuilderAPI_MakeFace(wire)
         aPrismVec = wp.wVec * -depth
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(),
                                      aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
-        doc.replaceShape(newPart)
+        doc.replaceShape(uid, newPart)
+        win.setActivePart(uid)
+        win.redraw()
         win.statusBar().showMessage('Mill operation complete')
         win.clearCallback()
     else:
@@ -761,12 +764,15 @@ def pull():
             return
         wire = wp.wire
         workPart = win.activePart
+        uid = win.activePartUID
         pullProfile = BRepBuilderAPI_MakeFace(wire)
         aPrismVec = wp.wVec * length
         tool = BRepPrimAPI_MakePrism(pullProfile.Shape(),
                                      aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
-        doc.replaceShape(newPart)
+        doc.replaceShape(uid, newPart)
+        win.setActivePart(uid)
+        win.redraw()
         win.statusBar().showMessage('Pull operation complete')
         win.clearCallback()
     else:
@@ -802,15 +808,18 @@ def fillet(event=None):
                 return
         win.edgeStack = []
         workPart = win.activePart
+        uid = win.activePartUID
         mkFillet = BRepFilletAPI_MakeFillet(workPart)
         for edge in edges:
             mkFillet.Add(filletR, edge)
         try:
             newPart = mkFillet.Shape()
-            doc.replaceShape(newPart)
+            doc.replaceShape(uid, newPart)
             win.statusBar().showMessage('Fillet operation complete')
         except RuntimeError as e:
             print(f"Unable to make Fillet. {e}")
+        win.setActivePart(uid)
+        win.redraw()
         win.clearCallback()
     else:
         win.registerCallback(filletC)
@@ -832,8 +841,11 @@ def fuse():
     if win.shapeStack:
         shape = win.shapeStack.pop()
         workpart = win.activePart
+        uid = win.activePartUID
         newPart = BRepAlgoAPI_Fuse(workpart, shape).Shape()
-        doc.replaceShape(newPart)
+        doc.replaceShape(uid, newPart)
+        win.setActivePart(uid)
+        win.redraw()
         win.statusBar().showMessage('Fuse operation complete')
         win.clearCallback()
     else:
@@ -856,9 +868,12 @@ def shell(event=None):
             faces.Append(face)
         win.faceStack = []
         workPart = win.activePart
+        uid = win.activePartUID
         shellT = float(text) * win.unitscale
         newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.e-3).Shape()
-        doc.replaceShape(newPart)
+        doc.replaceShape(uid, newPart)
+        win.setActivePart(uid)
+        win.redraw()
         win.statusBar().showMessage('Shell operation complete')
         win.clearCallback()
     else:

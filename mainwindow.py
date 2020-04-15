@@ -285,7 +285,13 @@ class MainWindow(QMainWindow):
     #############################################
 
     def build_tree(self):
-        """Build new tree view (Do thus when doc is modified to affect tree view)"""
+        """Build new tree view from doc.uid_dict.
+
+        This ought to be done whenever doc.doc is modified in a way that causes
+        the tree view to change. The tree view represents the hierarchical
+        structure of the top assembly and its components. The tree sjould be
+        rebuilt if the name of one of its items were changed. Also, if new
+        geometry is created or loaded."""
         self.clearTree()
         parent_item_dict = {}  # {uid: tree view item}
         for uid, dic in doc.uid_dict.items():
