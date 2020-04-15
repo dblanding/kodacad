@@ -27,26 +27,23 @@ import os.path
 from PyQt5.QtWidgets import QFileDialog
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
-from OCC.Core.Quantity import (Quantity_Color, Quantity_NOC_GRAY, Quantity_ColorRGBA,
-                               Quantity_NOC_DARKGREEN, Quantity_NOC_MAGENTA1)
+from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
 from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Writer
 from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_CopyLabel
-from OCC.Core.TopoDS import topods_Edge, topods_Vertex, TopoDS_Compound
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
                               XCAFDoc_DocumentTool_ColorTool,
                               XCAFDoc_ColorGen, XCAFDoc_ColorSurf)
 from OCC.Core.XSControl import XSControl_WorkSession
-import OCC.Display.OCCViewer
 from treemodel import TreeModel
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO) # set to DEBUG | INFO | ERROR
+logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
 
 class DocModel():
     """Holds and manipulates the 3D CAD model in OCAF TDocStd_Document format.
@@ -218,7 +215,7 @@ class DocModel():
                     logger.debug("Number of components: %s", r_comps.Length())
                     if r_comps.Length():
                         logger.debug("")
-                        logger.debug("Parsing components of label entry %s)",  ref_entry)
+                        logger.debug("Parsing components of label entry %s)", ref_entry)
                         self.parse_components(r_comps, shape_tool, color_tool)
             else:
                 print(f"I was wrong: All components are *not* references {c_uid}")
@@ -229,7 +226,7 @@ class DocModel():
     def doc_linter(self, doc=None):
         """Clean self.doc by cycling through a STEP save/load cycle."""
 
-        if doc == None:
+        if doc is None:
             doc = self.doc
         # Create a file object to save to
         fname = "deleteme.txt"
@@ -490,7 +487,7 @@ class DocModel():
         assert status == IFSelect_RetDone
 
     def replaceShape(self, uid, modshape):
-        """Replace referred shape with modshape of component with uid 
+        """Replace referred shape with modshape of component with uid
 
         The modified part is a located instance of a referred shape stored
         at doc root. The user doesn't have access to this root shape. In order

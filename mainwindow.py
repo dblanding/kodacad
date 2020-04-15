@@ -23,40 +23,22 @@
 
 from collections import defaultdict
 import logging
-import os
-import os.path
-import sys
 from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
                              QDockWidget, QDesktopWidget, QToolButton,
                              QLineEdit, QTreeWidgetItem, QAction, QFrame,
-                             QToolBar, QFileDialog, QAbstractItemView,
-                             QInputDialog, QTreeWidgetItemIterator)
+                             QToolBar, QAbstractItemView, QInputDialog,
+                             QTreeWidgetItemIterator)
 from OCC.Core.AIS import AIS_Shape, AIS_Line, AIS_Circle
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
-from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.CPnts import CPnts_AbscissaPoint_Length
 from OCC.Core.gp import gp_Vec
-from OCC.Core.IFSelect import IFSelect_RetDone
-from OCC.Core.Interface import Interface_Static_SetCVal
 from OCC.Core.Prs3d import Prs3d_LineAspect
 from OCC.Core.Quantity import (Quantity_Color, Quantity_NOC_GRAY,
                                Quantity_NOC_DARKGREEN, Quantity_NOC_MAGENTA1)
-from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Writer
-from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
-from OCC.Core.TCollection import TCollection_ExtendedString
-from OCC.Core.TDataStd import TDataStd_Name
-from OCC.Core.TDocStd import TDocStd_Document
-from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_CopyLabel
-from OCC.Core.TopoDS import topods_Edge, topods_Vertex, TopoDS_Compound
-from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
-from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
-                              XCAFDoc_DocumentTool_ColorTool,
-                              XCAFDoc_ColorGen, XCAFDoc_ColorSurf)
-from OCC.Core.XSControl import XSControl_WorkSession
+from OCC.Core.TopoDS import topods_Edge, topods_Vertex
 import OCC.Display.OCCViewer
 import OCC.Display.backend
 used_backend = OCC.Display.backend.load_backend()
@@ -236,7 +218,7 @@ class MainWindow(QMainWindow):
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
-        self.default_color = OCC.Display.OCCViewer.rgb_color(.2, .1, .1)
+        self.default_color = OCC.Display.OCCViewer.rgb_color(.6, .6, .4)
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -496,7 +478,8 @@ class MainWindow(QMainWindow):
                 print(f"UID= {uid}, name = {newName}")
                 self.treeView.clearSelection()
                 self.itemClicked = None
-                self.change_label_name(uid, newName)
+                doc.change_label_name(uid, newName)
+                self.build_tree()
 
     #############################################
     #
