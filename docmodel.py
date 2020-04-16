@@ -159,11 +159,23 @@ class DocModel():
         return entry + '.' + str(value)
 
     def parse_doc(self):
-        """Generate new part_dict, uid_dict, & tree_item_list."""
+        """Generate new part_dict & uid_dict.
+
+        part_dict (dict of dicts) is used primarily for 3D display
+        part_dict = {uid: {'shape': ,
+                            'name': ,
+                            'color': }}
+        uid_dict (dict of dicts) is used primarily for tree view display
+        uid_dict = {uid:   {'entry': ,
+                            'name': ,
+                            'parent_uid': ,
+                            'ref_entry': ,
+                            'is_assy': }}
+        """
 
         # Initialize dictionaries & list
         self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
-        self.part_dict = {}  # {uid: {'shape': , 'name': , 'color': }}
+        self.part_dict = {}
         self.uid_dict = {}
         # Temporary use during unpacking
         self.parent_uid_stack = []  # uid of parent (topmost first)
@@ -190,7 +202,8 @@ class DocModel():
         self.assy_loc_stack.append(loc)
         self.assy_entry_stack.append(root_entry)
         self.uid_dict = {root_uid: {'entry': root_entry, 'name': root_name,
-                                    'parent_uid': None, 'ref_entry': None}}
+                                    'parent_uid': None, 'ref_entry': None,
+                                    'is_assy': True}}
         self.parent_uid_stack.append(root_uid)
         top_comps = TDF_LabelSequence() # Components of Top Assy
         subchilds = False
@@ -233,6 +246,7 @@ class DocModel():
                                         'parent_uid': self.parent_uid_stack[-1],
                                         'ref_entry': ref_entry}
                 if shape_tool.IsSimpleShape(ref_label):
+                    self.uid_dict[c_uid].update({'is_assy': False})
                     temp_assy_loc_stack = list(self.assy_loc_stack)
                     # Multiply locations in stack sequentially to a result
                     if len(temp_assy_loc_stack) > 1:
@@ -264,6 +278,7 @@ class DocModel():
                                              'name': c_name,
                                              'loc': loc}
                 elif shape_tool.IsAssembly(ref_label):
+                    self.uid_dict[c_uid].update({'is_assy': True})
                     logger.debug("Referred item is an Assembly")
                     # Location vector is carried by component
                     aLoc = TopLoc_Location()

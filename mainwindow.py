@@ -269,6 +269,7 @@ class MainWindow(QMainWindow):
         result in a change in the tree view. The tree view represents the
         hierarchical structure of the top assembly and its components."""
         self.clearTree()
+        self.assy_list = []
         parent_item_dict = {}  # {uid: tree view item}
         for uid, dic in doc.uid_dict.items():
             # dic: {keys: 'entry', 'name', 'parent_uid', 'ref_entry'}
@@ -287,6 +288,11 @@ class MainWindow(QMainWindow):
             item.setCheckState(0, Qt.Checked)
             self.treeView.expandItem(item)
             parent_item_dict[uid] = item
+            # build assy_list
+            if dic['is_assy']:
+                self.assy_list.append(uid)
+        self.sync_treeview_to_active()
+        self.syncCheckedToDrawList()
 
     def addItemToTreeView(self, name, uid):
         itemName = [name, str(uid)]
@@ -358,8 +364,8 @@ class MainWindow(QMainWindow):
                     item.setCheckState(0, Qt.Unchecked)
 
     def sortViewItems(self):
-        """Return dicts of view items sorted by type: (prt, ay, wp)"""
-        # Traverse all treeView items
+        """Return dicts of tree view items sorted by type: (prt, ay, wp)"""
+        # Traverse all treeView widget items
         iterator = QTreeWidgetItemIterator(self.treeView)
         pdict = {}  # part-types    {uid: item}
         adict = {}  # asy-types     {uid: item}
@@ -418,6 +424,8 @@ class MainWindow(QMainWindow):
             elif uid in ad:
                 self.setActiveAsy(uid)
                 sbText = f"{name} [uid={uid}] is now the active assembly"
+            else:
+                sbText = f"{name} [uid={uid}] Unable to set active."
             self.statusBar().showMessage(sbText, 5000)
 
     def showItemActive(self, uid):
@@ -441,6 +449,11 @@ class MainWindow(QMainWindow):
                 itm.setBackground(0, QBrush(QColor(255, 255, 255, 0)))
             # Set BG color of new active asy
             ad[uid].setBackground(0, QBrush(QColor('lightblue')))
+
+    def sync_treeview_to_active(self):
+        for uid in (self.activePartUID, self.activeAsyUID, self.activeWpUID):
+            if uid:
+                self.showItemActive(uid)
 
     def setTransparent(self):
         item = self.itemClicked

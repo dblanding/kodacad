@@ -924,15 +924,12 @@ def loadStepAtEnd():
 #############################################
 
 def print_uid_dict():
-    pprint.pprint(win.uid_dict)
+    pprint.pprint(doc.uid_dict)
 
 def dumpDoc():
     sa = stepanalyzer.StepAnalyzer(document=doc.doc)
     dumpdata = sa.dump()
     print(dumpdata)
-
-def parseDoc():
-    win.parse_doc(tree=True)
 
 def topoDumpAP():
     if win.activePart:
@@ -940,32 +937,27 @@ def topoDumpAP():
 
 def printActiveAsyInfo():
     uid = win.activeAsyUID
-    try:
-        name = win.uid_dict[uid]['name']
-    except KeyError:
-        name = None
-    print(f"Active Assembly Name: {name} \t UID: {uid}")
+    if uid:
+        name = doc.uid_dict[uid]['name']
+        print(f"Active Assembly (uid) Name: ({uid}) {name}")
+    else:
+        print("None active")
 
 def printActiveWpInfo():
-    print(f"Name: {win.activeWp}")
-    print(f"UID: {win.activeWpUID}")
+    uid = win.activeWpUID
+    if uid:
+        name = win.activeWp
+        print(f"Active WP (uid) Name: ({uid}) {name}")
+    else:
+        print("None active")
 
 def printActivePartInfo():
     uid = win.activePartUID
-    try:
-        name = win.uid_dict[uid]['name']
-    except KeyError:
-        name = None
-    print(f"Active Part Name: {name} \t UID: {uid}")
-
-def printPartsInActiveAssy():
-    asyPrtTree = []
-    leafNodes = win.treeModel.leaves(win.activeAsyUID)
-    for node in leafNodes:
-        pid = node.identifier
-        if pid in win.part_dict:
-            asyPrtTree.append(pid)
-    print(asyPrtTree)
+    if uid:
+        name = doc.uid_dict[uid]['name']
+        print(f"Active Part (uid) Name: ({uid}) {name}")
+    else:
+        print("None active")
 
 def printActPart():
     uid = win.activePartUID
@@ -1028,10 +1020,8 @@ if __name__ == '__main__':
     win.add_menu('Utility')
     win.add_function_to_menu('Utility', "print uid_dict", print_uid_dict)
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
-    win.add_function_to_menu('Utility', "parse doc", parseDoc)
     win.add_function_to_menu('Utility', "Load Step Under Top", loadStepAtEnd)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
-    win.add_function_to_menu('Utility', "print(TreeViewData)", printTreeView)
     win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)
     win.add_function_to_menu('Utility', "print(Active Asy Info)", printActiveAsyInfo)
     win.add_function_to_menu('Utility', "print(Active Prt Info)", printActivePartInfo)
