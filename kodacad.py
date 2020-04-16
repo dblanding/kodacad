@@ -1012,7 +1012,7 @@ if __name__ == '__main__':
     win.add_function_to_menu('Create 3D', "Extrude", extrude)
     win.add_function_to_menu('Create 3D', "Revolve", revolve)
     win.add_menu('Modify Active Part')
-    #win.add_function_to_menu('Modify Active Part', "Rotate Act Part", rotateAP)
+    win.add_function_to_menu('Modify Active Part', "Rotate Act Part", rotateAP)
     win.add_function_to_menu('Modify Active Part', "Mill", mill)
     win.add_function_to_menu('Modify Active Part', "Pull", pull)
     win.add_function_to_menu('Modify Active Part', "Fillet", fillet)

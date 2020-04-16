@@ -113,13 +113,12 @@ class TreeModel():
 class DocModel():
     """Maintain the 3D CAD model in OCAF TDocStd_Document format.
 
-    Generate self.part_dict and self.uid_dict by parsing self.doc.
+    Generates self.part_dict and self.uid_dict by parsing self.doc.
     These dictionaries provide mainwindow with convenient access to CAD data.
-    Each tree view item represents a label in the OCAF document and has a uid
-    comprising the label entry appended with a '.' and an integer. The integer
-    is needed to make it unique (allowing to distinguish between different
-    instances of shared data).
-    """
+    Each item in the tree view represents a component label in the OCAF document and
+    has a uid comprising the label entry appended with a '.' and an integer. The
+    integer makes it unique (allowing to distinguish between different instances of
+    shared data)."""
 
     def __init__(self):
         self.doc = self.createDoc()
