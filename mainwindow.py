@@ -215,7 +215,6 @@ class MainWindow(QMainWindow):
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
         self.activeAsy = self.setActiveAsy(self.activeAsyUID)
-        self.default_color = OCC.Display.OCCViewer.rgb_color(.6, .6, .4)
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)

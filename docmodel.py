@@ -44,8 +44,12 @@ from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
                               XCAFDoc_ColorGen, XCAFDoc_ColorSurf)
 from OCC.Core.XSControl import XSControl_WorkSession
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
+
+
 class TreeModel():
-    """XCAF Tree Model of hierarchical CAD assembly data."""
+    """XCAF Tree Model of hierarchical CAD assembly data"""
 
     def __init__(self, title):
         # Create the application and document
@@ -104,8 +108,6 @@ class TreeModel():
         savefilename = TCollection_ExtendedString(filename)
         self.app.SaveAs(self.doc, savefilename)
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
 
 class DocModel():
     """Maintain the 3D CAD model in OCAF TDocStd_Document format.

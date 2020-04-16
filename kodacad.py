@@ -36,6 +36,7 @@ from OCC.Core.BRepPrimAPI import (BRepPrimAPI_MakeBox, BRepPrimAPI_MakePrism,
                                   BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeRevol)
 from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_MakeThickSolid
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
+from OCC.Core.Quantity import Quantity_ColorRGBA
 from OCC.Core.TopoDS import (TopoDS_Vertex, topods_Edge,
                              topods_Face, topods_Vertex)
 from OCC.Core.TopLoc import TopLoc_Location
@@ -51,6 +52,7 @@ logger.setLevel(logging.DEBUG) # set to DEBUG | INFO | ERROR
 TOL = 1e-7 # Linear Tolerance
 ATOL = TOL # Angular Tolerance
 print('TOLERANCE = ', TOL)
+DEFAULT_COLOR = Quantity_ColorRGBA(.6, .6, .4, 1.0)
 
 #############################################
 #
@@ -601,20 +603,20 @@ def delElC(shapeList, *args):
 #############################################
 
 def makeBox():
-    """Quick box (for debuggging)"""
+    """Quick box used for debuggging"""
     name = 'Box'
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
-    uid = doc.addComponent(myBody, name, win.default_color)
+    uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
     win.build_tree()
     win.drawAddPart(uid)
     win.setActivePart(uid)
     win.redraw()
 
 def makeCyl():
-    """Quick cylinder (for debuggging)"""
+    """Quick cylinder used for debuggging"""
     name = 'Cylinder'
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
-    uid = doc.addComponent(myBody, name, win.default_color)
+    uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
     win.build_tree()
     win.drawAddPart(uid)
     win.setActivePart(uid)
@@ -634,7 +636,7 @@ def extrude():
         aPrismVec = wp.wVec * length
         myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(),
                                        aPrismVec).Shape()
-        uid = doc.addComponent(myBody, name, win.default_color)
+        uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
         win.build_tree()
         win.drawAddPart(uid)
         win.setActivePart(uid)
@@ -668,7 +670,7 @@ def revolve():
         face = BRepBuilderAPI_MakeFace(wp.wire).Shape()
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
         myBody = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
-        uid = doc.addComponent(myBody, name, win.default_color)
+        uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
         win.build_tree()
         win.drawAddPart(uid)
         win.setActivePart(uid)
