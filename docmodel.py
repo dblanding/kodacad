@@ -30,7 +30,8 @@ from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
 from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Writer
 from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
-from OCC.Core.TCollection import TCollection_ExtendedString
+from OCC.Core.TCollection import (TCollection_ExtendedString,
+                                  TCollection_AsciiString)
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TDF import (TDF_LabelSequence, TDF_Label, TDF_CopyLabel,
@@ -526,24 +527,6 @@ class DocModel():
         self.doc = self.doc_linter()
         # Build new self.part_dict & tree view
         self.parse_doc()
-
-    def saveStepActPrt(self):
-        prompt = 'Choose filename for step file.'
-        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        if not fname:
-            print("Save step cancelled.")
-            return
-
-        # initialize the STEP exporter
-        step_writer = STEPControl_Writer()
-        Interface_Static_SetCVal("write.step.schema", "AP203")
-
-        # transfer shapes and write file
-        step_writer.Transfer(self.activePart, STEPControl_AsIs)
-        status = step_writer.Write(fname)
-        assert status == IFSelect_RetDone
 
     def saveStepDoc(self):
         """Export self.doc to STEP file."""
