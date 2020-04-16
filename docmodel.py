@@ -145,7 +145,7 @@ class DocModel():
         # shape_tool is at label entry = 0:1:1
         # Create empty rootLabel entry = 0:1:1:1
         rootLabel = shape_tool.NewShape()
-        self.setLabelName(rootLabel, "/")
+        self.setLabelName(rootLabel, "Top")
         return doc
 
     def get_uid_from_entry(self, entry):
@@ -339,8 +339,8 @@ class DocModel():
         cp_label.Perform()
         return cp_label.IsDone()
 
-    def loadStepAtRoot(self):
-        """Get OCAF document from STEP file and assign it to self.doc.
+    def load_stp_at_top(self):
+        """Get OCAF document from STEP file and assign it directly to self.doc.
 
         This works as a surrogate for loading a CAD project that has previously
         been saved as a STEP file."""
@@ -371,10 +371,10 @@ class DocModel():
         # Build new self.part_dict & self.uid_dict
         self.parse_doc()
 
-    def loadStep(self):
+    def load_stp_cmpnt(self):
         """Get OCAF document from STEP file and add (as component) to doc root.
 
-        This is the way to open step files containing a single shape at root."""
+        This is the way to load step files containing a single shape at root."""
 
         prompt = 'Select STEP file to import'
         fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
@@ -411,60 +411,10 @@ class DocModel():
             if isSimpleShape:
                 _ = self.addComponent(shape, name, color)
 
-    def loadStepAt2(self):
-        """Get OCAF document from STEP file and 'paste' root label onto 0:1:1:2
+    def load_stp_undr_top(self):
+        """Paste step root label under 1st label at self.doc root
 
-        First create a box, resulting in a box component under doc root that
-        refers to the actual TopoDS_Shape at label 0:1:1:2.
-        Then run this to see if the step file being loaded replaces the box.
-        This actually worked! The name 'Box' at component 0:1:1:1:1 stayed the
-        same but the top assembly 'as1' of the step file 'as1-oc-214.stp' came
-        in starting at 0:1:1:2."""
-
-        prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
-        logger.debug("Load file name: %s", fname)
-        if not fname:
-            print("Load step cancelled")
-            return
-        tmodel = TreeModel("DOC")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
-
-        step_reader = STEPCAFControl_Reader()
-        step_reader.SetColorMode(True)
-        step_reader.SetLayerMode(True)
-        step_reader.SetNameMode(True)
-        step_reader.SetMatMode(True)
-
-        status = step_reader.ReadFile(fname)
-        if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-        # Get root label of step data
-        step_labels = TDF_LabelSequence()
-        step_shape_tool.GetShapes(step_labels)
-        steprootLabel = step_labels.Value(1)
-        # Get target label of self.doc
-        labels = TDF_LabelSequence()
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        shape_tool.GetShapes(labels)
-        targetLabel = labels.Value(2)
-        # Copy source label to target label
-        self.copy_label(steprootLabel, targetLabel)
-        shape_tool.UpdateAssemblies()
-        # Repair self.doc by cycling through save/load
-        self.doc = self.doc_linter()
-        # Build new self.part_dict & self.uid_dict
-        self.parse_doc()
-
-    def loadStepAtEnd(self):
-        """Paste step root label onto last+1 label at self.doc root
-
-        Add a simple box component to the first label at self.doc root.
+        Add a simple component to the first label at self.doc root.
         Set the component name to be the name of the step file.
         Then assign the label of the referred shape to 'targetLabel'.
         Finally, copy step root label onto 'targetLabel'.

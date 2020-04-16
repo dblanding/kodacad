@@ -81,7 +81,7 @@ class TreeView(QTreeWidget):
 
     def contextMenu(self, point):
         self.menu = QMenu()
-        action = self.popMenu.exec_(self.mapToGlobal(point))
+        self.popMenu.exec_(self.mapToGlobal(point))
 
     def dropEvent(self, event):
         if event.source() == self:
@@ -214,7 +214,7 @@ class MainWindow(QMainWindow):
         self.activeAsyUID = 0
         self.assy_list = []     # list of assy uid's
         self.showItemActive(0)
-        self.activeAsy = self.setActiveAsy(self.activeAsyUID)
+        self.setActiveAsy(self.activeAsyUID)
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
@@ -475,7 +475,6 @@ class MainWindow(QMainWindow):
 
     def editName(self): # Edit name of item clicked in treeView
         item = self.itemClicked
-        sbText = '' # status bar text
         if item:
             name = item.text(0)
             uid = item.text(1)
@@ -661,7 +660,6 @@ class MainWindow(QMainWindow):
                     transp = 0.0
                 part_data = doc.part_dict[uid]
                 shape = part_data['shape']
-                name = part_data['name']
                 color = part_data['color']
                 try:
                     aisShape = AIS_Shape(shape)

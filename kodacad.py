@@ -899,20 +899,20 @@ def shellC(shapeList, *args):
 #
 #############################################
 
-def loadStepAtTop():
-    doc.loadStepAtRoot()
+def load_stp_at_top():
+    doc.load_stp_at_top()
     win.build_tree()
     win.drawAll()
     win.fitAll()
 
-def loadStep():
-    doc.loadStep()
+def load_stp_cmpnt():
+    doc.load_stp_cmpnt()
     win.build_tree()
     win.drawAll()
     win.fitAll()
 
-def loadStepAtEnd():
-    doc.loadStepAtEnd()
+def load_stp_undr_top():
+    doc.load_stp_undr_top()
     win.build_tree()
     win.drawAll()
     win.fitAll()
@@ -998,8 +998,9 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = MainWindow()
     win.add_menu('File')
-    win.add_function_to_menu('File', "Load STEP At Top", loadStepAtTop)
-    win.add_function_to_menu('File', "Load STEP As Comp", loadStep)
+    win.add_function_to_menu('File', "Load STEP At Top", load_stp_at_top)
+    win.add_function_to_menu('File', "Load STEP Under Top", load_stp_undr_top)
+    win.add_function_to_menu('File', "Load STEP Component", load_stp_cmpnt)
     win.add_function_to_menu('File', "Save STEP (Top)", doc.saveStepDoc)
     win.add_menu('Workplane')
     win.add_function_to_menu('Workplane', "At Origin, XY Plane", makeWP)
@@ -1020,7 +1021,6 @@ if __name__ == '__main__':
     win.add_menu('Utility')
     win.add_function_to_menu('Utility', "print uid_dict", print_uid_dict)
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
-    win.add_function_to_menu('Utility', "Load Step Under Top", loadStepAtEnd)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)
     win.add_function_to_menu('Utility', "print(Active Asy Info)", printActiveAsyInfo)
