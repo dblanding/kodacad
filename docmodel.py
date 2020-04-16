@@ -33,22 +33,84 @@ from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDocStd import TDocStd_Document
-from OCC.Core.TDF import TDF_LabelSequence, TDF_Label, TDF_CopyLabel
+from OCC.Core.TDF import (TDF_LabelSequence, TDF_Label, TDF_CopyLabel,
+                          TDF_ChildIterator)
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
                               XCAFDoc_DocumentTool_ColorTool,
+                              XCAFDoc_DocumentTool_LayerTool,
+                              XCAFDoc_DocumentTool_MaterialTool,
                               XCAFDoc_ColorGen, XCAFDoc_ColorSurf)
 from OCC.Core.XSControl import XSControl_WorkSession
-from treemodel import TreeModel
+
+class TreeModel():
+    """XCAF Tree Model of hierarchical CAD assembly data."""
+
+    def __init__(self, title):
+        # Create the application and document
+        doc = TDocStd_Document(TCollection_ExtendedString(title))
+        app = XCAFApp_Application_GetApplication()
+        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
+        self.app = app
+        self.doc = doc
+        # Initialize tools
+        self.shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+        self.shape_tool.SetAutoNaming(True)
+        self.color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
+        self.layer_tool = XCAFDoc_DocumentTool_LayerTool(doc.Main())
+        self.l_materials = XCAFDoc_DocumentTool_MaterialTool(doc.Main())
+        self.allChildLabels = []
+
+    def getChildLabels(self, label):
+        """Return list of child labels directly below label."""
+        itlbl = TDF_ChildIterator(label, True)
+        childlabels = []
+        while itlbl.More():
+            childlabels.append(itlbl.Value())
+            itlbl.Next()
+        return childlabels
+
+    def getAllChildLabels(self, label, first=True):
+        """Return list of all child labels (recursively) below label.
+
+        This doesn't find anything at the second level down because
+        the component labels of root do not have children, but rather
+        they have references."""
+        print("Entering 'getAllChildLabels'")
+        if first:
+            self.allChildLabels = []
+        childLabels = self.getChildLabels(label)
+        print(f"len(childLabels) = {len(childLabels)}")
+        self.allChildLabels += childLabels
+        print(f"len(allChildLabels) = {len(self.allChildLabels)}")
+        for lbl in childLabels:
+            self.getAllChildLabels(lbl, first=False)
+        return self.allChildLabels
+
+    def saveDoc(self, filename="foo.caf"):
+        """Save doc to file (for educational purposes) (not working yet)
+
+        https://www.opencascade.com/doc/occt-7.4.0/overview/html/occt_user_guides__ocaf.html#occt_ocaf_11
+        """
+        frmte = TCollection_ExtendedString("Xml-XCAF")
+        frmta = TCollection_AsciiString("MDTV-CAF")
+        self.app.DefineFormat(TCollection_AsciiString("DocumentFormat"),
+                              TCollection_AsciiString("MDTV-CAF"),
+                              TCollection_AsciiString("caf"),
+                              XmlXCAFDrivers_DocumentRetrievalDriver(),
+                              XmlXCAFDrivers_DocumentStorageDriver(frmte))
+        logger.debug("Saving doc to file")
+        savefilename = TCollection_ExtendedString(filename)
+        self.app.SaveAs(self.doc, savefilename)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
 
 class DocModel():
-    """Holds and manipulates the 3D CAD model in OCAF TDocStd_Document format.
+    """Maintain the 3D CAD model in OCAF TDocStd_Document format.
 
-    Generates self.part_dict and self.uid_dict by parsing self.doc.
+    Generate self.part_dict and self.uid_dict by parsing self.doc.
     These dictionaries provide mainwindow with convenient access to CAD data.
     Each tree view item represents a label in the OCAF document and has a uid
     comprising the label entry appended with a '.' and an integer. The integer

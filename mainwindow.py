@@ -56,19 +56,16 @@ logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
 
 doc = DocModel()
 
-class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
-    """ Display assembly structure.
+class TreeView(QTreeWidget):
+    """Assembly structure display
 
-    TO DO: This Part/Assy tree view GUI and the XCAF data model need to be
-    maintained in sync with each other. That's not happening right now.
-    While it is very slick (from the user's perspective) to be able to edit
-    the assembly structure using 'drag & drop' of parts and assemblies within
-    the QTreeWidget Part/Assy view, it's no simple task to keep the model in
-    sync. There are some moves that need to be prohibited, such as moving an
-    item into a child relationship with an item that is not an assembly.
-    Currently, 'drag and drop' changes in the GUI are not propagated to the
-    XCAF data model. As an alternative to 'drag & drop', consider adding an
-    option to the RMB pop-up to change the parent of a QTreeWidgetItem.
+    The Part/Assy tree view GUI and is kept in sync with the XCAF data model
+    by calling the function build_tree() whenever changes in the data model
+    cause the tree view display to become out of date. By first clicking on a
+    tree view item, then right clicking, a drop down list of options appears,
+    allowing some modifications to be made to the model. Although the tree view
+    display currently permits the user to make 'drag & drop' modifications,
+    those changes are currently not propagated to the data model.
     """
 
     def __init__(self, parent=None):
@@ -134,7 +131,7 @@ class TreeView(QTreeWidget): # With 'drag & drop' ; context menu
         return True
 
 class MainWindow(QMainWindow):
-    """Main GUI window containing an assy tree view and a 3D display."""
+    """Main GUI window containing an assy tree view and a 3D display view"""
 
     def __init__(self, *args):
         super().__init__()
@@ -269,8 +266,8 @@ class MainWindow(QMainWindow):
     def build_tree(self):
         """Build new tree view from doc.uid_dict.
 
-        This needs to be done whenever doc.doc is modified in a way that would
-        reuslt in a change in the tree view. The tree view represents the
+        This method is called whenever doc.doc is modified in a way that would
+        result in a change in the tree view. The tree view represents the
         hierarchical structure of the top assembly and its components."""
         self.clearTree()
         parent_item_dict = {}  # {uid: tree view item}
