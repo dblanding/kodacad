@@ -243,8 +243,10 @@ def find_fillet_pts(r, commonpt, end1, end2):
     p2b = proj_pt_on_line(cl1b, end2)
     da = p2p_dist(p2a, end2)
     db = p2p_dist(p2b, end2)
-    if da <= db: cl1 = cl1a
-    else: cl1 = cl1b
+    if da <= db:
+        cl1 = cl1a
+    else:
+        cl1 = cl1b
     cl2a, cl2b = para_lines(line2, r)
     p1a = proj_pt_on_line(cl2a, end1)
     p1b = proj_pt_on_line(cl2b, end1)

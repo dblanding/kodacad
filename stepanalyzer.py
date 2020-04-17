@@ -142,7 +142,7 @@ class StepAnalyzer():
             uid = self.get_uid_from_entry(c_entry)
             ref_label = TDF_Label()  # label of referred shape (or assembly)
             is_ref = self.shape_tool.GetReferredShape(c_label, ref_label)
-            if is_ref:  # just in case all components are not references 
+            if is_ref:  # just in case all components are not references
                 ref_entry = ref_label.EntryDumpToString()
                 ref_name = ref_label.GetLabelName()
                 indent = "\t" * self.indent
