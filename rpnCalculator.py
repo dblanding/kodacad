@@ -32,6 +32,8 @@ def nyi():
     print('Not yet implemented')
 
 class Button(QToolButton):
+    """Convenience class for buttons"""
+
     def __init__(self, text, parent=None):
         super(Button, self).__init__(parent)
 
@@ -255,7 +257,7 @@ class Calculator(QDialog):
         if in_cnvrt: convert input value from degrees to radians.
         if out_cnvrt: convert output value from radians to degrees."""
         x = self.x
-        y = self.y
+        #y = self.y
         if in_cnvrt:
             x = x * math.pi / 180
         result = eval(op)

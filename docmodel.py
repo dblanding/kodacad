@@ -29,7 +29,7 @@ from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
 from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Writer
-from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
+from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Core.TCollection import (TCollection_ExtendedString,
                                   TCollection_AsciiString)
 from OCC.Core.TDataStd import TDataStd_Name
@@ -43,6 +43,8 @@ from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
                               XCAFDoc_DocumentTool_LayerTool,
                               XCAFDoc_DocumentTool_MaterialTool,
                               XCAFDoc_ColorGen, XCAFDoc_ColorSurf)
+from OCC.Core.XmlXCAFDrivers import (XmlXCAFDrivers_DocumentRetrievalDriver,
+                                     XmlXCAFDrivers_DocumentStorageDriver)
 from OCC.Core.XSControl import XSControl_WorkSession
 
 logger = logging.getLogger(__name__)
@@ -99,7 +101,7 @@ class TreeModel():
         https://www.opencascade.com/doc/occt-7.4.0/overview/html/occt_user_guides__ocaf.html#occt_ocaf_11
         """
         frmte = TCollection_ExtendedString("Xml-XCAF")
-        frmta = TCollection_AsciiString("MDTV-CAF")
+        #frmta = TCollection_AsciiString("MDTV-CAF")
         self.app.DefineFormat(TCollection_AsciiString("DocumentFormat"),
                               TCollection_AsciiString("MDTV-CAF"),
                               TCollection_AsciiString("caf"),
@@ -126,6 +128,10 @@ class DocModel():
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
         # To be used to construct treeView & access labels
         self.uid_dict = {}  # {uid: {keys: 'entry', 'name', 'parent_uid', 'ref_entry'}}
+        self._share_dict = {}  # {entry: highest_serial_nmbr_used}
+        self.parent_uid_stack = []  # uid of parent lineage (topmost first)
+        self.assy_entry_stack = []  # entries of containing assemblies, immediate last
+        self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
 
     def createDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1.
