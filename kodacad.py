@@ -560,7 +560,7 @@ def delCl():
     win.registerCallback(delClC)
     statusText = "Select a construction element to delete."
     win.statusBar().showMessage(statusText)
-    display = win.canva._display.Context
+    display = win.canvas._display.Context
     print(display.NbSelected())  # Use shift-select for multiple lines
     selected_line = display.SelectedInteractive()
     if selected_line:
@@ -1032,7 +1032,7 @@ if __name__ == '__main__':
 
     drawSubMenu = QMenu('Draw')
     win.popMenu.addMenu(drawSubMenu)
-    drawSubMenu.addAction('Fit All', win.fitAll)
+    drawSubMenu.addAction('Fit', win.fitAll)
     drawSubMenu.addAction('Redraw', win.redraw)
     drawSubMenu.addAction('Hide All', win.eraseAll)
     drawSubMenu.addAction('Draw All', win.drawAll)
@@ -1045,8 +1045,8 @@ if __name__ == '__main__':
     win.treeView.popMenu.addAction('Edit Name', win.editName)
 
     win.show()
-    win.canva.InitDriver()
-    display = win.canva._display
+    win.canvas.InitDriver()
+    display = win.canvas._display
 
     selectSubMenu = QMenu('Select Mode')
     win.popMenu.addMenu(selectSubMenu)

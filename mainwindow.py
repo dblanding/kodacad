@@ -135,9 +135,9 @@ class MainWindow(QMainWindow):
 
     def __init__(self, *args):
         super().__init__()
-        self.canva = qtDisplay.qtViewer3d(self)
-        # Renaming self.canva._display (like below) doesn't work.
-        # self.display = self.canva._display
+        self.canvas = qtDisplay.qtViewer3d(self)
+        # Renaming self.canvas._display (like below) doesn't work.
+        # self.display = self.canvas._display
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.contextMenu)
         self.popMenu = QMenu(self)
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         title += f"(Using: PythonOCC version {VERSION} with PyQt5 backend)"
         self.setWindowTitle(title)
         self.resize(960, 720)
-        self.setCentralWidget(self.canva)
+        self.setCentralWidget(self.canvas)
         self.createDockWidget()
         self.wcToolBar = QToolBar("2D")  # Construction toolbar
         self.addToolBar(Qt.RightToolBarArea, self.wcToolBar)
@@ -572,18 +572,18 @@ class MainWindow(QMainWindow):
         currCallback = self.registeredCallback
         if currCallback:    # Make sure a callback isn't already registered
             self.clearCallback()
-        self.canva._display.register_select_callback(callback)
+        self.canvas._display.register_select_callback(callback)
         self.registeredCallback = callback
         self.currOpLabel.setText("Current Operation: %s " % callback.__name__[:-1])
 
     def clearCallback(self):
         if self.registeredCallback:
-            self.canva._display.unregister_callback(self.registeredCallback)
+            self.canvas._display.unregister_callback(self.registeredCallback)
             self.registeredCallback = None
             self.clearAllStacks()
             self.currOpLabel.setText("Current Operation: None ")
             self.statusBar().showMessage('')
-            self.canva._display.SetSelectionModeNeutral()
+            self.canvas._display.SetSelectionModeNeutral()
             # self.redraw()
 
     #############################################
@@ -593,16 +593,16 @@ class MainWindow(QMainWindow):
     #############################################
 
     def fitAll(self):
-        self.canva._display.FitAll()
+        self.canvas._display.FitAll()
 
     def eraseAll(self):
-        context = self.canva._display.Context
+        context = self.canvas._display.Context
         context.RemoveAll(True)
         self.draw_list = []
         self.syncCheckedToDrawList()
 
     def redraw_wp(self):
-        context = self.canva._display.Context
+        context = self.canvas._display.Context
         for uid in self.wp_dict:
             if uid in self.draw_list:
                 wp = self.wp_dict[uid]
@@ -632,7 +632,7 @@ class MainWindow(QMainWindow):
                     # 'False' above enables 'context' mode display & selection
                 pntlist = wp.intersectPts()  # type <gp_Pnt>
                 for point in pntlist:
-                    self.canva._display.DisplayShape(point)
+                    self.canvas._display.DisplayShape(point)
                 for ccirc in wp.ccircs:
                     aiscirc = AIS_Circle(wp.convert_circ_to_geomCirc(ccirc))
                     drawer = aisline.Attributes()
@@ -643,13 +643,13 @@ class MainWindow(QMainWindow):
                     context.Display(aiscirc, False)  # (see comment below)
                     # 'False' above enables 'context' mode display & selection
                 for edge in wp.edgeList:
-                    self.canva._display.DisplayShape(edge, color="WHITE")
-                self.canva._display.Repaint()
+                    self.canvas._display.DisplayShape(edge, color="WHITE")
+                self.canvas._display.Repaint()
 
     def redraw(self):
-        context = self.canva._display.Context
+        context = self.canvas._display.Context
         if not self.registeredCallback:
-            self.canva._display.SetSelectionModeNeutral()
+            self.canvas._display.SetSelectionModeNeutral()
             context.SetAutoActivateSelection(True)
         context.RemoveAll(True)
         for uid in doc.part_dict:
@@ -687,7 +687,7 @@ class MainWindow(QMainWindow):
         if uid:
             self.eraseAll()
             self.draw_list.append(uid)
-            self.canva._display.DisplayShape(doc.part_dict[uid]['shape'])
+            self.canvas._display.DisplayShape(doc.part_dict[uid]['shape'])
             self.syncCheckedToDrawList()
             self.redraw()
 
@@ -737,7 +737,7 @@ class MainWindow(QMainWindow):
         else:
             self.registerCallback(self.distPtPtC)
             # How to enable selecting intersection points on WP?
-            self.canva._display.SetSelectionModeVertex()
+            self.canvas._display.SetSelectionModeVertex()
             statusText = "Select 2 points to measure distance."
             self.statusBar().showMessage(statusText)
 
@@ -761,7 +761,7 @@ class MainWindow(QMainWindow):
             self.edgeLen()
         else:
             self.registerCallback(self.edgeLenC)
-            self.canva._display.SetSelectionModeEdge()
+            self.canvas._display.SetSelectionModeEdge()
             statusText = "Pick an edge to measure."
             self.statusBar().showMessage(statusText)
 
