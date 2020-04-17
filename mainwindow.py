@@ -529,9 +529,12 @@ class MainWindow(QMainWindow):
         """Change active part status in coordinated manner."""
         # modify status in self
         self.activePartUID = uid
-        self.activePart = doc.part_dict[uid]['shape']
-        # show as active in treeView
-        self.showItemActive(uid)
+        if uid:
+            self.activePart = doc.part_dict[uid]['shape']
+            # show as active in treeView
+            self.showItemActive(uid)
+        else:
+            self.activePart = None
 
     def setActiveWp(self, uid):
         """Change active workplane status in coordinated manner."""
@@ -545,8 +548,9 @@ class MainWindow(QMainWindow):
         """Change active assembly status in coordinated manner."""
         # modify status in self
         self.activeAsyUID = uid
-        # show as active in treeView
-        self.showItemActive(uid)
+        if uid:
+            # show as active in treeView
+            self.showItemActive(uid)
 
     def valueFromCalc(self, value):
         """Receive value from calculator."""

@@ -900,6 +900,8 @@ def shellC(shapeList, *args):
 #############################################
 
 def load_stp_at_top():
+    win.setActivePart(0)
+    win.setActiveAsy(0)
     doc.load_stp_at_top()
     win.build_tree()
     win.drawAll()
