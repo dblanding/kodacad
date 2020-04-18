@@ -925,6 +925,14 @@ def load_stp_undr_top():
 #
 #############################################
 
+def drawActPart():
+    uid = win.activePartUID
+    win.draw_shape(uid)
+
+def eraseActPart():
+    uid = win.activePartUID
+    win.erase_shape(uid)
+
 def print_uid_dict():
     pprint.pprint(doc.uid_dict)
 
@@ -1021,6 +1029,8 @@ if __name__ == '__main__':
     win.add_function_to_menu('Modify Active Part', "Shell", shell)
     win.add_function_to_menu('Modify Active Part', "Fuse", fuse)
     win.add_menu('Utility')
+    win.add_function_to_menu('Utility', "Draw Active Prt", drawActPart)
+    win.add_function_to_menu('Utility', "Erase Active Prt", eraseActPart)
     win.add_function_to_menu('Utility', "print uid_dict", print_uid_dict)
     win.add_function_to_menu('Utility', "dump doc", dumpDoc)
     win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)

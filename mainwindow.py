@@ -205,6 +205,7 @@ class MainWindow(QMainWindow):
         self.activePartUID = 0
         self.transparency_dict = {}  # {uid: part display transparency}
         self.ancestor_dict = defaultdict(list)  # {uid: [list of ancestor shapes]}
+        self.ais_shape_dict = {}  # storage for displayed ais_shapes (by uid key)
 
         self.activeWp = None    # WorkPlane object
         self.activeWpUID = 0
@@ -605,6 +606,13 @@ class MainWindow(QMainWindow):
         self.draw_list = []
         self.syncCheckedToDrawList()
 
+    def erase_shape(self, uid):
+        context = self.canvas._display.Context
+        aisShape = self.ais_shape_dict[uid]
+        context.Remove(aisShape, True)
+        self.draw_list.remove(uid)
+        self.syncCheckedToDrawList()
+
     def redraw_wp(self):
         context = self.canvas._display.Context
         for uid in self.wp_dict:
@@ -658,24 +666,32 @@ class MainWindow(QMainWindow):
         context.RemoveAll(True)
         for uid in doc.part_dict:
             if uid in self.draw_list:
-                if uid in self.transparency_dict:
-                    transp = self.transparency_dict[uid]
-                else:
-                    transp = 0.0
-                part_data = doc.part_dict[uid]
-                shape = part_data['shape']
-                color = part_data['color']
-                try:
-                    aisShape = AIS_Shape(shape)
-                    context.Display(aisShape, True)
-                    context.SetColor(aisShape, color, True)
-                    # Set shape transparency, a float from 0.0 to 1.0
-                    context.SetTransparency(aisShape, transp, True)
-                    drawer = aisShape.DynamicHilightAttributes()
-                    context.HilightWithColor(aisShape, drawer, True)
-                except AttributeError as e:
-                    print(e)
+                self.draw_shape(uid)
         self.redraw_wp()
+
+    def draw_shape(self, uid):
+        context = self.canvas._display.Context
+        if uid:
+            if uid in self.transparency_dict:
+                transp = self.transparency_dict[uid]
+            else:
+                transp = 0.0
+            part_data = doc.part_dict[uid]
+            shape = part_data['shape']
+            color = part_data['color']
+            try:
+                aisShape = AIS_Shape(shape)
+                self.ais_shape_dict[uid] = aisShape
+                context.Display(aisShape, True)
+                context.SetColor(aisShape, color, True)
+                # Set shape transparency, a float from 0.0 to 1.0
+                context.SetTransparency(aisShape, transp, True)
+                drawer = aisShape.DynamicHilightAttributes()
+                context.HilightWithColor(aisShape, drawer, True)
+            except AttributeError as e:
+                print(e)
+            self.draw_list.append(uid)
+            self.syncCheckedToDrawList()
 
     def drawAll(self):
         self.draw_list = []
