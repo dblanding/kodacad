@@ -26,39 +26,45 @@ import logging
 import math
 import pprint
 import sys
-from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
-from PyQt5.QtGui import QIcon, QPixmap
+
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace
 from OCC.Core.BRepFilletAPI import BRepFilletAPI_MakeFillet
-from OCC.Core.BRepPrimAPI import (BRepPrimAPI_MakeBox, BRepPrimAPI_MakePrism,
-                                  BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeRevol)
 from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_MakeThickSolid
+from OCC.Core.BRepPrimAPI import (
+    BRepPrimAPI_MakeBox,
+    BRepPrimAPI_MakeCylinder,
+    BRepPrimAPI_MakePrism,
+    BRepPrimAPI_MakeRevol,
+)
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
 from OCC.Core.Quantity import Quantity_ColorRGBA
-from OCC.Core.TopoDS import (TopoDS_Vertex, topods_Edge,
-                             topods_Face, topods_Vertex)
 from OCC.Core.TopLoc import TopLoc_Location
+from OCC.Core.TopoDS import TopoDS_Vertex, topods_Edge, topods_Face, topods_Vertex
 from OCC.Core.TopTools import TopTools_ListOfShape
-from OCCUtils import Topology
-from mainwindow import MainWindow, doc
+from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
+
 import stepanalyzer
 import workplane
+from mainwindow import MainWindow, doc
+from OCCUtils import Topology
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG) # set to DEBUG | INFO | ERROR
+logger.setLevel(logging.DEBUG)  # set to DEBUG | INFO | ERROR
 
-TOL = 1e-7 # Linear Tolerance
-ATOL = TOL # Angular Tolerance
-print('TOLERANCE = ', TOL)
-DEFAULT_COLOR = Quantity_ColorRGBA(.6, .6, .4, 1.0)
+TOL = 1e-7  # Linear Tolerance
+ATOL = TOL  # Angular Tolerance
+print("TOLERANCE = ", TOL)
+DEFAULT_COLOR = Quantity_ColorRGBA(0.6, 0.6, 0.4, 1.0)
 
 #############################################
 #
 # Workplane creation functions
 #
 #############################################
+
 
 def wpBy3Pts(*args):
     """Direction from pt1 to pt2 sets wDir, pt2 is wpOrigin.
@@ -89,10 +95,11 @@ def wpBy3Pts(*args):
         win.statusBar().showMessage(statusText)
         return
 
+
 def wpBy3PtsC(shapeList, *args):  # callback (collector) for wpBy3Pts
     for shape in shapeList:
         vrtx = topods_Vertex(shape)
-        gpPt = BRep_Tool.Pnt(vrtx) # convert vertex to gp_Pnt
+        gpPt = BRep_Tool.Pnt(vrtx)  # convert vertex to gp_Pnt
         win.ptStack.append(gpPt)
     if len(win.ptStack) == 1:
         statusText = "Now select point 2 (wp origin)."
@@ -102,6 +109,7 @@ def wpBy3PtsC(shapeList, *args):  # callback (collector) for wpBy3Pts
         win.statusBar().showMessage(statusText)
     elif len(win.ptStack) == 3:
         wpBy3Pts()
+
 
 def wpOnFace(*args):
     """ First face defines plane of wp. Second face defines uDir."""
@@ -121,6 +129,7 @@ def wpOnFace(*args):
     statusText = "Workplane created."
     win.statusBar().showMessage(statusText)
 
+
 def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
     if not shapeList:
         shapeList = []
@@ -133,10 +142,12 @@ def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
     elif len(win.faceStack) == 2:
         wpOnFace()
 
-def makeWP():   # Default workplane located in X-Y plane at 0,0,0
+
+def makeWP():  # Default workplane located in X-Y plane at 0,0,0
     wp = workplane.WorkPlane(100)
     win.get_wp_uid(wp)
     win.redraw_wp()
+
 
 #############################################
 #
@@ -144,13 +155,14 @@ def makeWP():   # Default workplane located in X-Y plane at 0,0,0
 #
 #############################################
 
+
 def add_vertex_to_xyPtStack(shapeList):
     """Helper function to convert vertex to gp_Pnt and put on ptStack."""
     wp = win.activeWp
     for shape in shapeList:
         if isinstance(shape, TopoDS_Vertex):  # Guard against wrong type
             vrtx = topods_Vertex(shape)
-            pnt = BRep_Tool.Pnt(vrtx) # convert vertex to type <gp_Pnt>
+            pnt = BRep_Tool.Pnt(vrtx)  # convert vertex to type <gp_Pnt>
             trsf = wp.Trsf.Inverted()  # New transform. Don't invert wp.Trsf
             pnt.Transform(trsf)
             pt2d = (pnt.X(), pnt.Y())  # 2d point
@@ -158,13 +170,14 @@ def add_vertex_to_xyPtStack(shapeList):
         else:
             print(f"(Unwanted) shape type: {type(shape)}")
 
+
 def processLineEdit():
     """pop value from lineEditStack and place on floatStack or ptStack."""
 
     text = win.lineEditStack.pop()
-    if ',' in text:
+    if "," in text:
         try:
-            xstr, ystr = text.split(',')
+            xstr, ystr = text.split(",")
             p = (float(xstr) * win.unitscale, float(ystr) * win.unitscale)
             win.xyPtStack.append(p)
         except:
@@ -174,6 +187,7 @@ def processLineEdit():
             win.floatStack.append(float(text))
         except ValueError as e:
             print(f"{e}")
+
 
 def clineH():
     """Horizontal construction line"""
@@ -192,6 +206,7 @@ def clineH():
         statusText = "Select point or enter Y-value for horizontal cline."
         win.statusBar().showMessage(statusText)
 
+
 def clineHC(shapeList, *args):
     """Callback (collector) for clineH"""
     add_vertex_to_xyPtStack(shapeList)
@@ -203,6 +218,7 @@ def clineHC(shapeList, *args):
         win.xyPtStack.append(pnt)
     if win.xyPtStack:
         clineH()
+
 
 def clineV():
     """Vertical construction line"""
@@ -221,6 +237,7 @@ def clineV():
         statusText = "Select point or enter X-value for vertcal cline."
         win.statusBar().showMessage(statusText)
 
+
 def clineVC(shapeList, *args):
     """Callback (collector) for clineV"""
     add_vertex_to_xyPtStack(shapeList)
@@ -232,6 +249,7 @@ def clineVC(shapeList, *args):
         win.xyPtStack.append(pnt)
     if win.xyPtStack:
         clineV()
+
 
 def clineHV():
     """Horizontal + Vertical construction lines"""
@@ -250,6 +268,7 @@ def clineHV():
         statusText = "Select point or enter x,y coords for H+V cline."
         win.statusBar().showMessage(statusText)
 
+
 def clineHVC(shapeList, *args):
     """Callback (collector) for clineHV"""
     add_vertex_to_xyPtStack(shapeList)
@@ -257,6 +276,7 @@ def clineHVC(shapeList, *args):
         processLineEdit()
     if win.xyPtStack:
         clineHV()
+
 
 def cline2Pts():
     """Construction line through two points"""
@@ -276,6 +296,7 @@ def cline2Pts():
         statusText = "Select 2 points for Construction Line."
         win.statusBar().showMessage(statusText)
 
+
 def cline2PtsC(shapeList, *args):
     """Callback (collector) for cline2Pts"""
     add_vertex_to_xyPtStack(shapeList)
@@ -284,9 +305,10 @@ def cline2PtsC(shapeList, *args):
     if len(win.xyPtStack) == 2:
         cline2Pts()
 
+
 def clineAng():
     """Construction line through a point and at an angle"""
-    if (win.xyPtStack and win.floatStack):
+    if win.xyPtStack and win.floatStack:
         wp = win.activeWp
         text = win.floatStack.pop()
         angle = float(text)
@@ -304,20 +326,24 @@ def clineAng():
         statusText = "Select point on WP (or enter x,y coords) then enter angle."
         win.statusBar().showMessage(statusText)
 
+
 def clineAngC(shapeList, *args):
     """Callback (collector) for clineAng"""
     add_vertex_to_xyPtStack(shapeList)
     win.lineEdit.setFocus()
     if win.lineEditStack:
         processLineEdit()
-    if (win.xyPtStack and win.floatStack):
+    if win.xyPtStack and win.floatStack:
         clineAng()
+
 
 def clineRefAng():
     pass
 
+
 def clineAngBisec():
     pass
+
 
 def clineLinBisec():
     """Linear bisector between two points"""
@@ -332,23 +358,29 @@ def clineLinBisec():
         win.registerCallback(clineLinBisecC)
         display.SetSelectionModeVertex()
 
+
 def clineLinBisecC(shapeList, *args):
     """Callback (collector) for clineLinBisec"""
     add_vertex_to_xyPtStack(shapeList)
     if len(win.xyPtStack) == 2:
         clineLinBisec()
 
+
 def clinePara():
     pass
+
 
 def clinePerp():
     pass
 
+
 def clineTan1():
     pass
 
+
 def clineTan2():
     pass
+
 
 def ccirc():
     """Create a c-circle from center & radius or center & Pnt on circle"""
@@ -361,7 +393,7 @@ def ccirc():
         win.xyPtStack = []
         win.floatStack = []
         win.redraw_wp()
-    elif (win.xyPtStack and win.floatStack):
+    elif win.xyPtStack and win.floatStack:
         pnt = win.xyPtStack.pop()
         rad = win.floatStack.pop() * win.unitscale
         wp.circle(pnt, rad, constr=True)
@@ -378,6 +410,7 @@ def ccirc():
         statusText = "Pick center of construction circle and enter radius."
         win.statusBar().showMessage(statusText)
 
+
 def ccircC(shapeList, *args):
     """callback (collector) for ccirc"""
     add_vertex_to_xyPtStack(shapeList)
@@ -386,14 +419,16 @@ def ccircC(shapeList, *args):
         processLineEdit()
     if len(win.xyPtStack) == 2:
         ccirc()
-    if (win.xyPtStack and win.floatStack):
+    if win.xyPtStack and win.floatStack:
         ccirc()
+
 
 #############################################
 #
 # Create 2d Edge Profile functions
 #
 #############################################
+
 
 def line():
     """Create a profile geometry line between two end points."""
@@ -412,6 +447,7 @@ def line():
         statusText = "Select 2 end points for line."
         win.statusBar().showMessage(statusText)
 
+
 def lineC(shapeList, *args):
     """callback (collector) for line"""
     add_vertex_to_xyPtStack(shapeList)
@@ -420,6 +456,7 @@ def lineC(shapeList, *args):
         processLineEdit()
     if len(win.xyPtStack) == 2:
         line()
+
 
 def rect():
     """Create a profile geometry rectangle from two diagonally opposite corners."""
@@ -438,6 +475,7 @@ def rect():
         statusText = "Select 2 points for Rectangle."
         win.statusBar().showMessage(statusText)
 
+
 def rectC(shapeList, *args):
     """callback (collector) for rect"""
     add_vertex_to_xyPtStack(shapeList)
@@ -446,6 +484,7 @@ def rectC(shapeList, *args):
         processLineEdit()
     if len(win.xyPtStack) == 2:
         rect()
+
 
 def circle():
     """Create a geometry circle from cntr & rad or cntr & pnt on circle."""
@@ -458,7 +497,7 @@ def circle():
         win.xyPtStack = []
         win.floatStack = []
         win.redraw_wp()
-    elif (win.xyPtStack and win.floatStack):
+    elif win.xyPtStack and win.floatStack:
         pnt = win.xyPtStack.pop()
         rad = win.floatStack.pop() * win.unitscale
         wp.circle(pnt, rad, constr=False)
@@ -475,6 +514,7 @@ def circle():
         statusText = "Pick center and enter radius or pick center & 2nd point."
         win.statusBar().showMessage(statusText)
 
+
 def circleC(shapeList, *args):
     """callback (collector) for circle"""
     add_vertex_to_xyPtStack(shapeList)
@@ -483,8 +523,9 @@ def circleC(shapeList, *args):
         processLineEdit()
     if len(win.xyPtStack) == 2:
         circle()
-    if (win.xyPtStack and win.floatStack):
+    if win.xyPtStack and win.floatStack:
         circle()
+
 
 def arcc2p():
     """Create an arc from center pt, start pt and end pt."""
@@ -514,6 +555,7 @@ def arcc2pC(shapeList, *args):
     if len(win.xyPtStack) == 3:
         arcc2p()
 
+
 def arc3p():
     """Create an arc from start pt, end pt, and 3rd pt on the arc."""
     wp = win.activeWp
@@ -532,6 +574,7 @@ def arc3p():
         statusText = "Pick start point on arc, then end then 3rd point on arc."
         win.statusBar().showMessage(statusText)
 
+
 def arc3pC(shapeList, *args):
     """Callback (collector) for arc3p"""
     add_vertex_to_xyPtStack(shapeList)
@@ -541,14 +584,17 @@ def arc3pC(shapeList, *args):
     if len(win.xyPtStack) == 3:
         arc3p()
 
+
 def geom():
     pass
+
 
 #############################################
 #
 # 2D Delete functions
 #
 #############################################
+
 
 def delCl():
     """Delete selected 2d construction element.
@@ -567,11 +613,13 @@ def delCl():
         print(type(selected_line))  # <AIS_InteractiveObject>
         print(selected_line.GetOwner())  # <Standard_Transient>
 
+
 def delClC(shapeList, *args):
     """Callback (collector) for delCl"""
     print(shapeList)
     print(args)
     delCl()
+
 
 def delEl():
     """Delete selected construction element."""
@@ -589,6 +637,7 @@ def delEl():
         statusText = "Select an element to delete."
         win.statusBar().showMessage(statusText)
 
+
 def delElC(shapeList, *args):
     """Callback (collector) for delEl"""
     for shape in shapeList:
@@ -596,15 +645,17 @@ def delElC(shapeList, *args):
     if win.shapeStack:
         delEl()
 
+
 #############################################
 #
 # 3D Geometry creation functions
 #
 #############################################
 
+
 def makeBox():
     """Quick box used for debuggging"""
-    name = 'Box'
+    name = "Box"
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
     uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
     win.build_tree()
@@ -612,15 +663,17 @@ def makeBox():
     win.setActivePart(uid)
     win.redraw()
 
+
 def makeCyl():
     """Quick cylinder used for debuggging"""
-    name = 'Cylinder'
+    name = "Cylinder"
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
     uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
     win.build_tree()
     win.drawAddPart(uid)
     win.setActivePart(uid)
     win.redraw()
+
 
 def extrude():
     """Extrude profile on active WP to create a new part."""
@@ -634,14 +687,13 @@ def extrude():
             return
         myFaceProfile = BRepBuilderAPI_MakeFace(wp.wire)
         aPrismVec = wp.wVec * length
-        myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(),
-                                       aPrismVec).Shape()
+        myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(), aPrismVec).Shape()
         uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
         win.build_tree()
         win.drawAddPart(uid)
         win.setActivePart(uid)
         win.redraw()
-        win.statusBar().showMessage('New part created.')
+        win.statusBar().showMessage("New part created.")
         win.clearCallback()
     else:
         win.registerCallback(extrudeC)
@@ -649,11 +701,13 @@ def extrude():
         statusText = "Enter extrusion length, then enter part name."
         win.statusBar().showMessage(statusText)
 
+
 def extrudeC(shapeList, *args):
     """Callback (collector) for extrude"""
     win.lineEdit.setFocus()
     if len(win.lineEditStack) == 2:
         extrude()
+
 
 def revolve():
     """Revolve profile on active WP to create a new part."""
@@ -675,7 +729,7 @@ def revolve():
         win.drawAddPart(uid)
         win.setActivePart(uid)
         win.redraw()
-        win.statusBar().showMessage('New part created.')
+        win.statusBar().showMessage("New part created.")
         win.clearCallback()
     else:
         win.registerCallback(revolveC)
@@ -684,11 +738,12 @@ def revolve():
         statusText = "Pick two points on revolve axis."
         win.statusBar().showMessage(statusText)
 
+
 def revolveC(shapeList, *args):
     """Callback (collector) for revolve"""
     for shape in shapeList:
         vrtx = topods_Vertex(shape)
-        gpPt = BRep_Tool.Pnt(vrtx) # convert vertex to gp_Pnt
+        gpPt = BRep_Tool.Pnt(vrtx)  # convert vertex to gp_Pnt
         win.ptStack.append(gpPt)
     if len(win.ptStack) == 1:
         statusText = "Select 2nd point on revolve axis."
@@ -700,26 +755,30 @@ def revolveC(shapeList, *args):
     if win.lineEditStack and len(win.ptStack) == 2:
         revolve()
 
+
 #############################################
 #
 # 3D Geometry positioning functons
 #
 #############################################
 
+
 def rotateAP():
-    ax1 = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(1., 0., 0.))
+    ax1 = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
     aRotTrsf = gp_Trsf()
-    angle = math.pi/18 # 10 degrees
+    angle = math.pi / 18  # 10 degrees
     aRotTrsf.SetRotation(ax1, angle)
     aTopLoc = TopLoc_Location(aRotTrsf)
     win.activePart.Move(aTopLoc)
     win.redraw()
+
 
 #############################################
 #
 # 3D Geometry modification functons
 #
 #############################################
+
 
 def mill():
     """Mill profile on active WP into active part."""
@@ -735,13 +794,12 @@ def mill():
         uid = win.activePartUID
         punchProfile = BRepBuilderAPI_MakeFace(wire)
         aPrismVec = wp.wVec * -depth
-        tool = BRepPrimAPI_MakePrism(punchProfile.Shape(),
-                                     aPrismVec).Shape()
+        tool = BRepPrimAPI_MakePrism(punchProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
         doc.replaceShape(uid, newPart)
         win.setActivePart(uid)
         win.redraw()
-        win.statusBar().showMessage('Mill operation complete')
+        win.statusBar().showMessage("Mill operation complete")
         win.clearCallback()
     else:
         win.registerCallback(millC)
@@ -749,11 +807,13 @@ def mill():
         statusText = "Enter milling depth (pos in -w direction)"
         win.statusBar().showMessage(statusText)
 
+
 def millC(shapeList, *args):
     """Callback (collector) for mill"""
     win.lineEdit.setFocus()
     if win.lineEditStack:
         mill()
+
 
 def pull():
     """Pull profile on active WP onto active part."""
@@ -769,13 +829,12 @@ def pull():
         uid = win.activePartUID
         pullProfile = BRepBuilderAPI_MakeFace(wire)
         aPrismVec = wp.wVec * length
-        tool = BRepPrimAPI_MakePrism(pullProfile.Shape(),
-                                     aPrismVec).Shape()
+        tool = BRepPrimAPI_MakePrism(pullProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
         doc.replaceShape(uid, newPart)
         win.setActivePart(uid)
         win.redraw()
-        win.statusBar().showMessage('Pull operation complete')
+        win.statusBar().showMessage("Pull operation complete")
         win.clearCallback()
     else:
         win.registerCallback(pullC)
@@ -783,14 +842,16 @@ def pull():
         statusText = "Enter pull distance (pos in +w direction)"
         win.statusBar().showMessage(statusText)
 
+
 def pullC(shapeList, *args):
     """Callback (collector) for pull"""
     win.lineEdit.setFocus()
     if win.lineEditStack:
         pull()
 
+
 def fillet(event=None):
-    if (win.lineEditStack and win.edgeStack):
+    if win.lineEditStack and win.edgeStack:
         topo = Topology.Topo(win.activePart)
         text = win.lineEditStack.pop()
         filletR = float(text) * win.unitscale
@@ -817,7 +878,7 @@ def fillet(event=None):
         try:
             newPart = mkFillet.Shape()
             doc.replaceShape(uid, newPart)
-            win.statusBar().showMessage('Fillet operation complete')
+            win.statusBar().showMessage("Fillet operation complete")
         except RuntimeError as e:
             print(f"Unable to make Fillet. {e}")
         win.setActivePart(uid)
@@ -829,14 +890,16 @@ def fillet(event=None):
         statusText = "Select edge(s) to fillet then specify fillet radius."
         win.statusBar().showMessage(statusText)
 
+
 def filletC(shapeList, *args):
     """Callback (collector) for fillet"""
     win.lineEdit.setFocus()
     for shape in shapeList:
         edge = topods_Edge(shape)
         win.edgeStack.append(edge)
-    if (win.edgeStack and win.lineEditStack):
+    if win.edgeStack and win.lineEditStack:
         fillet()
+
 
 def fuse():
     """Fuse two solid shapes together."""
@@ -848,12 +911,13 @@ def fuse():
         doc.replaceShape(uid, newPart)
         win.setActivePart(uid)
         win.redraw()
-        win.statusBar().showMessage('Fuse operation complete')
+        win.statusBar().showMessage("Fuse operation complete")
         win.clearCallback()
     else:
         win.registerCallback(fuseC)
         statusText = "Select shape to fuse to active part."
         win.statusBar().showMessage(statusText)
+
 
 def fuseC(shapeList, *args):
     """Callback (collector) for fuse"""
@@ -862,8 +926,9 @@ def fuseC(shapeList, *args):
     if win.shapeStack:
         fuse()
 
+
 def shell(event=None):
-    if (win.lineEditStack and win.faceStack):
+    if win.lineEditStack and win.faceStack:
         text = win.lineEditStack.pop()
         faces = TopTools_ListOfShape()
         for face in win.faceStack:
@@ -872,11 +937,11 @@ def shell(event=None):
         workPart = win.activePart
         uid = win.activePartUID
         shellT = float(text) * win.unitscale
-        newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.e-3).Shape()
+        newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.0e-3).Shape()
         doc.replaceShape(uid, newPart)
         win.setActivePart(uid)
         win.redraw()
-        win.statusBar().showMessage('Shell operation complete')
+        win.statusBar().showMessage("Shell operation complete")
         win.clearCallback()
     else:
         win.registerCallback(shellC)
@@ -884,20 +949,23 @@ def shell(event=None):
         statusText = "Select face(s) to remove then specify shell thickness."
         win.statusBar().showMessage(statusText)
 
+
 def shellC(shapeList, *args):
     """Callback (collector) for shell"""
     win.lineEdit.setFocus()
     for shape in shapeList:
         face = topods_Face(shape)
         win.faceStack.append(face)
-    if (win.faceStack and win.lineEditStack):
+    if win.faceStack and win.lineEditStack:
         shell()
+
 
 #############################################
 #
 #  Load Step functions
 #
 #############################################
+
 
 def load_stp_at_top():
     win.setActivePart(0)
@@ -907,11 +975,13 @@ def load_stp_at_top():
     win.drawAll()
     win.fitAll()
 
+
 def load_stp_cmpnt():
     doc.load_stp_cmpnt()
     win.build_tree()
     win.drawAll()
     win.fitAll()
+
 
 def load_stp_undr_top():
     doc.load_stp_undr_top()
@@ -919,39 +989,47 @@ def load_stp_undr_top():
     win.drawAll()
     win.fitAll()
 
+
 #############################################
 #
 #  Info & Utility functions
 #
 #############################################
 
+
 def drawActPart():
     uid = win.activePartUID
     win.draw_shape(uid)
+
 
 def eraseActPart():
     uid = win.activePartUID
     win.erase_shape(uid)
 
+
 def print_uid_dict():
     pprint.pprint(doc.uid_dict)
+
 
 def dumpDoc():
     sa = stepanalyzer.StepAnalyzer(document=doc.doc)
     dumpdata = sa.dump()
     print(dumpdata)
 
+
 def topoDumpAP():
     if win.activePart:
         Topology.dumpTopology(win.activePart)
 
+
 def printActiveAsyInfo():
     uid = win.activeAsyUID
     if uid:
-        name = doc.uid_dict[uid]['name']
+        name = doc.uid_dict[uid]["name"]
         print(f"Active Assembly (uid) Name: ({uid}) {name}")
     else:
         print("None active")
+
 
 def printActiveWpInfo():
     uid = win.activeWpUID
@@ -961,21 +1039,24 @@ def printActiveWpInfo():
     else:
         print("None active")
 
+
 def printActivePartInfo():
     uid = win.activePartUID
     if uid:
-        name = doc.uid_dict[uid]['name']
+        name = doc.uid_dict[uid]["name"]
         print(f"Active Part (uid) Name: ({uid}) {name}")
     else:
         print("None active")
 
+
 def printActPart():
     uid = win.activePartUID
     if uid:
-        name = win.uid_dict[uid]['name']
+        name = win.uid_dict[uid]["name"]
         print(f"Active Part: {name} [{uid}]")
     else:
         print(None)
+
 
 def printTreeView():
     """Print 'uid'; 'name'; 'parent' for all items in treeView."""
@@ -992,114 +1073,123 @@ def printTreeView():
         print(f"UID: {uid}; Name: {name}; Parent: {pname}")
         iterator += 1
 
+
 def printDrawList():
     print("Draw List:", win.drawList)
+
 
 def printInSync():
     print(win.inSync())
 
+
 def setUnits_in():
-    win.setUnits('in')
+    win.setUnits("in")
+
 
 def setUnits_mm():
-    win.setUnits('mm')
+    win.setUnits("mm")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = MainWindow()
-    win.add_menu('File')
-    win.add_function_to_menu('File', "Load STEP At Top", load_stp_at_top)
-    win.add_function_to_menu('File', "Load STEP Under Top", load_stp_undr_top)
-    win.add_function_to_menu('File', "Load STEP Component", load_stp_cmpnt)
-    win.add_function_to_menu('File', "Save STEP (Top)", doc.saveStepDoc)
-    win.add_menu('Workplane')
-    win.add_function_to_menu('Workplane', "At Origin, XY Plane", makeWP)
-    win.add_function_to_menu('Workplane', "On face", wpOnFace)
-    win.add_function_to_menu('Workplane', "By 3 points", wpBy3Pts)
-    win.add_menu('Create 3D')
-    win.add_function_to_menu('Create 3D', "Box", makeBox)
-    win.add_function_to_menu('Create 3D', "Cylinder", makeCyl)
-    win.add_function_to_menu('Create 3D', "Extrude", extrude)
-    win.add_function_to_menu('Create 3D', "Revolve", revolve)
-    win.add_menu('Modify Active Part')
-    win.add_function_to_menu('Modify Active Part', "Rotate Act Part", rotateAP)
-    win.add_function_to_menu('Modify Active Part', "Mill", mill)
-    win.add_function_to_menu('Modify Active Part', "Pull", pull)
-    win.add_function_to_menu('Modify Active Part', "Fillet", fillet)
-    win.add_function_to_menu('Modify Active Part', "Shell", shell)
-    win.add_function_to_menu('Modify Active Part', "Fuse", fuse)
-    win.add_menu('Utility')
-    win.add_function_to_menu('Utility', "Draw Active Prt", drawActPart)
-    win.add_function_to_menu('Utility', "Erase Active Prt", eraseActPart)
-    win.add_function_to_menu('Utility', "print uid_dict", print_uid_dict)
-    win.add_function_to_menu('Utility', "dump doc", dumpDoc)
-    win.add_function_to_menu('Utility', "Topology of Act Prt", topoDumpAP)
-    win.add_function_to_menu('Utility', "print(Active Wp Info)", printActiveWpInfo)
-    win.add_function_to_menu('Utility', "print(Active Asy Info)", printActiveAsyInfo)
-    win.add_function_to_menu('Utility', "print(Active Prt Info)", printActivePartInfo)
-    win.add_function_to_menu('Utility', "Clear Line Edit Stack", win.clearLEStack)
-    win.add_function_to_menu('Utility', "Calculator", win.launchCalc)
-    win.add_function_to_menu('Utility', "set Units ->in", setUnits_in)
-    win.add_function_to_menu('Utility', "set Units ->mm", setUnits_mm)
+    win.add_menu("File")
+    win.add_function_to_menu("File", "Load STEP At Top", load_stp_at_top)
+    win.add_function_to_menu("File", "Load STEP Under Top", load_stp_undr_top)
+    win.add_function_to_menu("File", "Load STEP Component", load_stp_cmpnt)
+    win.add_function_to_menu("File", "Save STEP (Top)", doc.saveStepDoc)
+    win.add_menu("Workplane")
+    win.add_function_to_menu("Workplane", "At Origin, XY Plane", makeWP)
+    win.add_function_to_menu("Workplane", "On face", wpOnFace)
+    win.add_function_to_menu("Workplane", "By 3 points", wpBy3Pts)
+    win.add_menu("Create 3D")
+    win.add_function_to_menu("Create 3D", "Box", makeBox)
+    win.add_function_to_menu("Create 3D", "Cylinder", makeCyl)
+    win.add_function_to_menu("Create 3D", "Extrude", extrude)
+    win.add_function_to_menu("Create 3D", "Revolve", revolve)
+    win.add_menu("Modify Active Part")
+    win.add_function_to_menu("Modify Active Part", "Rotate Act Part", rotateAP)
+    win.add_function_to_menu("Modify Active Part", "Mill", mill)
+    win.add_function_to_menu("Modify Active Part", "Pull", pull)
+    win.add_function_to_menu("Modify Active Part", "Fillet", fillet)
+    win.add_function_to_menu("Modify Active Part", "Shell", shell)
+    win.add_function_to_menu("Modify Active Part", "Fuse", fuse)
+    win.add_menu("Utility")
+    win.add_function_to_menu("Utility", "Draw Active Prt", drawActPart)
+    win.add_function_to_menu("Utility", "Erase Active Prt", eraseActPart)
+    win.add_function_to_menu("Utility", "print uid_dict", print_uid_dict)
+    win.add_function_to_menu("Utility", "dump doc", dumpDoc)
+    win.add_function_to_menu("Utility", "Topology of Act Prt", topoDumpAP)
+    win.add_function_to_menu("Utility", "print(Active Wp Info)", printActiveWpInfo)
+    win.add_function_to_menu("Utility", "print(Active Asy Info)", printActiveAsyInfo)
+    win.add_function_to_menu("Utility", "print(Active Prt Info)", printActivePartInfo)
+    win.add_function_to_menu("Utility", "Clear Line Edit Stack", win.clearLEStack)
+    win.add_function_to_menu("Utility", "Calculator", win.launchCalc)
+    win.add_function_to_menu("Utility", "set Units ->in", setUnits_in)
+    win.add_function_to_menu("Utility", "set Units ->mm", setUnits_mm)
 
-    drawSubMenu = QMenu('Draw')
+    drawSubMenu = QMenu("Draw")
     win.popMenu.addMenu(drawSubMenu)
-    drawSubMenu.addAction('Fit', win.fitAll)
-    drawSubMenu.addAction('Redraw', win.redraw)
-    drawSubMenu.addAction('Hide All', win.eraseAll)
-    drawSubMenu.addAction('Draw All', win.drawAll)
-    drawSubMenu.addAction('Draw Only Active Part', win.drawOnlyActivePart)
+    drawSubMenu.addAction("Fit", win.fitAll)
+    drawSubMenu.addAction("Redraw", win.redraw)
+    drawSubMenu.addAction("Hide All", win.eraseAll)
+    drawSubMenu.addAction("Draw All", win.drawAll)
+    drawSubMenu.addAction("Draw Only Active Part", win.drawOnlyActivePart)
 
-    win.treeView.popMenu.addAction('Item Info', win.showClickedInfo)
-    win.treeView.popMenu.addAction('Set Active', win.setClickedActive)
-    win.treeView.popMenu.addAction('Make Transparent', win.setTransparent)
-    win.treeView.popMenu.addAction('Make Opaque', win.setOpaque)
-    win.treeView.popMenu.addAction('Edit Name', win.editName)
+    win.treeView.popMenu.addAction("Item Info", win.showClickedInfo)
+    win.treeView.popMenu.addAction("Set Active", win.setClickedActive)
+    win.treeView.popMenu.addAction("Make Transparent", win.setTransparent)
+    win.treeView.popMenu.addAction("Make Opaque", win.setOpaque)
+    win.treeView.popMenu.addAction("Edit Name", win.editName)
 
     win.show()
     win.canvas.InitDriver()
     display = win.canvas._display
 
-    selectSubMenu = QMenu('Select Mode')
+    selectSubMenu = QMenu("Select Mode")
     win.popMenu.addMenu(selectSubMenu)
-    selectSubMenu.addAction('Vertex', display.SetSelectionModeVertex)
-    selectSubMenu.addAction('Edge', display.SetSelectionModeEdge)
-    selectSubMenu.addAction('Face', display.SetSelectionModeFace)
-    selectSubMenu.addAction('Shape', display.SetSelectionModeShape)
-    selectSubMenu.addAction('Neutral', display.SetSelectionModeNeutral)
-    win.popMenu.addAction('Clear Callback', win.clearCallback)
+    selectSubMenu.addAction("Vertex", display.SetSelectionModeVertex)
+    selectSubMenu.addAction("Edge", display.SetSelectionModeEdge)
+    selectSubMenu.addAction("Face", display.SetSelectionModeFace)
+    selectSubMenu.addAction("Shape", display.SetSelectionModeShape)
+    selectSubMenu.addAction("Neutral", display.SetSelectionModeNeutral)
+    win.popMenu.addAction("Clear Callback", win.clearCallback)
     # Construction Line Toolbar buttons
-    win.wcToolBar.addAction(QIcon(QPixmap('icons/hcl.gif')), 'Horizontal', clineH)
-    win.wcToolBar.addAction(QIcon(QPixmap('icons/vcl.gif')), 'Vertical', clineV)
-    win.wcToolBar.addAction(QIcon(QPixmap('icons/hvcl.gif')), 'H + V', clineHV)
-    win.wcToolBar.addAction(QIcon(QPixmap('icons/tpcl.gif')), 'By 2 Pnts', cline2Pts)
-    win.wcToolBar.addAction(QIcon(QPixmap('icons/acl.gif')), 'Angled', clineAng)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/refangcl.gif')), 'Ref-Ang', clineRefAng)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/abcl.gif')), 'Angular Bisector', clineAngBisec)
-    win.wcToolBar.addAction(QIcon(QPixmap('icons/lbcl.gif')), 'Linear Bisector', clineLinBisec)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/parcl.gif')), 'Parallel', clinePara)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/perpcl.gif')), 'Perpendicular', clinePerp)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan1.gif')), 'Tangent to circle', clineTan1)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan2.gif')), 'Tangent 2 circles', clineTan2)
-    win.wcToolBar.addAction(QIcon(QPixmap('icons/ccirc.gif')), 'Circle', ccirc)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/cc3p.gif')), 'Circle by 3Pts', ccirc)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/cccirc.gif')), 'Concentric Circle', ccirc)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan2.gif')), 'Circ Tangent x2', ccirc)
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan3.gif')), 'Circ Tangent x3', ccirc)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/hcl.gif")), "Horizontal", clineH)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/vcl.gif")), "Vertical", clineV)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/hvcl.gif")), "H + V", clineHV)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/tpcl.gif")), "By 2 Pnts", cline2Pts)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/acl.gif")), "Angled", clineAng)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/refangcl.gif')), 'Ref-Ang', clineRefAng)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/abcl.gif')), 'Angular Bisector', clineAngBisec)
+    win.wcToolBar.addAction(
+        QIcon(QPixmap("icons/lbcl.gif")), "Linear Bisector", clineLinBisec
+    )
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/parcl.gif')), 'Parallel', clinePara)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/perpcl.gif')), 'Perpendicular', clinePerp)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan1.gif')), 'Tangent to circle', clineTan1)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan2.gif')), 'Tangent 2 circles', clineTan2)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/ccirc.gif")), "Circle", ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cc3p.gif')), 'Circle by 3Pts', ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cccirc.gif')), 'Concentric Circle', ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan2.gif')), 'Circ Tangent x2', ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan3.gif')), 'Circ Tangent x3', ccirc)
     win.wcToolBar.addSeparator()
-    #win.wcToolBar.addAction(QIcon(QPixmap('icons/del_cel.gif')), 'Delete Constr', delCl)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/del_cel.gif')), 'Delete Constr', delCl)
     # Profile Line Toolbar buttons
-    win.wgToolBar.addAction(QIcon(QPixmap('icons/line.gif')), 'Line', line)
-    win.wgToolBar.addAction(QIcon(QPixmap('icons/rect.gif')), 'Rectangle', rect)
-    #win.wgToolBar.addAction(QIcon(QPixmap('icons/poly.gif')), 'Polygon', geom)
-    #win.wgToolBar.addAction(QIcon(QPixmap('icons/slot.gif')), 'Slot', geom)
-    win.wgToolBar.addAction(QIcon(QPixmap('icons/circ.gif')), 'Circle', circle)
-    win.wgToolBar.addAction(QIcon(QPixmap('icons/arcc2p.gif')), 'Arc Cntr-2Pts', arcc2p)
-    win.wgToolBar.addAction(QIcon(QPixmap('icons/arc3p.gif')), 'Arc by 3Pts', arc3p)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/line.gif")), "Line", line)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/rect.gif")), "Rectangle", rect)
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/poly.gif')), 'Polygon', geom)
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/slot.gif')), 'Slot', geom)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/circ.gif")), "Circle", circle)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/arcc2p.gif")), "Arc Cntr-2Pts", arcc2p)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/arc3p.gif")), "Arc by 3Pts", arc3p)
     win.wgToolBar.addSeparator()
-    #win.wgToolBar.addAction(QIcon(QPixmap('icons/translate.gif')), 'Translate Profile', geom)
-    #win.wgToolBar.addAction(QIcon(QPixmap('icons/rotate.gif')), 'Rotate Profile', geom)
-    win.wgToolBar.addAction(QIcon(QPixmap('icons/del_el.gif')), 'Delete Profile Elem', delEl)
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/translate.gif')), 'Translate Profile', geom)
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/rotate.gif')), 'Rotate Profile', geom)
+    win.wgToolBar.addAction(
+        QIcon(QPixmap("icons/del_el.gif")), "Delete Profile Elem", delEl
+    )
 
-    win.raise_() # bring the app to the top
+    win.raise_()  # bring the app to the top
     app.exec_()
