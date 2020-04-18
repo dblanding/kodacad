@@ -339,7 +339,7 @@ class MainWindow(QMainWindow):
             self.redraw()
 
     def checkedToList(self):
-        """Returns list of uid's of checked (part) items in treeView"""
+        """Returns list of uid's of checked (part & wp) items in treeView"""
         dl = []
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             if item.checkState(0) == Qt.Checked:
@@ -348,9 +348,19 @@ class MainWindow(QMainWindow):
                     dl.append(uid)
         return dl
 
+    def uncheckedToList(self):
+        """Returns list of uid's of unchecked (part & wp) items in treeView"""
+        dl = []
+        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+            if item.checkState(0) == Qt.Unchecked:
+                uid = item.text(1)
+                if (uid in doc.part_dict) or (uid in self.wp_dict):
+                    dl.append(uid)
+        return dl
+
     def inSync(self):
         """Return True if checked items are in sync with draw_list."""
-        return self.checkedToList() == self.draw_list
+        return set(self.checkedToList()) == set(self.draw_list)
 
     def syncDrawListToChecked(self):
         self.draw_list = self.checkedToList()
@@ -607,11 +617,12 @@ class MainWindow(QMainWindow):
         self.syncCheckedToDrawList()
 
     def erase_shape(self, uid):
-        context = self.canvas._display.Context
-        aisShape = self.ais_shape_dict[uid]
-        context.Remove(aisShape, True)
-        self.draw_list.remove(uid)
-        self.syncCheckedToDrawList()
+        if uid in self.ais_shape_dict:
+            context = self.canvas._display.Context
+            aisShape = self.ais_shape_dict[uid]
+            context.Remove(aisShape, True)
+            self.draw_list.remove(uid)
+            self.syncCheckedToDrawList()
 
     def redraw_wp(self):
         context = self.canvas._display.Context
