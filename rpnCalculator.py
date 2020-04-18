@@ -24,16 +24,10 @@
 
 import math
 import sys
+
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QApplication,
-    QToolButton,
-    QDialog,
-    QGridLayout,
-    QLineEdit,
-    QLayout,
-    QSizePolicy,
-)
+from PyQt5.QtWidgets import (QApplication, QDialog, QGridLayout, QLayout,
+                             QLineEdit, QSizePolicy, QToolButton)
 
 
 def nyi():

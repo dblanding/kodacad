@@ -22,19 +22,21 @@
 #
 
 import math
+
 from OCC.Core.BRepBuilderAPI import (BRepBuilderAPI_MakeEdge,
                                      BRepBuilderAPI_MakeFace,
                                      BRepBuilderAPI_MakeWire)
 from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
 from OCC.Core.GC import GC_MakeArcOfCircle, GC_MakeSegment
+from OCC.Core.Geom import Geom_Circle, Geom_Line, Geom_Plane
 from OCC.Core.Geom2d import Geom2d_Circle, Geom2d_Line
 from OCC.Core.Geom2dAPI import Geom2dAPI_InterCurveCurve
-from OCC.Core.Geom import Geom_Circle, Geom_Plane, Geom_Line
-from OCC.Core.gp import (gp_Ax2, gp_Ax3, gp_Dir, gp_Dir2d, gp_Lin2d, gp_Pnt,
-                         gp_Pnt2d, gp_Ax2d, gp_Circ2d, gp_Pln, gp_Trsf, gp_Vec)
+from OCC.Core.gp import (gp_Ax2, gp_Ax2d, gp_Ax3, gp_Circ2d, gp_Dir, gp_Dir2d,
+                         gp_Lin2d, gp_Pln, gp_Pnt, gp_Pnt2d, gp_Trsf, gp_Vec)
 from OCC.Core.GProp import GProp_GProps
-from OCCUtils.Construct import face_normal
 from OCC.Core.TopTools import TopTools_ListOfShape
+
+from OCCUtils.Construct import face_normal
 
 INFINITY = 1e+10  # mm (on the order of Earth's diameter)
 

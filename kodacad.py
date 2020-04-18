@@ -32,16 +32,14 @@ from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace
 from OCC.Core.BRepFilletAPI import BRepFilletAPI_MakeFillet
 from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_MakeThickSolid
-from OCC.Core.BRepPrimAPI import (
-    BRepPrimAPI_MakeBox,
-    BRepPrimAPI_MakeCylinder,
-    BRepPrimAPI_MakePrism,
-    BRepPrimAPI_MakeRevol,
-)
+from OCC.Core.BRepPrimAPI import (BRepPrimAPI_MakeBox,
+                                  BRepPrimAPI_MakeCylinder,
+                                  BRepPrimAPI_MakePrism, BRepPrimAPI_MakeRevol)
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
 from OCC.Core.Quantity import Quantity_ColorRGBA
 from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Core.TopoDS import TopoDS_Vertex, topods_Edge, topods_Face, topods_Vertex
+from OCC.Core.TopoDS import (TopoDS_Vertex, topods_Edge, topods_Face,
+                             topods_Vertex)
 from OCC.Core.TopTools import TopTools_ListOfShape
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator

@@ -24,28 +24,30 @@
 import logging
 import os
 import os.path
-from PyQt5.QtWidgets import QFileDialog
+
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
-from OCC.Core.STEPCAFControl import STEPCAFControl_Reader, STEPCAFControl_Writer
+from OCC.Core.STEPCAFControl import (STEPCAFControl_Reader,
+                                     STEPCAFControl_Writer)
 from OCC.Core.STEPControl import STEPControl_AsIs
-from OCC.Core.TCollection import (TCollection_ExtendedString,
-                                  TCollection_AsciiString)
+from OCC.Core.TCollection import (TCollection_AsciiString,
+                                  TCollection_ExtendedString)
 from OCC.Core.TDataStd import TDataStd_Name
+from OCC.Core.TDF import (TDF_ChildIterator, TDF_CopyLabel, TDF_Label,
+                          TDF_LabelSequence)
 from OCC.Core.TDocStd import TDocStd_Document
-from OCC.Core.TDF import (TDF_LabelSequence, TDF_Label, TDF_CopyLabel,
-                          TDF_ChildIterator)
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
-from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
+from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
                               XCAFDoc_DocumentTool_ColorTool,
                               XCAFDoc_DocumentTool_LayerTool,
                               XCAFDoc_DocumentTool_MaterialTool,
-                              XCAFDoc_ColorGen, XCAFDoc_ColorSurf)
+                              XCAFDoc_DocumentTool_ShapeTool)
 from OCC.Core.XmlXCAFDrivers import (XmlXCAFDrivers_DocumentRetrievalDriver,
                                      XmlXCAFDrivers_DocumentStorageDriver)
 from OCC.Core.XSControl import XSControl_WorkSession
+from PyQt5.QtWidgets import QFileDialog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
