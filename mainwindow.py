@@ -25,22 +25,39 @@ from collections import defaultdict
 import logging
 from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QBrush, QColor
-from PyQt5.QtWidgets import (QLabel, QMainWindow, QTreeWidget, QMenu,
-                             QDockWidget, QDesktopWidget, QToolButton,
-                             QLineEdit, QTreeWidgetItem, QAction, QFrame,
-                             QToolBar, QAbstractItemView, QInputDialog,
-                             QTreeWidgetItemIterator)
+from PyQt5.QtWidgets import (
+    QLabel,
+    QMainWindow,
+    QTreeWidget,
+    QMenu,
+    QDockWidget,
+    QDesktopWidget,
+    QToolButton,
+    QLineEdit,
+    QTreeWidgetItem,
+    QAction,
+    QFrame,
+    QToolBar,
+    QAbstractItemView,
+    QInputDialog,
+    QTreeWidgetItemIterator,
+)
 from OCC.Core.AIS import AIS_Shape, AIS_Line, AIS_Circle
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.CPnts import CPnts_AbscissaPoint_Length
 from OCC.Core.gp import gp_Vec
 from OCC.Core.Prs3d import Prs3d_LineAspect
-from OCC.Core.Quantity import (Quantity_Color, Quantity_NOC_GRAY,
-                               Quantity_NOC_DARKGREEN, Quantity_NOC_MAGENTA1)
+from OCC.Core.Quantity import (
+    Quantity_Color,
+    Quantity_NOC_GRAY,
+    Quantity_NOC_DARKGREEN,
+    Quantity_NOC_MAGENTA1,
+)
 from OCC.Core.TopoDS import topods_Edge, topods_Vertex
 import OCC.Display.OCCViewer
 import OCC.Display.backend
+
 used_backend = OCC.Display.backend.load_backend()
 # from OCC.Display import qtDisplay
 # import local version instead (allows changing rotate/pan/zoom controls)
@@ -49,12 +66,14 @@ import myDisplay.qtDisplay as qtDisplay
 import rpnCalculator
 from docmodel import DocModel
 from version import APP_VERSION
+
 print("OCC version: %s" % VERSION)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
+logger.setLevel(logging.ERROR)  # set to DEBUG | INFO | ERROR
 
 doc = DocModel()
+
 
 class TreeView(QTreeWidget):
     """Assembly structure display
@@ -93,9 +112,8 @@ class TreeView(QTreeWidget):
         return False
 
     def moveSelection(self, parent, position):
-    # save the selected items
-        selection = [QPersistentModelIndex(i)
-                     for i in self.selectedIndexes()]
+        # save the selected items
+        selection = [QPersistentModelIndex(i) for i in self.selectedIndexes()]
         parent_index = self.indexFromItem(parent)
         if parent_index in selection:
             return False
@@ -118,21 +136,21 @@ class TreeView(QTreeWidget):
                 if parent_index.isValid():
                     parent.insertChild(parent.childCount(), taken.pop(0))
                 else:
-                    self.insertTopLevelItem(self.topLevelItemCount(),
-                                            taken.pop(0))
+                    self.insertTopLevelItem(self.topLevelItemCount(), taken.pop(0))
             else:
                 # insert the items at the specified position
                 if parent_index.isValid():
-                    parent.insertChild(min(target, parent.childCount()),
-                                       taken.pop(0))
+                    parent.insertChild(min(target, parent.childCount()), taken.pop(0))
                 else:
-                    self.insertTopLevelItem(min(target, self.topLevelItemCount()),
-                                            taken.pop(0))
+                    self.insertTopLevelItem(
+                        min(target, self.topLevelItemCount()), taken.pop(0)
+                    )
         return True
+
 
 class MainWindow(QMainWindow):
     """Main GUI window containing an assy tree view and a 3D display view
-    
+
     The User controls whether parts displayed in the 3D display view are drawn
     or hidden through the use of check boxes on the tree view display. The list
     of the uid's of all the items currently hidden is held in self.hide_list.
@@ -175,21 +193,21 @@ class MainWindow(QMainWindow):
         self.calculator = None
 
         self.assy_root, self.wp_root = self.create_root_items()
-        self.itemClicked = None   # TreeView item that has been mouse clicked
+        self.itemClicked = None  # TreeView item that has been mouse clicked
 
         # Internally, everything is always in mm
         # scale user input and output values
         # (user input values) * unitscale = value in mm
         # (output values) / unitscale = value in user's units
-        self._unitDict = {'mm': 1.0, 'in': 25.4, 'ft': 304.8}
-        self.units = 'mm'
+        self._unitDict = {"mm": 1.0, "in": 25.4, "ft": 304.8}
+        self.units = "mm"
         self.unitscale = self._unitDict[self.units]
         self.unitsLabel = QLabel()
         self.unitsLabel.setText("Units: %s " % self.units)
-        self.unitsLabel.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        self.unitsLabel.setFrameStyle(QFrame.StyledPanel | QFrame.Sunken)
 
         self.endOpButton = QToolButton()
-        self.endOpButton.setText('End Operation')
+        self.endOpButton.setText("End Operation")
         self.endOpButton.clicked.connect(self.clearCallback)
         self.currOpLabel = QLabel()
         self.registeredCallback = None
@@ -206,37 +224,39 @@ class MainWindow(QMainWindow):
         status.addPermanentWidget(self.unitsLabel)
         status.showMessage("Ready", 5000)
 
-        self.draw_list = []     # No longer needed
-        self.hide_list = []     # list of part uid's to be hidden (not displayed)
-        self.floatStack = []    # storage stack for floating point values
-        self.xyPtStack = []     # storage stack for 2d points (x, y)
-        self.ptStack = []       # storage stack for gp_Pnts
-        self.edgeStack = []     # storage stack for edge picks
-        self.faceStack = []     # storage stack for face picks
-        self.shapeStack = []    # storage stack for shape picks
-        self.lineEditStack = [] # list of user inputs
+        self.draw_list = []  # No longer needed
+        self.hide_list = []  # list of part uid's to be hidden (not displayed)
+        self.floatStack = []  # storage stack for floating point values
+        self.xyPtStack = []  # storage stack for 2d points (x, y)
+        self.ptStack = []  # storage stack for gp_Pnts
+        self.edgeStack = []  # storage stack for edge picks
+        self.faceStack = []  # storage stack for face picks
+        self.shapeStack = []  # storage stack for shape picks
+        self.lineEditStack = []  # list of user inputs
 
         self.activePart = None  # <TopoDS_Shape> object
         self.activePartUID = 0
         self.transparency_dict = {}  # {uid: part display transparency}
         self.ancestor_dict = defaultdict(list)  # {uid: [list of ancestor shapes]}
-        self.ais_shape_dict = {}  # {uid: <AIS_Shape> object} 
+        self.ais_shape_dict = {}  # {uid: <AIS_Shape> object}
 
-        self.activeWp = None    # WorkPlane object
+        self.activeWp = None  # WorkPlane object
         self.activeWpUID = 0
-        self.wp_dict = {}       # k = uid, v = wpObject
+        self.wp_dict = {}  # k = uid, v = wpObject
         self._wpNmbr = 1
 
         self.activeAsyUID = 0
-        self.assy_list = []     # list of assy uid's
+        self.assy_list = []  # list of assy uid's
         self.showItemActive(0)
         self.setActiveAsy(self.activeAsyUID)
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
         self.treeDockWidget.setObjectName("treeDockWidget")
-        self.treeDockWidget.setAllowedAreas(Qt.LeftDockWidgetArea| Qt.RightDockWidgetArea)
-        self.treeView = TreeView()   # Assy/Part structure (display)
+        self.treeDockWidget.setAllowedAreas(
+            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
+        )
+        self.treeView = TreeView()  # Assy/Part structure (display)
         self.treeView.itemClicked.connect(self.treeViewItemClicked)
         self.treeDockWidget.setWidget(self.treeView)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.treeDockWidget)
@@ -244,17 +264,19 @@ class MainWindow(QMainWindow):
     ####  PyQt menuBar & general methods:
 
     def centerOnScreen(self):
-        '''Centers the window on the screen.'''
+        """Centers the window on the screen."""
         resolution = QDesktopWidget().screenGeometry()
-        self.move((resolution.width() / 2) - (self.frameSize().width() / 2),
-                  (resolution.height() / 2) - (self.frameSize().height() / 2))
+        self.move(
+            (resolution.width() / 2) - (self.frameSize().width() / 2),
+            (resolution.height() / 2) - (self.frameSize().height() / 2),
+        )
 
     def add_menu(self, menu_name):
-        _menu = self.menu_bar.addMenu("&"+menu_name)
+        _menu = self.menu_bar.addMenu("&" + menu_name)
         self._menus[menu_name] = _menu
 
     def add_function_to_menu(self, menu_name, text, _callable):
-        assert callable(_callable), 'the function supplied is not callable'
+        assert callable(_callable), "the function supplied is not callable"
         try:
             _action = QAction(text, self)
             # if not, the "exit" action is now shown...
@@ -263,9 +285,9 @@ class MainWindow(QMainWindow):
             _action.triggered.connect(_callable)
             self._menus[menu_name].addAction(_action)
         except KeyError:
-            raise ValueError('the menu item %s does not exist' % (menu_name))
+            raise ValueError("the menu item %s does not exist" % (menu_name))
 
-    def closeEvent(self, event):    # things that need to happen on exit
+    def closeEvent(self, event):  # things that need to happen on exit
         try:
             self.calculator.close()
         except AttributeError:
@@ -289,9 +311,9 @@ class MainWindow(QMainWindow):
         parent_item_dict = {}  # {uid: tree view item}
         for uid, dic in doc.uid_dict.items():
             # dic: {keys: 'entry', 'name', 'parent_uid', 'ref_entry'}
-            entry = dic['entry']
-            name = dic['name']
-            parent_uid = dic['parent_uid']
+            entry = dic["entry"]
+            name = dic["name"]
+            parent_uid = dic["parent_uid"]
             if parent_uid not in parent_item_dict:
                 parent_item = self.assy_root
             else:
@@ -301,14 +323,17 @@ class MainWindow(QMainWindow):
             item_name = [name, uid]
             item = QTreeWidgetItem(parent_item, item_name)
             item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-            item.setCheckState(0, Qt.Checked)
+            if uid in self.hide_list:
+                item.setCheckState(0, Qt.Unchecked)
+            else:
+                item.setCheckState(0, Qt.Checked)
             self.treeView.expandItem(item)
             parent_item_dict[uid] = item
             # build assy_list
-            if dic['is_assy']:
+            if dic["is_assy"]:
                 self.assy_list.append(uid)
         self.sync_treeview_to_active()
-        self.syncCheckedToDrawList()
+        #self.syncCheckedToDrawList()
 
     def addItemToTreeView(self, name, uid):
         itemName = [name, str(uid)]
@@ -324,12 +349,12 @@ class MainWindow(QMainWindow):
 
     def create_root_items(self):
         """Create '2D' & '3D' root items in treeView."""
-        root_item = ['/', '0']  # [name, uid]
+        root_item = ["/", "0"]  # [name, uid]
         tree_view_root = QTreeWidgetItem(self.treeView, root_item)
         self.treeView.expandItem(tree_view_root)
-        wp_root = QTreeWidgetItem(tree_view_root, ['2D', 'wp0'])
+        wp_root = QTreeWidgetItem(tree_view_root, ["2D", "wp0"])
         self.treeView.expandItem(wp_root)
-        ay_root = QTreeWidgetItem(tree_view_root, ['3D', '0:1:1.0'])
+        ay_root = QTreeWidgetItem(tree_view_root, ["3D", "0:1:1.0"])
         self.treeView.expandItem(ay_root)
         return (ay_root, wp_root)
 
@@ -352,8 +377,8 @@ class MainWindow(QMainWindow):
     def treeViewItemClicked(self, item):
         """Called when treeView item is clicked"""
 
-        self.itemClicked = item # store item
-        if not self.inSync():   # click may have been on checkmark.
+        self.itemClicked = item  # store item
+        if not self.inSync():  # click may have been on checkmark.
             self.adjust_draw_hide()
 
     def inSync(self):
@@ -387,10 +412,18 @@ class MainWindow(QMainWindow):
                     item.setCheckState(0, Qt.Unchecked)
                 else:
                     item.setCheckState(0, Qt.Checked)
-    
+
+    def syncUncheckedToHideList(self):
+        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+            uid = item.text(1)
+            if (uid in doc.part_dict) or (uid in self.wp_dict):
+                if uid in self.hide_list:
+                    item.setCheckState(0, Qt.Unchecked)
+                else:
+                    item.setCheckState(0, Qt.Checked)
 
     # unused?
-    
+
     def syncDrawListToChecked(self):
         self.draw_list = self.checkedToList()
 
@@ -403,14 +436,6 @@ class MainWindow(QMainWindow):
                 else:
                     item.setCheckState(0, Qt.Unchecked)
 
-    def syncUncheckedToDrawList(self):
-        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-            uid = item.text(1)
-            if (uid in doc.part_dict) or (uid in self.wp_dict):
-                if uid in self.draw_list:
-                    item.setCheckState(0, Qt.Checked)
-                else:
-                    item.setCheckState(0, Qt.Unchecked)
 
     def checkedToList(self):
         """Returns list of uid's of checked (part & wp) items in treeView"""
@@ -455,8 +480,8 @@ class MainWindow(QMainWindow):
         if item:
             name = item.text(0)
             uid = item.text(1)
-            entry = doc.uid_dict[uid]['entry']
-            ref_ent = doc.uid_dict[uid]['ref_entry']
+            entry = doc.uid_dict[uid]["entry"]
+            ref_ent = doc.uid_dict[uid]["ref_entry"]
             print(f"uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
 
     def setClickedActive(self):
@@ -477,7 +502,7 @@ class MainWindow(QMainWindow):
             if uid in pd:
                 self.setActivePart(uid)
                 sbText = f"{name} [uid={uid}] is now the active part"
-                #self.redraw()
+                # self.redraw()
             elif uid in wd:
                 self.setActiveWp(uid)
                 sbText = f"{name} [uid={uid}] is now the active workplane"
@@ -497,19 +522,19 @@ class MainWindow(QMainWindow):
             for itm in pd.values():
                 itm.setBackground(0, QBrush(QColor(255, 255, 255, 0)))
             # Set BG color of new active part
-            pd[uid].setBackground(0, QBrush(QColor('gold')))
+            pd[uid].setBackground(0, QBrush(QColor("gold")))
         elif uid in wd:
             # Clear BG color of all wp items
             for itm in wd.values():
                 itm.setBackground(0, QBrush(QColor(255, 255, 255, 0)))
             # Set BG color of new active wp
-            wd[uid].setBackground(0, QBrush(QColor('lightgreen')))
+            wd[uid].setBackground(0, QBrush(QColor("lightgreen")))
         elif uid in ad:
             # Clear BG color of all asy items
             for itm in ad.values():
                 itm.setBackground(0, QBrush(QColor(255, 255, 255, 0)))
             # Set BG color of new active asy
-            ad[uid].setBackground(0, QBrush(QColor('lightblue')))
+            ad[uid].setBackground(0, QBrush(QColor("lightblue")))
 
     def sync_treeview_to_active(self):
         for uid in (self.activePartUID, self.activeAsyUID, self.activeWpUID):
@@ -534,14 +559,13 @@ class MainWindow(QMainWindow):
                 self.redraw()
             self.itemClicked = None
 
-    def editName(self): # Edit name of item clicked in treeView
+    def editName(self):  # Edit name of item clicked in treeView
         item = self.itemClicked
         if item:
             name = item.text(0)
             uid = item.text(1)
-            prompt = 'Enter new name for part %s' % name
-            newName, OK = QInputDialog.getText(self, 'Input Dialog',
-                                               prompt, text=name)
+            prompt = "Enter new name for part %s" % name
+            newName, OK = QInputDialog.getText(self, "Input Dialog", prompt, text=name)
             if OK:
                 item.setText(0, newName)
                 print(f"UID= {uid}, name = {newName}")
@@ -564,7 +588,7 @@ class MainWindow(QMainWindow):
         # Update appropriate dictionaries
         uid = "wp%i" % self._wpNmbr
         self._wpNmbr += 1
-        self.wp_dict[uid] = wp_objct # wpObject
+        self.wp_dict[uid] = wp_objct  # wpObject
         # add item to treeView
         itemName = [uid, uid]
         item = QTreeWidgetItem(self.wp_root, itemName)
@@ -591,7 +615,7 @@ class MainWindow(QMainWindow):
         # modify status in self
         self.activePartUID = uid
         if uid:
-            self.activePart = doc.part_dict[uid]['shape']
+            self.activePart = doc.part_dict[uid]["shape"]
             # show as active in treeView
             self.showItemActive(uid)
         else:
@@ -635,7 +659,7 @@ class MainWindow(QMainWindow):
 
     def registerCallback(self, callback):
         currCallback = self.registeredCallback
-        if currCallback:    # Make sure a callback isn't already registered
+        if currCallback:  # Make sure a callback isn't already registered
             self.clearCallback()
         self.canvas._display.register_select_callback(callback)
         self.registeredCallback = callback
@@ -647,7 +671,7 @@ class MainWindow(QMainWindow):
             self.registeredCallback = None
             self.clearAllStacks()
             self.currOpLabel.setText("Current Operation: None ")
-            self.statusBar().showMessage('')
+            self.statusBar().showMessage("")
             self.canvas._display.SetSelectionModeNeutral()
             # self.redraw()
 
@@ -738,8 +762,8 @@ class MainWindow(QMainWindow):
             else:
                 transp = 0.0
             part_data = doc.part_dict[uid]
-            shape = part_data['shape']
-            color = part_data['color']
+            shape = part_data["shape"]
+            color = part_data["color"]
             try:
                 aisShape = AIS_Shape(shape)
                 self.ais_shape_dict[uid] = aisShape
@@ -768,7 +792,7 @@ class MainWindow(QMainWindow):
         if uid:
             self.eraseAll()
             self.draw_list.append(uid)
-            self.canvas._display.DisplayShape(doc.part_dict[uid]['shape'])
+            self.canvas._display.DisplayShape(doc.part_dict[uid]["shape"])
             self.syncCheckedToDrawList()
             self.redraw()
 
@@ -778,12 +802,12 @@ class MainWindow(QMainWindow):
         self.syncCheckedToDrawList()
         self.redraw()
 
-    def drawAddPart(self, key): # Add part to draw_list
+    def drawAddPart(self, key):  # Add part to draw_list
         self.draw_list.append(key)
         self.syncCheckedToDrawList()
         self.redraw()
 
-    def drawHidePart(self, key): # Remove part from draw_list
+    def drawHidePart(self, key):  # Remove part from draw_list
         if key in self.draw_list:
             self.draw_list.remove(key)
             self.syncCheckedToDrawList()
@@ -823,11 +847,11 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(statusText)
 
     def distPtPtC(self, shapeList, *args):  # callback (collector) for distPtPt
-        logger.debug('Edges selected: %s', shapeList)
-        logger.debug('args: %s', args)  # args = x, y mouse coords
+        logger.debug("Edges selected: %s", shapeList)
+        logger.debug("args: %s", args)  # args = x, y mouse coords
         for shape in shapeList:
             vrtx = topods_Vertex(shape)
-            gpPt = BRep_Tool.Pnt(vrtx) # convert vertex to gp_Pnt
+            gpPt = BRep_Tool.Pnt(vrtx)  # convert vertex to gp_Pnt
             self.ptStack.append(gpPt)
         if len(self.ptStack) == 2:
             self.distPtPt()
@@ -838,7 +862,7 @@ class MainWindow(QMainWindow):
             edgelen = CPnts_AbscissaPoint_Length(BRepAdaptor_Curve(edge))
             edgelen = edgelen / self.unitscale
             self.calculator.putx(edgelen)
-            #self.redraw()
+            # self.redraw()
             self.edgeLen()
         else:
             self.registerCallback(self.edgeLenC)
@@ -847,8 +871,8 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(statusText)
 
     def edgeLenC(self, shapeList, *args):  # callback (collector) for edgeLen
-        logger.debug('Edges selected: %s', shapeList)
-        logger.debug('args: %s', args)  # args = x, y mouse coords
+        logger.debug("Edges selected: %s", shapeList)
+        logger.debug("args: %s", args)  # args = x, y mouse coords
         for shape in shapeList:
             edge = topods_Edge(shape)
             self.edgeStack.append(edge)

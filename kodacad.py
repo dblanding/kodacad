@@ -657,9 +657,9 @@ def makeBox():
     myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
     uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
     win.build_tree()
-    win.drawAddPart(uid)
     win.setActivePart(uid)
-    win.redraw()
+    win.draw_shape(uid)
+    win.syncUncheckedToHideList()
 
 
 def makeCyl():
@@ -668,9 +668,9 @@ def makeCyl():
     myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
     uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
     win.build_tree()
-    win.drawAddPart(uid)
     win.setActivePart(uid)
-    win.redraw()
+    win.draw_shape(uid)
+    win.syncUncheckedToHideList()
 
 
 def extrude():
@@ -688,9 +688,9 @@ def extrude():
         myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(), aPrismVec).Shape()
         uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
         win.build_tree()
-        win.drawAddPart(uid)
         win.setActivePart(uid)
-        win.redraw()
+        win.draw_shape(uid)
+        win.syncUncheckedToHideList()
         win.statusBar().showMessage("New part created.")
         win.clearCallback()
     else:
@@ -724,9 +724,9 @@ def revolve():
         myBody = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
         uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
         win.build_tree()
-        win.drawAddPart(uid)
         win.setActivePart(uid)
-        win.redraw()
+        win.draw_shape(uid)
+        win.syncUncheckedToHideList()
         win.statusBar().showMessage("New part created.")
         win.clearCallback()
     else:
