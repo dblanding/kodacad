@@ -333,7 +333,7 @@ class MainWindow(QMainWindow):
             if dic["is_assy"]:
                 self.assy_list.append(uid)
         self.sync_treeview_to_active()
-        #self.syncCheckedToDrawList()
+        # self.syncCheckedToDrawList()
 
     def addItemToTreeView(self, name, uid):
         itemName = [name, str(uid)]
@@ -396,15 +396,28 @@ class MainWindow(QMainWindow):
         return dl
 
     def adjust_draw_hide(self):
+        """Erase from 3D display when an item is unchecked, draw when checked
+
+        An item is a treeview widget items. It may be a part, assy or wp.
+        For our purpose here, we only care if it is a part or wp because those
+        are the only types that are displayed in the 3D view window."""
+
         unchecked = self.uncheckedToList()
         for uid in unchecked:
-            if uid not in self.hide_list:
-                self.erase_shape(uid)
+            if uid not in self.hide_list:  # Newly unchecked item
+                if uid in doc.part_dict:
+                    self.erase_shape(uid)
+                elif uid in self.wp_dict:
+                    self.erase_wp(uid)
         for uid in self.hide_list:
-            if uid not in unchecked:
-                self.draw_shape(uid)
+            if uid not in unchecked:  # Newly checked item
+                if uid in doc.part_dict:
+                    self.draw_shape(uid)
+                elif uid in self.wp_dict:
+                    self.erase_wp(uid)
         self.hide_list = unchecked
-        # remove the displayed check
+        # Remove the check mark from the checkbox
+        '''
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             uid = item.text(1)
             if (uid in doc.part_dict) or (uid in self.wp_dict):
@@ -412,6 +425,7 @@ class MainWindow(QMainWindow):
                     item.setCheckState(0, Qt.Unchecked)
                 else:
                     item.setCheckState(0, Qt.Checked)
+        '''
 
     def syncUncheckedToHideList(self):
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
@@ -421,33 +435,6 @@ class MainWindow(QMainWindow):
                     item.setCheckState(0, Qt.Unchecked)
                 else:
                     item.setCheckState(0, Qt.Checked)
-
-    # unused?
-
-    def syncDrawListToChecked(self):
-        self.draw_list = self.checkedToList()
-
-    def syncCheckedToDrawList(self):
-        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-            uid = item.text(1)
-            if (uid in doc.part_dict) or (uid in self.wp_dict):
-                if uid in self.draw_list:
-                    item.setCheckState(0, Qt.Checked)
-                else:
-                    item.setCheckState(0, Qt.Unchecked)
-
-
-    def checkedToList(self):
-        """Returns list of uid's of checked (part & wp) items in treeView"""
-        dl = []
-        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-            if item.checkState(0) == Qt.Checked:
-                uid = item.text(1)
-                if (uid in doc.part_dict) or (uid in self.wp_dict):
-                    dl.append(uid)
-        return dl
-
-    # /unused?
 
     def sortViewItems(self):
         """Return dicts of tree view items sorted by type: (prt, ay, wp)"""
@@ -581,24 +568,21 @@ class MainWindow(QMainWindow):
     #############################################
 
     def get_wp_uid(self, wp_objct):
-        """
-        Assign a uid to a new workplane & add to tree view (2D).
-        """
+        """Assign a new uid to a new workplane, return uid. Also:
 
-        # Update appropriate dictionaries
+        Add item to treeview (2D), Make wp active & Add to self.wp_dict."""
+
+        # Generate new uid and update self.wp_dict
         uid = "wp%i" % self._wpNmbr
         self._wpNmbr += 1
-        self.wp_dict[uid] = wp_objct  # wpObject
-        # add item to treeView
+        self.wp_dict[uid] = wp_objct
+        # Add item to treeView
         itemName = [uid, uid]
         item = QTreeWidgetItem(self.wp_root, itemName)
         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
         item.setCheckState(0, Qt.Checked)
         # Make new workplane active
         self.setActiveWp(uid)
-        # Add new uid to draw list and sync w/ treeView
-        self.draw_list.append(uid)
-        self.syncCheckedToDrawList()
         return uid
 
     def appendToStack(self):  # called when <ret> is pressed on line edit
@@ -685,65 +669,14 @@ class MainWindow(QMainWindow):
         self.canvas._display.FitAll()
 
     def eraseAll(self):
+        """Depracated"""
         context = self.canvas._display.Context
         context.RemoveAll(True)
         self.draw_list = []
         self.syncCheckedToDrawList()
 
-    def erase_shape(self, uid):
-        if uid in self.ais_shape_dict:
-            context = self.canvas._display.Context
-            aisShape = self.ais_shape_dict[uid]
-            context.Remove(aisShape, True)
-            self.draw_list.remove(uid)
-            self.syncCheckedToDrawList()
-
-    def redraw_wp(self):
-        context = self.canvas._display.Context
-        for uid in self.wp_dict:
-            if uid in self.draw_list:
-                wp = self.wp_dict[uid]
-                border = wp.border
-                if uid == self.activeWpUID:
-                    borderColor = Quantity_Color(Quantity_NOC_DARKGREEN)
-                else:
-                    borderColor = Quantity_Color(Quantity_NOC_GRAY)
-                aisBorder = AIS_Shape(border)
-                context.Display(aisBorder, True)
-                context.SetColor(aisBorder, borderColor, True)
-                transp = 0.8  # 0.0 <= transparency <= 1.0
-                context.SetTransparency(aisBorder, transp, True)
-                drawer = aisBorder.DynamicHilightAttributes()
-                context.HilightWithColor(aisBorder, drawer, True)
-                clClr = Quantity_Color(Quantity_NOC_MAGENTA1)
-                for cline in wp.clines:
-                    geomline = wp.geomLineBldr(cline)
-                    aisline = AIS_Line(geomline)
-                    aisline.SetOwner(geomline)
-                    drawer = aisline.Attributes()
-                    # asp parameters: (color, type, width)
-                    asp = Prs3d_LineAspect(clClr, 2, 1.0)
-                    drawer.SetLineAspect(asp)
-                    aisline.SetAttributes(drawer)
-                    context.Display(aisline, False)  # (see comment below)
-                    # 'False' above enables 'context' mode display & selection
-                pntlist = wp.intersectPts()  # type <gp_Pnt>
-                for point in pntlist:
-                    self.canvas._display.DisplayShape(point)
-                for ccirc in wp.ccircs:
-                    aiscirc = AIS_Circle(wp.convert_circ_to_geomCirc(ccirc))
-                    drawer = aisline.Attributes()
-                    # asp parameters: (color, type, width)
-                    asp = Prs3d_LineAspect(clClr, 2, 1.0)
-                    drawer.SetLineAspect(asp)
-                    aiscirc.SetAttributes(drawer)
-                    context.Display(aiscirc, False)  # (see comment below)
-                    # 'False' above enables 'context' mode display & selection
-                for edge in wp.edgeList:
-                    self.canvas._display.DisplayShape(edge, color="WHITE")
-                self.canvas._display.Repaint()
-
     def redraw(self):
+        """Depracated"""
         context = self.canvas._display.Context
         if not self.registeredCallback:
             self.canvas._display.SetSelectionModeNeutral()
@@ -754,7 +687,73 @@ class MainWindow(QMainWindow):
                 self.draw_shape(uid)
         self.redraw_wp()
 
+    def redraw_wp(self):
+        """Depracated"""
+        context = self.canvas._display.Context
+        for uid in self.wp_dict:
+            if uid not in self.hide_list:
+                self.draw_wp(uid)
+
+    def draw_wp(self, uid):
+        """Draw the workplane identified by uid."""
+        context = self.canvas._display.Context
+        if uid:
+            wp = self.wp_dict[uid]
+            border = wp.border
+            if uid == self.activeWpUID:
+                borderColor = Quantity_Color(Quantity_NOC_DARKGREEN)
+            else:
+                borderColor = Quantity_Color(Quantity_NOC_GRAY)
+            aisBorder = AIS_Shape(border)
+            context.Display(aisBorder, True)
+            context.SetColor(aisBorder, borderColor, True)
+            transp = 0.8  # 0.0 <= transparency <= 1.0
+            context.SetTransparency(aisBorder, transp, True)
+            drawer = aisBorder.DynamicHilightAttributes()
+            context.HilightWithColor(aisBorder, drawer, True)
+            clClr = Quantity_Color(Quantity_NOC_MAGENTA1)
+            for cline in wp.clines:
+                geomline = wp.geomLineBldr(cline)
+                aisline = AIS_Line(geomline)
+                aisline.SetOwner(geomline)
+                drawer = aisline.Attributes()
+                # asp parameters: (color, type, width)
+                asp = Prs3d_LineAspect(clClr, 2, 1.0)
+                drawer.SetLineAspect(asp)
+                aisline.SetAttributes(drawer)
+                context.Display(aisline, False)  # (see comment below)
+                # 'False' above enables 'context' mode display & selection
+            pntlist = wp.intersectPts()  # type <gp_Pnt>
+            for point in pntlist:
+                self.canvas._display.DisplayShape(point)
+            for ccirc in wp.ccircs:
+                aiscirc = AIS_Circle(wp.convert_circ_to_geomCirc(ccirc))
+                drawer = aisline.Attributes()
+                # asp parameters: (color, type, width)
+                asp = Prs3d_LineAspect(clClr, 2, 1.0)
+                drawer.SetLineAspect(asp)
+                aiscirc.SetAttributes(drawer)
+                context.Display(aiscirc, False)  # (see comment below)
+                # 'False' above enables 'context' mode display & selection
+            for edge in wp.edgeList:
+                self.canvas._display.DisplayShape(edge, color="WHITE")
+            self.canvas._display.Repaint()
+
+    def erase_wp(self, uid):
+        """Erase (incrementally) the workplane with uid."""
+        pass
+
+    def erase_shape(self, uid):
+        """Erase (incrementally) the part with uid."""
+        if uid in self.ais_shape_dict:
+            context = self.canvas._display.Context
+            aisShape = self.ais_shape_dict[uid]
+            context.Remove(aisShape, True)
+            #self.draw_list.remove(uid)
+            #self.syncCheckedToDrawList()
+
     def draw_shape(self, uid):
+        """Draw (incrementally) the part with uid."""
         context = self.canvas._display.Context
         if uid:
             if uid in self.transparency_dict:
@@ -775,43 +774,15 @@ class MainWindow(QMainWindow):
                 context.HilightWithColor(aisShape, drawer, True)
             except AttributeError as e:
                 print(e)
-            self.draw_list.append(uid)
-            self.syncCheckedToDrawList()
+            #self.draw_list.append(uid)
+            #self.syncCheckedToDrawList()
 
     def drawAll(self):
-        self.draw_list = []
+        """This draws the parts & workplanes, but it doesn't check the items."""
         for k in doc.part_dict:
-            self.draw_list.append(k)
+            self.draw_shape(k)
         for k in self.wp_dict:
-            self.draw_list.append(k)
-        self.syncCheckedToDrawList()
-        self.redraw()
-
-    def drawOnlyActivePart(self):
-        uid = self.activePartUID
-        if uid:
-            self.eraseAll()
-            self.draw_list.append(uid)
-            self.canvas._display.DisplayShape(doc.part_dict[uid]["shape"])
-            self.syncCheckedToDrawList()
-            self.redraw()
-
-    def drawOnlyPart(self, key):
-        self.eraseAll()
-        self.draw_list.append(key)
-        self.syncCheckedToDrawList()
-        self.redraw()
-
-    def drawAddPart(self, key):  # Add part to draw_list
-        self.draw_list.append(key)
-        self.syncCheckedToDrawList()
-        self.redraw()
-
-    def drawHidePart(self, key):  # Remove part from draw_list
-        if key in self.draw_list:
-            self.draw_list.remove(key)
-            self.syncCheckedToDrawList()
-            self.redraw()
+            self.draw_wp(k)
 
     #############################################
     #

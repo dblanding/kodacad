@@ -32,14 +32,16 @@ from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace
 from OCC.Core.BRepFilletAPI import BRepFilletAPI_MakeFillet
 from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_MakeThickSolid
-from OCC.Core.BRepPrimAPI import (BRepPrimAPI_MakeBox,
-                                  BRepPrimAPI_MakeCylinder,
-                                  BRepPrimAPI_MakePrism, BRepPrimAPI_MakeRevol)
+from OCC.Core.BRepPrimAPI import (
+    BRepPrimAPI_MakeBox,
+    BRepPrimAPI_MakeCylinder,
+    BRepPrimAPI_MakePrism,
+    BRepPrimAPI_MakeRevol,
+)
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
 from OCC.Core.Quantity import Quantity_ColorRGBA
 from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Core.TopoDS import (TopoDS_Vertex, topods_Edge, topods_Face,
-                             topods_Vertex)
+from OCC.Core.TopoDS import TopoDS_Vertex, topods_Edge, topods_Face, topods_Vertex
 from OCC.Core.TopTools import TopTools_ListOfShape
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
@@ -79,11 +81,9 @@ def wpBy3Pts(*args):
         uDir = gp_Dir(uVec)
         axis3 = gp_Ax3(origin, wDir, uDir)
         wp = workplane.WorkPlane(100, ax3=axis3)
-        win.get_wp_uid(wp)
+        uid = win.get_wp_uid(wp)
+        win.draw_wp(uid)
         win.clearCallback()
-        win.redraw_wp()
-        statusText = "Workplane created."
-        win.statusBar().showMessage(statusText)
     else:
         # Initial setup
         win.registerCallback(wpBy3PtsC)
@@ -121,11 +121,9 @@ def wpOnFace(*args):
     faceU = win.faceStack.pop()
     faceW = win.faceStack.pop()
     wp = workplane.WorkPlane(100, face=faceW, faceU=faceU)
-    win.get_wp_uid(wp)
+    uid = win.get_wp_uid(wp)
+    win.draw_wp(uid)
     win.clearCallback()
-    win.redraw_wp()
-    statusText = "Workplane created."
-    win.statusBar().showMessage(statusText)
 
 
 def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
@@ -143,8 +141,8 @@ def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
 
 def makeWP():  # Default workplane located in X-Y plane at 0,0,0
     wp = workplane.WorkPlane(100)
-    win.get_wp_uid(wp)
-    win.redraw_wp()
+    uid = win.get_wp_uid(wp)
+    win.draw_wp(uid)
 
 
 #############################################
@@ -995,16 +993,6 @@ def load_stp_undr_top():
 #############################################
 
 
-def drawActPart():
-    uid = win.activePartUID
-    win.draw_shape(uid)
-
-
-def eraseActPart():
-    uid = win.activePartUID
-    win.erase_shape(uid)
-
-
 def print_uid_dict():
     pprint.pprint(doc.uid_dict)
 
@@ -1113,8 +1101,6 @@ if __name__ == "__main__":
     win.add_function_to_menu("Modify Active Part", "Shell", shell)
     win.add_function_to_menu("Modify Active Part", "Fuse", fuse)
     win.add_menu("Utility")
-    win.add_function_to_menu("Utility", "Draw Active Prt", drawActPart)
-    win.add_function_to_menu("Utility", "Erase Active Prt", eraseActPart)
     win.add_function_to_menu("Utility", "print uid_dict", print_uid_dict)
     win.add_function_to_menu("Utility", "dump doc", dumpDoc)
     win.add_function_to_menu("Utility", "Topology of Act Prt", topoDumpAP)
@@ -1129,10 +1115,6 @@ if __name__ == "__main__":
     drawSubMenu = QMenu("Draw")
     win.popMenu.addMenu(drawSubMenu)
     drawSubMenu.addAction("Fit", win.fitAll)
-    drawSubMenu.addAction("Redraw", win.redraw)
-    drawSubMenu.addAction("Hide All", win.eraseAll)
-    drawSubMenu.addAction("Draw All", win.drawAll)
-    drawSubMenu.addAction("Draw Only Active Part", win.drawOnlyActivePart)
 
     win.treeView.popMenu.addAction("Item Info", win.showClickedInfo)
     win.treeView.popMenu.addAction("Set Active", win.setClickedActive)
