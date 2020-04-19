@@ -82,7 +82,7 @@ def wpBy3Pts(*args):
         axis3 = gp_Ax3(origin, wDir, uDir)
         wp = workplane.WorkPlane(100, ax3=axis3)
         uid = win.get_wp_uid(wp)
-        win.draw_wp(uid)
+        win.redraw_workplanes()
         win.clearCallback()
     else:
         # Initial setup
@@ -122,7 +122,7 @@ def wpOnFace(*args):
     faceW = win.faceStack.pop()
     wp = workplane.WorkPlane(100, face=faceW, faceU=faceU)
     uid = win.get_wp_uid(wp)
-    win.draw_wp(uid)
+    win.redraw_workplanes()
     win.clearCallback()
 
 
@@ -142,7 +142,7 @@ def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
 def makeWP():  # Default workplane located in X-Y plane at 0,0,0
     wp = workplane.WorkPlane(100)
     uid = win.get_wp_uid(wp)
-    win.draw_wp(uid)
+    win.redraw_workplanes()
 
 
 #############################################
@@ -192,7 +192,7 @@ def clineH():
         p = win.xyPtStack.pop()
         win.xyPtStack = []
         wp.hcl(p)
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(clineHC)
         display.SetSelectionModeVertex()
@@ -223,7 +223,7 @@ def clineV():
         p = win.xyPtStack.pop()
         win.xyPtStack = []
         wp.vcl(p)
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(clineVC)
         display.SetSelectionModeVertex()
@@ -254,7 +254,7 @@ def clineHV():
         p = win.xyPtStack.pop()
         win.xyPtStack = []
         wp.hvcl(p)
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(clineHVC)
         display.SetSelectionModeVertex()
@@ -282,7 +282,7 @@ def cline2Pts():
         p1 = win.xyPtStack.pop()
         wp.acl(p1, p2)
         win.xyPtStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(cline2PtsC)
         display.SetSelectionModeVertex()
@@ -311,7 +311,7 @@ def clineAng():
         pnt = win.xyPtStack.pop()
         wp.acl(pnt, ang=angle)
         win.xyPtStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(clineAngC)
         display.SetSelectionModeVertex()
@@ -349,7 +349,7 @@ def clineLinBisec():
         pnt1 = win.xyPtStack.pop()
         wp.lbcl(pnt1, pnt2)
         win.xyPtStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(clineLinBisecC)
         display.SetSelectionModeVertex()
@@ -388,14 +388,14 @@ def ccirc():
         wp.circle(p1, rad, constr=True)
         win.xyPtStack = []
         win.floatStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     elif win.xyPtStack and win.floatStack:
         pnt = win.xyPtStack.pop()
         rad = win.floatStack.pop() * win.unitscale
         wp.circle(pnt, rad, constr=True)
         win.xyPtStack = []
         win.floatStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(ccircC)
         display.SetSelectionModeVertex()
@@ -434,7 +434,7 @@ def line():
         pnt1 = win.xyPtStack.pop()
         wp.line(pnt1, pnt2)
         win.xyPtStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(lineC)
         display.SetSelectionModeVertex()
@@ -462,7 +462,7 @@ def rect():
         pnt1 = win.xyPtStack.pop()
         wp.rect(pnt1, pnt2)
         win.xyPtStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(rectC)
         display.SetSelectionModeVertex()
@@ -492,14 +492,14 @@ def circle():
         wp.circle(p1, rad, constr=False)
         win.xyPtStack = []
         win.floatStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     elif win.xyPtStack and win.floatStack:
         pnt = win.xyPtStack.pop()
         rad = win.floatStack.pop() * win.unitscale
         wp.circle(pnt, rad, constr=False)
         win.xyPtStack = []
         win.floatStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(circleC)
         display.SetSelectionModeVertex()
@@ -533,7 +533,7 @@ def arcc2p():
         wp.arcc2p(pc, ps, pe)
         win.xyPtStack = []
         win.floatStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(arcc2pC)
         display.SetSelectionModeVertex()
@@ -562,7 +562,7 @@ def arc3p():
         wp.arc3p(ps, pe, p3)
         win.xyPtStack = []
         win.floatStack = []
-        win.redraw_wp()
+        win.draw_wp(win.activeWpUID)
     else:
         win.registerCallback(arc3pC)
         display.SetSelectionModeVertex()
@@ -968,21 +968,21 @@ def load_stp_at_top():
     win.setActiveAsy(0)
     doc.load_stp_at_top()
     win.build_tree()
-    win.drawAll()
+    win.redraw()
     win.fitAll()
 
 
 def load_stp_cmpnt():
     doc.load_stp_cmpnt()
     win.build_tree()
-    win.drawAll()
+    win.redraw()
     win.fitAll()
 
 
 def load_stp_undr_top():
     doc.load_stp_undr_top()
     win.build_tree()
-    win.drawAll()
+    win.redraw()
     win.fitAll()
 
 

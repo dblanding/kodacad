@@ -224,7 +224,6 @@ class MainWindow(QMainWindow):
         status.addPermanentWidget(self.unitsLabel)
         status.showMessage("Ready", 5000)
 
-        self.draw_list = []  # No longer needed
         self.hide_list = []  # list of part uid's to be hidden (not displayed)
         self.floatStack = []  # storage stack for floating point values
         self.xyPtStack = []  # storage stack for 2d points (x, y)
@@ -396,36 +395,43 @@ class MainWindow(QMainWindow):
         return dl
 
     def adjust_draw_hide(self):
-        """Erase from 3D display when an item is unchecked, draw when checked
+        """Erase from 3D display any item that gets unchecked, draw when checked.
 
-        An item is a treeview widget items. It may be a part, assy or wp.
+        An item is a treeview widget item. It may be a part, assy or workplane.
         For our purpose here, we only care if it is a part or wp because those
-        are the only types that are displayed in the 3D view window."""
+        are the only types that are displayed in the 3D view window. For parts,
+        the display is adjusted incrementally. A newly checked part is drawn and
+        a newly unchecked part is erased. However, because workplanes have a
+        great many ais_shapes, ais lines, ais_circles and topoDS_shapes (edges &
+        border) as well, it isn't practical to keep track of them all just so
+        they can removed incrementally. Also, when a new workplane is created,
+        it set active, so the old active workplane needs to be redrawn with a
+        duller border color. Therefore, if there is a change in the hide_list
+        involving a workplane, it is best to just clear the display and redraw
+        all the workplanes that are not in the hide_list.
+        """
 
+        # Get up to date list of uids of unchecked items
         unchecked = self.uncheckedToList()
+        # Check to see if a workplane is being unchecked (hidden)
+        for uid in unchecked:
+            if uid in self.wp_dict:
+                # If so, clear the display and redraw
+                self.hide_list = unchecked
+                self.eraseAll()
+                self.redraw()
+        # Otherwise, we can do an incremental change in the display
         for uid in unchecked:
             if uid not in self.hide_list:  # Newly unchecked item
                 if uid in doc.part_dict:
-                    self.erase_shape(uid)
-                elif uid in self.wp_dict:
-                    self.erase_wp(uid)
+                    self.erase_shape(uid)  # Erase the shape
         for uid in self.hide_list:
             if uid not in unchecked:  # Newly checked item
                 if uid in doc.part_dict:
-                    self.draw_shape(uid)
+                    self.draw_shape(uid)  # Draw the shape
                 elif uid in self.wp_dict:
-                    self.erase_wp(uid)
+                    self.draw_wp(uid)  # Draw the workplane
         self.hide_list = unchecked
-        # Remove the check mark from the checkbox
-        '''
-        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-            uid = item.text(1)
-            if (uid in doc.part_dict) or (uid in self.wp_dict):
-                if uid in unchecked:
-                    item.setCheckState(0, Qt.Unchecked)
-                else:
-                    item.setCheckState(0, Qt.Checked)
-        '''
 
     def syncUncheckedToHideList(self):
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
@@ -669,27 +675,27 @@ class MainWindow(QMainWindow):
         self.canvas._display.FitAll()
 
     def eraseAll(self):
-        """Depracated"""
+        """Clear all from 3D diplay"""
         context = self.canvas._display.Context
         context.RemoveAll(True)
-        self.draw_list = []
-        self.syncCheckedToDrawList()
 
     def redraw(self):
-        """Depracated"""
+        """Redraw all parts in 3D Display"""
         context = self.canvas._display.Context
         if not self.registeredCallback:
             self.canvas._display.SetSelectionModeNeutral()
             context.SetAutoActivateSelection(True)
         context.RemoveAll(True)
+        # Redraw all parts except those hidden
         for uid in doc.part_dict:
-            if uid in self.draw_list:
+            if uid not in self.hide_list:
                 self.draw_shape(uid)
-        self.redraw_wp()
+        # Redraw workplanes
+        self.redraw_workplanes()
 
-    def redraw_wp(self):
-        """Depracated"""
-        context = self.canvas._display.Context
+    def redraw_workplanes(self):
+        """Redraw all workplanes except those hidden"""
+
         for uid in self.wp_dict:
             if uid not in self.hide_list:
                 self.draw_wp(uid)
@@ -739,18 +745,12 @@ class MainWindow(QMainWindow):
                 self.canvas._display.DisplayShape(edge, color="WHITE")
             self.canvas._display.Repaint()
 
-    def erase_wp(self, uid):
-        """Erase (incrementally) the workplane with uid."""
-        pass
-
     def erase_shape(self, uid):
         """Erase (incrementally) the part with uid."""
         if uid in self.ais_shape_dict:
             context = self.canvas._display.Context
             aisShape = self.ais_shape_dict[uid]
             context.Remove(aisShape, True)
-            #self.draw_list.remove(uid)
-            #self.syncCheckedToDrawList()
 
     def draw_shape(self, uid):
         """Draw (incrementally) the part with uid."""
@@ -774,15 +774,6 @@ class MainWindow(QMainWindow):
                 context.HilightWithColor(aisShape, drawer, True)
             except AttributeError as e:
                 print(e)
-            #self.draw_list.append(uid)
-            #self.syncCheckedToDrawList()
-
-    def drawAll(self):
-        """This draws the parts & workplanes, but it doesn't check the items."""
-        for k in doc.part_dict:
-            self.draw_shape(k)
-        for k in self.wp_dict:
-            self.draw_wp(k)
 
     #############################################
     #
