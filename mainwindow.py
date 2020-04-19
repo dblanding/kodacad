@@ -131,7 +131,21 @@ class TreeView(QTreeWidget):
         return True
 
 class MainWindow(QMainWindow):
-    """Main GUI window containing an assy tree view and a 3D display view"""
+    """Main GUI window containing an assy tree view and a 3D display view
+    
+    The User controls whether parts displayed in the 3D display view are drawn
+    or hidden through the use of check boxes on the tree view display. The list
+    of the uid's of all the items currently hidden is held in self.hide_list.
+    When tree view items are checked or unchecked, a list of unchecked items is
+    compared to self.hide_list. That comparison results in two new lists:
+    a list of items to be erased and a list of items to be drawn. The items to
+    be erased are erased and the items to be drawn are drawn, and the hide_list
+    is then updated.
+
+    When a part is newly created or loaded (step), the doc model is changed and
+    this results in the regeneration of the tree view. As the new tree view
+    items are generated, they are shown checked except for the ones that are
+    contained in the hide_list. """
 
     def __init__(self, *args):
         super().__init__()
@@ -192,7 +206,8 @@ class MainWindow(QMainWindow):
         status.addPermanentWidget(self.unitsLabel)
         status.showMessage("Ready", 5000)
 
-        self.draw_list = []     # list of part uid's to be displayed
+        self.draw_list = []     # No longer needed
+        self.hide_list = []     # list of part uid's to be hidden (not displayed)
         self.floatStack = []    # storage stack for floating point values
         self.xyPtStack = []     # storage stack for 2d points (x, y)
         self.ptStack = []       # storage stack for gp_Pnts
@@ -205,7 +220,7 @@ class MainWindow(QMainWindow):
         self.activePartUID = 0
         self.transparency_dict = {}  # {uid: part display transparency}
         self.ancestor_dict = defaultdict(list)  # {uid: [list of ancestor shapes]}
-        self.ais_shape_dict = {}  # storage for displayed ais_shapes (by uid key)
+        self.ais_shape_dict = {}  # {uid: <AIS_Shape> object} 
 
         self.activeWp = None    # WorkPlane object
         self.activeWpUID = 0
@@ -332,24 +347,21 @@ class MainWindow(QMainWindow):
         self.menu = QMenu()
         action = self.popMenu.exec_(self.mapToGlobal(point))
 
-    def treeViewItemClicked(self, item):  # called whenever treeView item is clicked
-        self.itemClicked = item # store item
-        if not self.inSync():   # click may have been on checkmark. Update draw_list (if needed)
-            self.syncDrawListToChecked()
-            self.redraw()
+    # new draw/hide code
 
-    def checkedToList(self):
-        """Returns list of uid's of checked (part & wp) items in treeView"""
-        dl = []
-        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-            if item.checkState(0) == Qt.Checked:
-                uid = item.text(1)
-                if (uid in doc.part_dict) or (uid in self.wp_dict):
-                    dl.append(uid)
-        return dl
+    def treeViewItemClicked(self, item):
+        """Called when treeView item is clicked"""
+
+        self.itemClicked = item # store item
+        if not self.inSync():   # click may have been on checkmark.
+            self.adjust_draw_hide()
+
+    def inSync(self):
+        """Return True if unchecked items are in sync with hide_list."""
+        return set(self.uncheckedToList()) == set(self.hide_list)
 
     def uncheckedToList(self):
-        """Returns list of uid's of unchecked (part & wp) items in treeView"""
+        """Return list of uid's of unchecked (part & wp) items in treeView"""
         dl = []
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             if item.checkState(0) == Qt.Unchecked:
@@ -358,10 +370,27 @@ class MainWindow(QMainWindow):
                     dl.append(uid)
         return dl
 
-    def inSync(self):
-        """Return True if checked items are in sync with draw_list."""
-        return set(self.checkedToList()) == set(self.draw_list)
+    def adjust_draw_hide(self):
+        unchecked = self.uncheckedToList()
+        for uid in unchecked:
+            if uid not in self.hide_list:
+                self.erase_shape(uid)
+        for uid in self.hide_list:
+            if uid not in unchecked:
+                self.draw_shape(uid)
+        self.hide_list = unchecked
+        # remove the displayed check
+        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+            uid = item.text(1)
+            if (uid in doc.part_dict) or (uid in self.wp_dict):
+                if uid in unchecked:
+                    item.setCheckState(0, Qt.Unchecked)
+                else:
+                    item.setCheckState(0, Qt.Checked)
+    
 
+    # unused?
+    
     def syncDrawListToChecked(self):
         self.draw_list = self.checkedToList()
 
@@ -373,6 +402,27 @@ class MainWindow(QMainWindow):
                     item.setCheckState(0, Qt.Checked)
                 else:
                     item.setCheckState(0, Qt.Unchecked)
+
+    def syncUncheckedToDrawList(self):
+        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+            uid = item.text(1)
+            if (uid in doc.part_dict) or (uid in self.wp_dict):
+                if uid in self.draw_list:
+                    item.setCheckState(0, Qt.Checked)
+                else:
+                    item.setCheckState(0, Qt.Unchecked)
+
+    def checkedToList(self):
+        """Returns list of uid's of checked (part & wp) items in treeView"""
+        dl = []
+        for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+            if item.checkState(0) == Qt.Checked:
+                uid = item.text(1)
+                if (uid in doc.part_dict) or (uid in self.wp_dict):
+                    dl.append(uid)
+        return dl
+
+    # /unused?
 
     def sortViewItems(self):
         """Return dicts of tree view items sorted by type: (prt, ay, wp)"""
