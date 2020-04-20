@@ -129,7 +129,7 @@ class DocModel():
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
         # To be used to construct treeView & access labels
-        self.uid_dict = {}  # {uid: {keys: 'entry', 'name', 'parent_uid', 'ref_entry'}}
+        self.uid_dict = {}  # {uid: {keys: 'entry', 'name', 'parent_uid', 'ref_entry', 'is_assy'}}
         self._share_dict = {}  # {entry: highest_serial_nmbr_used}
         self.parent_uid_stack = []  # uid of parent lineage (topmost first)
         self.assy_entry_stack = []  # entries of containing assemblies, immediate last
@@ -172,7 +172,8 @@ class DocModel():
         part_dict (dict of dicts) is used primarily for 3D display
         part_dict = {uid: {'shape': ,
                             'name': ,
-                            'color': }}
+                            'color': ,
+                            'loc': }}
         uid_dict (dict of dicts) is used primarily for tree view display
         uid_dict = {uid:   {'entry': ,
                             'name': ,

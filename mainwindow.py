@@ -351,7 +351,7 @@ class MainWindow(QMainWindow):
         root_item = ["/", "0"]  # [name, uid]
         tree_view_root = QTreeWidgetItem(self.treeView, root_item)
         self.treeView.expandItem(tree_view_root)
-        wp_root = QTreeWidgetItem(tree_view_root, ["2D", "wp0"])
+        wp_root = QTreeWidgetItem(tree_view_root, ["WP", "wp0"])
         self.treeView.expandItem(wp_root)
         ay_root = QTreeWidgetItem(tree_view_root, ["3D", "0:1:1.0"])
         self.treeView.expandItem(ay_root)
@@ -473,9 +473,18 @@ class MainWindow(QMainWindow):
         if item:
             name = item.text(0)
             uid = item.text(1)
-            entry = doc.uid_dict[uid]["entry"]
-            ref_ent = doc.uid_dict[uid]["ref_entry"]
-            print(f"uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
+            if name in ['/', 'WP', '3D']:
+                print(f"Root ({name}) tree view item")
+            elif uid.startswith("wp"):
+                print(f"Workplane: uid: {uid}; name: {name}")
+            else:
+                entry = doc.uid_dict[uid]["entry"]
+                ref_ent = doc.uid_dict[uid]["ref_entry"]
+                is_assy = doc.uid_dict[uid]["is_assy"]
+                if is_assy:
+                    print(f"Assembly: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
+                else:
+                    print(f"Part: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
 
     def setClickedActive(self):
         """Set item clicked in treeView Active."""
