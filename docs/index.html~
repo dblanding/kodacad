@@ -41,8 +41,8 @@
     <li>The main <b>3D Display</b> window is the 3D view of workplanes and 3D parts.</li>
 
     <li>To the left of the <b>3D Display</b> is the <b>Tree View</b> window, showing the
-    heirarchical relationship among Parts, Assemblies and Workplanes. In addition to
-    displaying heiarchical relationships, the Tree View window also allows user editing
+    hierarchical relationship among Parts, Assemblies and Workplanes. In addition to
+    displaying hierarchical relationships, the Tree View window also allows user editing
     of certain parameters, allows Parts, Assemblies and Workplanes to be shown/hidden
     (using the checkboxes) and shows (by color):
 
@@ -114,9 +114,13 @@
 
   <h3>Tutorial: Creating the Classic OCC Bottle</h3>
 
-  <p><a href="tutorial/index.html" target="_blank" name="KodaCAD Tutorial"
+  <p><a href="bottle_tutorial/index.html" target="_blank" name="KodaCAD Tutorial"
   title="KodaCAD Tutorial">Step by step tutorial</a></p><img src="images/bottle.png"
   width="808" height="514" border="0" alt="" />
+
+  <p><a href="load_mod_save_demo/index.html" target="_blank" name="Load Modify Save Demo"
+  title="Load Modify Save Demo">Demonstration of Load STEP / Modify / Save STEP</a></p>
+  <img src="images/bottle.png" width="808" height="514" border="0" alt="" />
 
   <h3>Author and Maintainer of KodaCAD:</h3>Doug Blanding<br />
   dBlanding@gmail.com

@@ -148,9 +148,10 @@ class DocModel():
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
         # type(doc.Main()) = <class 'OCC.Core.TDF.TDF_Label'>
-        # doc.Main().EntryDumpToString() 0:1
-        # shape_tool is at label entry = 0:1:1
-        # Create empty rootLabel entry = 0:1:1:1
+        # 0:1 doc.Main().EntryDumpToString()
+        # 0:1:1   shape_tool is at this label entry
+        # 0:1:2   color_tool at this entry
+        # 0:1:1:1 rootLabel created at this entry
         rootLabel = shape_tool.NewShape()
         self.setLabelName(rootLabel, "Top")
         return doc
@@ -518,7 +519,6 @@ class DocModel():
         # shape is stored at label entry '0:1:1:n'
         n = int(self.label_dict[uid]['ref_entry'].split(':')[-1])
         color = self.part_dict[uid]['color']
-        print(color)
         labels = TDF_LabelSequence()
         shape_tool.GetShapes(labels)
         label = labels.Value(n)  # nth label at root

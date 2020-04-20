@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta name="generator" content="Bluefish 2.2.10" />
+
+  <title>Load Modify Save Demo</title>
+</head>
+
+<body>
+  <h1>Demo: Load from STEP file / Modify / Save to STEP file</h1>
+
+  <h3>Load the STEP file</h3>
+
+  <p>In the menubar, click on <b>File</b> then <b>Load STEP At Top</b>.</p>
+  <p>Navigate to the file 'as1-oc-214.stp' and load it.</p>
+
+	<img src="images/img1.png" width="805" height="521" border="0" alt="" />
+
+  <p>In the tree view window, left click on the part <b>l-bracket_1</b>
+  then right click on it to get the drop down menu.</p>
+  <p>Select <b>Set Active</b>. The color of the tree view item will turn
+  <b>yellow</b>.</p><img src="images/img2.png" width="805" height="521"
+  border="0" alt="" />
+
+  <p> Now use the check boxes to show only <b>l-bracket-assembly_1</b></p>
+  <p>Then zoom in using one of these techniques:</p>
+
+  <ul>
+    <li>MMB scroll wheel</li>
+
+    <li>Ctrl+RMB</li>
+
+    <li>RMB</li>
+
+    <li style="list-style: none; display: inline">
+      <ul>
+        <li>Draw</li>
+
+        <li style="list-style: none; display: inline">
+          <ul>
+            <li>Fit All</li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul><img src="images/img3.png" width="805" height="521" border="0" alt="" />
+
+  <h3>Modify the active part</h3>
+
+  <p>Apply fillets to the corners of the bracket, as shown. I applied a
+  radius of 5mm to the inside corner and 10mm to the outside corners.</p>
+  <img src="images/img4.png" width="805" height="521" border="0" alt="" />
+
+  <p>Now use the check boxes to show the entire assembly and right click
+  in the graphics window to select Draw -> Fit. Notice that the changes
+  made on the bracket are applied to both parts because they are shared
+  instances of one part.</p>
+  <p>Next, let's edit the name of one of the bolts. Left click on one of
+  the bolt_1 tree view items, then right click and select <b>Edit Name</b>.</p>
+  <img src="images/img5.png" width="805" height="521" border="0"
+  alt="" />
+
+  <h3>Edit Part Names</h3>
+
+  <p>Change the name to <b>BOLT</b></p>
+  <img src="images/img6.png" width="805" height="521" border="0" alt="" />
+
+  <p>Notice tht all the bolts now have the new name because they are all
+  shared instances of a single part.</p>
+  <img src="images/img7.png" width="805" height="521" border="0" alt="" />
+
+  <h3>Save the Modified Assembly</h3>
+
+  <p>Click <b>File</b> then <b>Save STEP (Top)</b> and save the modified
+  assembly to a file.</p>
+  <img src="images/img8.png" width="805" height="521" border="0" alt="" />
+
+  <h3>Reload the saved file</h3>
+
+  <p>Close Kodacad, then restart it and load the saved file</p>
+
+  <p>Notice that the modifications (both the geometry mods to the bracket
+  and the name change) are still there but the color of the modified bracket
+  has been lost somewhere along the way.</p>
+  <img src="images/img9.png" width="805" height="521" border="0" alt="" />
+
+  <h3>Todo: Figure out why modified parts lose their color</h3>
+
+  <p>Seriously, if anybody can help me to figure this out, I would love
+  to hear from you.</p>
+  -Doug
+
+</body>
+</html>
