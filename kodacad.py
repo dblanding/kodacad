@@ -39,7 +39,7 @@ from OCC.Core.BRepPrimAPI import (
     BRepPrimAPI_MakeRevol,
 )
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
-from OCC.Core.Quantity import Quantity_ColorRGBA
+from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.TopoDS import TopoDS_Vertex, topods_Edge, topods_Face, topods_Vertex
 from OCC.Core.TopTools import TopTools_ListOfShape
@@ -57,7 +57,8 @@ logger.setLevel(logging.DEBUG)  # set to DEBUG | INFO | ERROR
 TOL = 1e-7  # Linear Tolerance
 ATOL = TOL  # Angular Tolerance
 print("TOLERANCE = ", TOL)
-DEFAULT_COLOR = Quantity_ColorRGBA(0.6, 0.6, 0.4, 1.0)
+#DEFAULT_COLOR = Quantity_ColorRGBA(0.6, 0.6, 0.4, 1.0)
+DEFAULT_COLOR = Quantity_Color(0.6, 0.6, 0.4, Quantity_TOC_RGB)
 
 #############################################
 #
@@ -994,7 +995,7 @@ def load_stp_undr_top():
 
 
 def print_uid_dict():
-    pprint.pprint(doc.uid_dict)
+    pprint.pprint(doc.label_dict)
 
 
 def dumpDoc():
@@ -1011,7 +1012,7 @@ def topoDumpAP():
 def printActiveAsyInfo():
     uid = win.activeAsyUID
     if uid:
-        name = doc.uid_dict[uid]["name"]
+        name = doc.label_dict[uid]["name"]
         print(f"Active Assembly (uid) Name: ({uid}) {name}")
     else:
         print("None active")
@@ -1029,7 +1030,7 @@ def printActiveWpInfo():
 def printActivePartInfo():
     uid = win.activePartUID
     if uid:
-        name = doc.uid_dict[uid]["name"]
+        name = doc.label_dict[uid]["name"]
         print(f"Active Part (uid) Name: ({uid}) {name}")
     else:
         print("None active")
@@ -1038,7 +1039,7 @@ def printActivePartInfo():
 def printActPart():
     uid = win.activePartUID
     if uid:
-        name = win.uid_dict[uid]["name"]
+        name = win.label_dict[uid]["name"]
         print(f"Active Part: {name} [{uid}]")
     else:
         print(None)
@@ -1101,7 +1102,7 @@ if __name__ == "__main__":
     win.add_function_to_menu("Modify Active Part", "Shell", shell)
     win.add_function_to_menu("Modify Active Part", "Fuse", fuse)
     win.add_menu("Utility")
-    win.add_function_to_menu("Utility", "print uid_dict", print_uid_dict)
+    win.add_function_to_menu("Utility", "print label_dict", print_uid_dict)
     win.add_function_to_menu("Utility", "dump doc", dumpDoc)
     win.add_function_to_menu("Utility", "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu("Utility", "print(Active Wp Info)", printActiveWpInfo)

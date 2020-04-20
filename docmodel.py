@@ -117,7 +117,7 @@ class TreeModel():
 class DocModel():
     """Maintain the 3D CAD model in OCAF TDocStd_Document format.
 
-    Generates self.part_dict and self.uid_dict by parsing self.doc.
+    Generates self.part_dict and self.label_dict by parsing self.doc.
     These dictionaries provide mainwindow with convenient access to CAD data.
     Each item in the tree view represents a component label in the OCAF document and
     has a uid comprising the label entry appended with a '.' and an integer. The
@@ -129,7 +129,7 @@ class DocModel():
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
         # To be used to construct treeView & access labels
-        self.uid_dict = {}  # {uid: {keys: 'entry', 'name', 'parent_uid', 'ref_entry', 'is_assy'}}
+        self.label_dict = {}  # {uid: {keys: 'entry', 'name', 'parent_uid', 'ref_entry', 'is_assy'}}
         self._share_dict = {}  # {entry: highest_serial_nmbr_used}
         self.parent_uid_stack = []  # uid of parent lineage (topmost first)
         self.assy_entry_stack = []  # entries of containing assemblies, immediate last
@@ -167,15 +167,15 @@ class DocModel():
         return entry + '.' + str(value)
 
     def parse_doc(self):
-        """Generate new part_dict & uid_dict.
+        """Generate new part_dict & label_dict.
 
         part_dict (dict of dicts) is used primarily for 3D display
         part_dict = {uid: {'shape': ,
                             'name': ,
                             'color': ,
                             'loc': }}
-        uid_dict (dict of dicts) is used primarily for tree view display
-        uid_dict = {uid:   {'entry': ,
+        label_dict (dict of dicts) is used primarily for tree view display
+        label_dict = {uid:   {'entry': ,
                             'name': ,
                             'parent_uid': ,
                             'ref_entry': ,
@@ -185,7 +185,7 @@ class DocModel():
         # Initialize dictionaries & list
         self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
         self.part_dict = {}
-        self.uid_dict = {}
+        self.label_dict = {}
         # Temporary use during unpacking
         self.parent_uid_stack = []  # uid of parent (topmost first)
         self.assy_entry_stack = ['0:1:1']  # [entries of containing assemblies]
@@ -210,9 +210,9 @@ class DocModel():
         loc = shape_tool.GetLocation(root_label)  # <TopLoc_Location>
         self.assy_loc_stack.append(loc)
         self.assy_entry_stack.append(root_entry)
-        self.uid_dict = {root_uid: {'entry': root_entry, 'name': root_name,
-                                    'parent_uid': None, 'ref_entry': None,
-                                    'is_assy': True}}
+        self.label_dict = {root_uid: {'entry': root_entry, 'name': root_name,
+                                      'parent_uid': None, 'ref_entry': None,
+                                      'is_assy': True}}
         self.parent_uid_stack.append(root_uid)
         top_comps = TDF_LabelSequence() # Components of Top Assy
         subchilds = False
@@ -250,12 +250,12 @@ class DocModel():
                 ref_name = ref_label.GetLabelName()
                 ref_shape = shape_tool.GetShape(ref_label)
                 ref_entry = ref_label.EntryDumpToString()
-                self.uid_dict[c_uid] = {'entry': c_entry,
-                                        'name': c_name,
-                                        'parent_uid': self.parent_uid_stack[-1],
-                                        'ref_entry': ref_entry}
+                self.label_dict[c_uid] = {'entry': c_entry,
+                                          'name': c_name,
+                                          'parent_uid': self.parent_uid_stack[-1],
+                                          'ref_entry': ref_entry}
                 if shape_tool.IsSimpleShape(ref_label):
-                    self.uid_dict[c_uid].update({'is_assy': False})
+                    self.label_dict[c_uid].update({'is_assy': False})
                     temp_assy_loc_stack = list(self.assy_loc_stack)
                     # Multiply locations in stack sequentially to a result
                     if len(temp_assy_loc_stack) > 1:
@@ -287,7 +287,7 @@ class DocModel():
                                              'name': c_name,
                                              'loc': loc}
                 elif shape_tool.IsAssembly(ref_label):
-                    self.uid_dict[c_uid].update({'is_assy': True})
+                    self.label_dict[c_uid].update({'is_assy': True})
                     logger.debug("Referred item is an Assembly")
                     # Location vector is carried by component
                     aLoc = TopLoc_Location()
@@ -376,7 +376,7 @@ class DocModel():
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(tmodel.doc)
         self.doc = tmodel.doc
-        # Build new self.part_dict & self.uid_dict
+        # Build new self.part_dict & self.label_dict
         self.parse_doc()
 
     def load_stp_cmpnt(self):
@@ -516,7 +516,9 @@ class DocModel():
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         # shape is stored at label entry '0:1:1:n'
-        n = int(self.uid_dict[uid]['ref_entry'].split(':')[-1])
+        n = int(self.label_dict[uid]['ref_entry'].split(':')[-1])
+        color = self.part_dict[uid]['color']
+        print(color)
         labels = TDF_LabelSequence()
         shape_tool.GetShapes(labels)
         label = labels.Value(n)  # nth label at root
@@ -527,6 +529,7 @@ class DocModel():
             modshape.Move(self.part_dict[uid]['loc'].Inverted())
         # Replace oldshape in self.doc
         shape_tool.SetShape(label, modshape)
+        color_tool.SetColor(modshape, color, XCAFDoc_ColorGen)
         shape_tool.UpdateAssemblies()
         self.parse_doc()  # generate new part_dict
 

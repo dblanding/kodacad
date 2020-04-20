@@ -300,7 +300,7 @@ class MainWindow(QMainWindow):
     #############################################
 
     def build_tree(self):
-        """Build new tree view from doc.uid_dict.
+        """Build new tree view from doc.label_dict.
 
         This method is called whenever doc.doc is modified in a way that would
         result in a change in the tree view. The tree view represents the
@@ -308,7 +308,7 @@ class MainWindow(QMainWindow):
         self.clearTree()
         self.assy_list = []
         parent_item_dict = {}  # {uid: tree view item}
-        for uid, dic in doc.uid_dict.items():
+        for uid, dic in doc.label_dict.items():
             # dic: {keys: 'entry', 'name', 'parent_uid', 'ref_entry'}
             entry = dic["entry"]
             name = dic["name"]
@@ -478,9 +478,9 @@ class MainWindow(QMainWindow):
             elif uid.startswith("wp"):
                 print(f"Workplane: uid: {uid}; name: {name}")
             else:
-                entry = doc.uid_dict[uid]["entry"]
-                ref_ent = doc.uid_dict[uid]["ref_entry"]
-                is_assy = doc.uid_dict[uid]["is_assy"]
+                entry = doc.label_dict[uid]["entry"]
+                ref_ent = doc.label_dict[uid]["ref_entry"]
+                is_assy = doc.label_dict[uid]["is_assy"]
                 if is_assy:
                     print(f"Assembly: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
                 else:
