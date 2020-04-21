@@ -41,15 +41,16 @@ from OCC.Core.BRepPrimAPI import (
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
 from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB
 from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Core.TopoDS import TopoDS_Vertex, topods_Edge, topods_Face, topods_Vertex
+from OCC.Core.TopoDS import topods_Edge, topods_Face, topods_Vertex
 from OCC.Core.TopTools import TopTools_ListOfShape
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
 
+from m2d import M2D
 import stepanalyzer
-import workplane
 from mainwindow import MainWindow, doc
 from OCCUtils import Topology
+import workplane
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # set to DEBUG | INFO | ERROR
@@ -57,7 +58,7 @@ logger.setLevel(logging.DEBUG)  # set to DEBUG | INFO | ERROR
 TOL = 1e-7  # Linear Tolerance
 ATOL = TOL  # Angular Tolerance
 print("TOLERANCE = ", TOL)
-#DEFAULT_COLOR = Quantity_ColorRGBA(0.6, 0.6, 0.4, 1.0)
+# DEFAULT_COLOR = Quantity_ColorRGBA(0.6, 0.6, 0.4, 1.0)
 DEFAULT_COLOR = Quantity_Color(0.6, 0.6, 0.4, Quantity_TOC_RGB)
 
 #############################################
@@ -140,507 +141,10 @@ def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
         wpOnFace()
 
 
-def makeWP():  # Default workplane located in X-Y plane at 0,0,0
+def makeWP(self):  # Default workplane located in X-Y plane at 0,0,0
     wp = workplane.WorkPlane(100)
     uid = win.get_wp_uid(wp)
     win.redraw_workplanes()
-
-
-#############################################
-#
-# Create 2d Construction Line functions
-#
-#############################################
-
-
-def add_vertex_to_xyPtStack(shapeList):
-    """Helper function to convert vertex to gp_Pnt and put on ptStack."""
-    wp = win.activeWp
-    for shape in shapeList:
-        if isinstance(shape, TopoDS_Vertex):  # Guard against wrong type
-            vrtx = topods_Vertex(shape)
-            pnt = BRep_Tool.Pnt(vrtx)  # convert vertex to type <gp_Pnt>
-            trsf = wp.Trsf.Inverted()  # New transform. Don't invert wp.Trsf
-            pnt.Transform(trsf)
-            pt2d = (pnt.X(), pnt.Y())  # 2d point
-            win.xyPtStack.append(pt2d)
-        else:
-            print(f"(Unwanted) shape type: {type(shape)}")
-
-
-def processLineEdit():
-    """pop value from lineEditStack and place on floatStack or ptStack."""
-
-    text = win.lineEditStack.pop()
-    if "," in text:
-        try:
-            xstr, ystr = text.split(",")
-            p = (float(xstr) * win.unitscale, float(ystr) * win.unitscale)
-            win.xyPtStack.append(p)
-        except:
-            print("Problem with processing line edit stack")
-    else:
-        try:
-            win.floatStack.append(float(text))
-        except ValueError as e:
-            print(f"{e}")
-
-
-def clineH():
-    """Horizontal construction line"""
-    if win.xyPtStack:
-        wp = win.activeWp
-        p = win.xyPtStack.pop()
-        win.xyPtStack = []
-        wp.hcl(p)
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(clineHC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.clearLEStack()
-        win.lineEdit.setFocus()
-        statusText = "Select point or enter Y-value for horizontal cline."
-        win.statusBar().showMessage(statusText)
-
-
-def clineHC(shapeList, *args):
-    """Callback (collector) for clineH"""
-    add_vertex_to_xyPtStack(shapeList)
-    if win.lineEditStack:
-        processLineEdit()
-    if win.floatStack:
-        y = win.floatStack.pop() * win.unitscale
-        pnt = (0, y)
-        win.xyPtStack.append(pnt)
-    if win.xyPtStack:
-        clineH()
-
-
-def clineV():
-    """Vertical construction line"""
-    if win.xyPtStack:
-        wp = win.activeWp
-        p = win.xyPtStack.pop()
-        win.xyPtStack = []
-        wp.vcl(p)
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(clineVC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.clearLEStack()
-        win.lineEdit.setFocus()
-        statusText = "Select point or enter X-value for vertcal cline."
-        win.statusBar().showMessage(statusText)
-
-
-def clineVC(shapeList, *args):
-    """Callback (collector) for clineV"""
-    add_vertex_to_xyPtStack(shapeList)
-    if win.lineEditStack:
-        processLineEdit()
-    if win.floatStack:
-        x = win.floatStack.pop() * win.unitscale
-        pnt = (x, 0)
-        win.xyPtStack.append(pnt)
-    if win.xyPtStack:
-        clineV()
-
-
-def clineHV():
-    """Horizontal + Vertical construction lines"""
-    if win.xyPtStack:
-        wp = win.activeWp
-        p = win.xyPtStack.pop()
-        win.xyPtStack = []
-        wp.hvcl(p)
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(clineHVC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.clearLEStack()
-        win.lineEdit.setFocus()
-        statusText = "Select point or enter x,y coords for H+V cline."
-        win.statusBar().showMessage(statusText)
-
-
-def clineHVC(shapeList, *args):
-    """Callback (collector) for clineHV"""
-    add_vertex_to_xyPtStack(shapeList)
-    if win.lineEditStack:
-        processLineEdit()
-    if win.xyPtStack:
-        clineHV()
-
-
-def cline2Pts():
-    """Construction line through two points"""
-    if len(win.xyPtStack) == 2:
-        wp = win.activeWp
-        p2 = win.xyPtStack.pop()
-        p1 = win.xyPtStack.pop()
-        wp.acl(p1, p2)
-        win.xyPtStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(cline2PtsC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.clearLEStack()
-        win.lineEdit.setFocus()
-        statusText = "Select 2 points for Construction Line."
-        win.statusBar().showMessage(statusText)
-
-
-def cline2PtsC(shapeList, *args):
-    """Callback (collector) for cline2Pts"""
-    add_vertex_to_xyPtStack(shapeList)
-    if win.lineEditStack:
-        processLineEdit()
-    if len(win.xyPtStack) == 2:
-        cline2Pts()
-
-
-def clineAng():
-    """Construction line through a point and at an angle"""
-    if win.xyPtStack and win.floatStack:
-        wp = win.activeWp
-        text = win.floatStack.pop()
-        angle = float(text)
-        pnt = win.xyPtStack.pop()
-        wp.acl(pnt, ang=angle)
-        win.xyPtStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(clineAngC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.floatStack = []
-        win.lineEditStack = []
-        win.lineEdit.setFocus()
-        statusText = "Select point on WP (or enter x,y coords) then enter angle."
-        win.statusBar().showMessage(statusText)
-
-
-def clineAngC(shapeList, *args):
-    """Callback (collector) for clineAng"""
-    add_vertex_to_xyPtStack(shapeList)
-    win.lineEdit.setFocus()
-    if win.lineEditStack:
-        processLineEdit()
-    if win.xyPtStack and win.floatStack:
-        clineAng()
-
-
-def clineRefAng():
-    pass
-
-
-def clineAngBisec():
-    pass
-
-
-def clineLinBisec():
-    """Linear bisector between two points"""
-    if len(win.xyPtStack) == 2:
-        wp = win.activeWp
-        pnt2 = win.xyPtStack.pop()
-        pnt1 = win.xyPtStack.pop()
-        wp.lbcl(pnt1, pnt2)
-        win.xyPtStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(clineLinBisecC)
-        display.SetSelectionModeVertex()
-
-
-def clineLinBisecC(shapeList, *args):
-    """Callback (collector) for clineLinBisec"""
-    add_vertex_to_xyPtStack(shapeList)
-    if len(win.xyPtStack) == 2:
-        clineLinBisec()
-
-
-def clinePara():
-    pass
-
-
-def clinePerp():
-    pass
-
-
-def clineTan1():
-    pass
-
-
-def clineTan2():
-    pass
-
-
-def ccirc():
-    """Create a c-circle from center & radius or center & Pnt on circle"""
-    wp = win.activeWp
-    if len(win.xyPtStack) == 2:
-        p2 = win.xyPtStack.pop()
-        p1 = win.xyPtStack.pop()
-        rad = wp.p2p_dist(p1, p2)
-        wp.circle(p1, rad, constr=True)
-        win.xyPtStack = []
-        win.floatStack = []
-        win.draw_wp(win.activeWpUID)
-    elif win.xyPtStack and win.floatStack:
-        pnt = win.xyPtStack.pop()
-        rad = win.floatStack.pop() * win.unitscale
-        wp.circle(pnt, rad, constr=True)
-        win.xyPtStack = []
-        win.floatStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(ccircC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.floatStack = []
-        win.lineEditStack = []
-        win.lineEdit.setFocus()
-        statusText = "Pick center of construction circle and enter radius."
-        win.statusBar().showMessage(statusText)
-
-
-def ccircC(shapeList, *args):
-    """callback (collector) for ccirc"""
-    add_vertex_to_xyPtStack(shapeList)
-    win.lineEdit.setFocus()
-    if win.lineEditStack:
-        processLineEdit()
-    if len(win.xyPtStack) == 2:
-        ccirc()
-    if win.xyPtStack and win.floatStack:
-        ccirc()
-
-
-#############################################
-#
-# Create 2d Edge Profile functions
-#
-#############################################
-
-
-def line():
-    """Create a profile geometry line between two end points."""
-    if len(win.xyPtStack) == 2:
-        wp = win.activeWp
-        pnt2 = win.xyPtStack.pop()
-        pnt1 = win.xyPtStack.pop()
-        wp.line(pnt1, pnt2)
-        win.xyPtStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(lineC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.lineEdit.setFocus()
-        statusText = "Select 2 end points for line."
-        win.statusBar().showMessage(statusText)
-
-
-def lineC(shapeList, *args):
-    """callback (collector) for line"""
-    add_vertex_to_xyPtStack(shapeList)
-    win.lineEdit.setFocus()
-    if win.lineEditStack:
-        processLineEdit()
-    if len(win.xyPtStack) == 2:
-        line()
-
-
-def rect():
-    """Create a profile geometry rectangle from two diagonally opposite corners."""
-    if len(win.xyPtStack) == 2:
-        wp = win.activeWp
-        pnt2 = win.xyPtStack.pop()
-        pnt1 = win.xyPtStack.pop()
-        wp.rect(pnt1, pnt2)
-        win.xyPtStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(rectC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.lineEdit.setFocus()
-        statusText = "Select 2 points for Rectangle."
-        win.statusBar().showMessage(statusText)
-
-
-def rectC(shapeList, *args):
-    """callback (collector) for rect"""
-    add_vertex_to_xyPtStack(shapeList)
-    win.lineEdit.setFocus()
-    if win.lineEditStack:
-        processLineEdit()
-    if len(win.xyPtStack) == 2:
-        rect()
-
-
-def circle():
-    """Create a geometry circle from cntr & rad or cntr & pnt on circle."""
-    wp = win.activeWp
-    if len(win.xyPtStack) == 2:
-        p2 = win.xyPtStack.pop()
-        p1 = win.xyPtStack.pop()
-        rad = wp.p2p_dist(p1, p2)
-        wp.circle(p1, rad, constr=False)
-        win.xyPtStack = []
-        win.floatStack = []
-        win.draw_wp(win.activeWpUID)
-    elif win.xyPtStack and win.floatStack:
-        pnt = win.xyPtStack.pop()
-        rad = win.floatStack.pop() * win.unitscale
-        wp.circle(pnt, rad, constr=False)
-        win.xyPtStack = []
-        win.floatStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(circleC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        win.floatStack = []
-        win.lineEditStack = []
-        win.lineEdit.setFocus()
-        statusText = "Pick center and enter radius or pick center & 2nd point."
-        win.statusBar().showMessage(statusText)
-
-
-def circleC(shapeList, *args):
-    """callback (collector) for circle"""
-    add_vertex_to_xyPtStack(shapeList)
-    win.lineEdit.setFocus()
-    if win.lineEditStack:
-        processLineEdit()
-    if len(win.xyPtStack) == 2:
-        circle()
-    if win.xyPtStack and win.floatStack:
-        circle()
-
-
-def arcc2p():
-    """Create an arc from center pt, start pt and end pt."""
-    wp = win.activeWp
-    if len(win.xyPtStack) == 3:
-        pe = win.xyPtStack.pop()
-        ps = win.xyPtStack.pop()
-        pc = win.xyPtStack.pop()
-        wp.arcc2p(pc, ps, pe)
-        win.xyPtStack = []
-        win.floatStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(arcc2pC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        statusText = "Pick center of arc, then start then end point."
-        win.statusBar().showMessage(statusText)
-
-
-def arcc2pC(shapeList, *args):
-    """callback (collector) for arcc2p"""
-    add_vertex_to_xyPtStack(shapeList)
-    win.lineEdit.setFocus()
-    if win.lineEditStack:
-        processLineEdit()
-    if len(win.xyPtStack) == 3:
-        arcc2p()
-
-
-def arc3p():
-    """Create an arc from start pt, end pt, and 3rd pt on the arc."""
-    wp = win.activeWp
-    if len(win.xyPtStack) == 3:
-        ps = win.xyPtStack.pop()
-        pe = win.xyPtStack.pop()
-        p3 = win.xyPtStack.pop()
-        wp.arc3p(ps, pe, p3)
-        win.xyPtStack = []
-        win.floatStack = []
-        win.draw_wp(win.activeWpUID)
-    else:
-        win.registerCallback(arc3pC)
-        display.SetSelectionModeVertex()
-        win.xyPtStack = []
-        statusText = "Pick start point on arc, then end then 3rd point on arc."
-        win.statusBar().showMessage(statusText)
-
-
-def arc3pC(shapeList, *args):
-    """Callback (collector) for arc3p"""
-    add_vertex_to_xyPtStack(shapeList)
-    win.lineEdit.setFocus()
-    if win.lineEditStack:
-        processLineEdit()
-    if len(win.xyPtStack) == 3:
-        arc3p()
-
-
-def geom():
-    pass
-
-
-#############################################
-#
-# 2D Delete functions
-#
-#############################################
-
-
-def delCl():
-    """Delete selected 2d construction element.
-
-    Todo: Get this working. Able to pre-select lines from the display
-    as type <AIS_InteractiveObject> but haven't figured out how to get
-    the type <AIS_Line> (or the cline or Geom_Line that was used to make
-    it)."""
-    win.registerCallback(delClC)
-    statusText = "Select a construction element to delete."
-    win.statusBar().showMessage(statusText)
-    display = win.canvas._display.Context
-    print(display.NbSelected())  # Use shift-select for multiple lines
-    selected_line = display.SelectedInteractive()
-    if selected_line:
-        print(type(selected_line))  # <AIS_InteractiveObject>
-        print(selected_line.GetOwner())  # <Standard_Transient>
-
-
-def delClC(shapeList, *args):
-    """Callback (collector) for delCl"""
-    print(shapeList)
-    print(args)
-    delCl()
-
-
-def delEl():
-    """Delete selected construction element."""
-    wp = win.activeWp
-    if win.shapeStack:
-        while win.shapeStack:
-            shape = win.shapeStack.pop()
-            if shape in wp.edgeList:
-                wp.edgeList.remove(shape)
-        win.redraw()
-    else:
-        win.registerCallback(delElC)
-        display.SetSelectionModeEdge()
-        win.xyPtStack = []
-        statusText = "Select an element to delete."
-        win.statusBar().showMessage(statusText)
-
-
-def delElC(shapeList, *args):
-    """Callback (collector) for delEl"""
-    for shape in shapeList:
-        win.shapeStack.append(shape)
-    if win.shapeStack:
-        delEl()
 
 
 #############################################
@@ -1126,6 +630,7 @@ if __name__ == "__main__":
     win.show()
     win.canvas.InitDriver()
     display = win.canvas._display
+    a2d = M2D(win, display)
 
     selectSubMenu = QMenu("Select Mode")
     win.popMenu.addMenu(selectSubMenu)
@@ -1136,40 +641,44 @@ if __name__ == "__main__":
     selectSubMenu.addAction("Neutral", display.SetSelectionModeNeutral)
     win.popMenu.addAction("Clear Callback", win.clearCallback)
     # Construction Line Toolbar buttons
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/hcl.gif")), "Horizontal", clineH)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/vcl.gif")), "Vertical", clineV)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/hvcl.gif")), "H + V", clineHV)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/tpcl.gif")), "By 2 Pnts", cline2Pts)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/acl.gif")), "Angled", clineAng)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/refangcl.gif')), 'Ref-Ang', clineRefAng)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/abcl.gif')), 'Angular Bisector', clineAngBisec)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/hcl.gif")), "Horizontal", a2d.clineH)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/vcl.gif")), "Vertical", a2d.clineV)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/hvcl.gif")), "H + V", a2d.clineHV)
     win.wcToolBar.addAction(
-        QIcon(QPixmap("icons/lbcl.gif")), "Linear Bisector", clineLinBisec
+        QIcon(QPixmap("icons/tpcl.gif")), "By 2 Pnts", a2d.cline2Pts
     )
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/parcl.gif')), 'Parallel', clinePara)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/perpcl.gif')), 'Perpendicular', clinePerp)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan1.gif')), 'Tangent to circle', clineTan1)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan2.gif')), 'Tangent 2 circles', clineTan2)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/ccirc.gif")), "Circle", ccirc)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cc3p.gif')), 'Circle by 3Pts', ccirc)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cccirc.gif')), 'Concentric Circle', ccirc)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan2.gif')), 'Circ Tangent x2', ccirc)
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan3.gif')), 'Circ Tangent x3', ccirc)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/acl.gif")), "Angled", a2d.clineAng)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/refangcl.gif')), 'Ref-Ang', a2d.clineRefAng)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/abcl.gif')), 'Angular Bisector', a2d.clineAngBisec)
+    win.wcToolBar.addAction(
+        QIcon(QPixmap("icons/lbcl.gif")), "Linear Bisector", a2d.clineLinBisec
+    )
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/parcl.gif')), 'Parallel', a2d.clinePara)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/perpcl.gif')), 'Perpendicular', a2d.clinePerp)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan1.gif')), 'Tangent to circle', a2d.clineTan1)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan2.gif')), 'Tangent 2 circles', a2d.clineTan2)
+    win.wcToolBar.addAction(QIcon(QPixmap("icons/ccirc.gif")), "Circle", a2d.ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cc3p.gif')), 'Circle by 3Pts', a2d.ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cccirc.gif')), 'Concentric Circle', a2d.ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan2.gif')), 'Circ Tangent x2', a2d.ccirc)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan3.gif')), 'Circ Tangent x3', a2d.ccirc)
     win.wcToolBar.addSeparator()
-    # win.wcToolBar.addAction(QIcon(QPixmap('icons/del_cel.gif')), 'Delete Constr', delCl)
+    # win.wcToolBar.addAction(QIcon(QPixmap('icons/del_cel.gif')), 'Delete Constr', a2d.delCl)
     # Profile Line Toolbar buttons
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/line.gif")), "Line", line)
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/rect.gif")), "Rectangle", rect)
-    # win.wgToolBar.addAction(QIcon(QPixmap('icons/poly.gif')), 'Polygon', geom)
-    # win.wgToolBar.addAction(QIcon(QPixmap('icons/slot.gif')), 'Slot', geom)
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/circ.gif")), "Circle", circle)
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/arcc2p.gif")), "Arc Cntr-2Pts", arcc2p)
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/arc3p.gif")), "Arc by 3Pts", arc3p)
-    win.wgToolBar.addSeparator()
-    # win.wgToolBar.addAction(QIcon(QPixmap('icons/translate.gif')), 'Translate Profile', geom)
-    # win.wgToolBar.addAction(QIcon(QPixmap('icons/rotate.gif')), 'Rotate Profile', geom)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/line.gif")), "Line", a2d.line)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/rect.gif")), "Rectangle", a2d.rect)
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/poly.gif')), 'Polygon', a2d.geom)
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/slot.gif')), 'Slot', a2d.geom)
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/circ.gif")), "Circle", a2d.circle)
     win.wgToolBar.addAction(
-        QIcon(QPixmap("icons/del_el.gif")), "Delete Profile Elem", delEl
+        QIcon(QPixmap("icons/arcc2p.gif")), "Arc Cntr-2Pts", a2d.arcc2p
+    )
+    win.wgToolBar.addAction(QIcon(QPixmap("icons/arc3p.gif")), "Arc by 3Pts", a2d.arc3p)
+    win.wgToolBar.addSeparator()
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/translate.gif')), 'Translate Profile', a2d.geom)
+    # win.wgToolBar.addAction(QIcon(QPixmap('icons/rotate.gif')), 'Rotate Profile', a2d.geom)
+    win.wgToolBar.addAction(
+        QIcon(QPixmap("icons/del_el.gif")), "Delete Profile Elem", a2d.delEl
     )
 
     win.raise_()  # bring the app to the top
