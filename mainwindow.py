@@ -385,7 +385,7 @@ class MainWindow(QMainWindow):
         return set(self.uncheckedToList()) == set(self.hide_list)
 
     def uncheckedToList(self):
-        """Return list of uid's of unchecked (part & wp) items in treeView"""
+        """Return list of uid's of unchecked (part & wp) items in treeView."""
         dl = []
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             if item.checkState(0) == Qt.Unchecked:
@@ -397,7 +397,7 @@ class MainWindow(QMainWindow):
     def adjust_draw_hide(self):
         """Erase from 3D display any item that gets unchecked, draw when checked.
 
-        An item is a treeview widget item. It may be a part, assy or workplane.
+        An item is a treeView widget item. It may be a part, assy or workplane.
         For our purpose here, we only care if it is a part or wp because those
         are the only types that are displayed in the 3D view window. For parts,
         the display is adjusted incrementally. A newly checked part is drawn and
@@ -433,6 +433,8 @@ class MainWindow(QMainWindow):
         self.hide_list = unchecked
 
     def syncUncheckedToHideList(self):
+        """Use this method after building a new treeView to make sure items
+        that were previously hidden are still unchecked in new treeView."""
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             uid = item.text(1)
             if (uid in doc.part_dict) or (uid in self.wp_dict):
@@ -472,7 +474,7 @@ class MainWindow(QMainWindow):
         if item:
             name = item.text(0)
             uid = item.text(1)
-            if name in ['/', 'WP', '3D']:
+            if name in ["/", "WP", "3D"]:
                 print(f"Root ({name}) tree view item")
             elif uid.startswith("wp"):
                 print(f"Workplane: uid: {uid}; name: {name}")
@@ -481,9 +483,13 @@ class MainWindow(QMainWindow):
                 ref_ent = doc.label_dict[uid]["ref_entry"]
                 is_assy = doc.label_dict[uid]["is_assy"]
                 if is_assy:
-                    print(f"Assembly: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
+                    print(
+                        f"Assembly: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}"
+                    )
                 else:
-                    print(f"Part: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}")
+                    print(
+                        f"Part: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}"
+                    )
 
     def setClickedActive(self):
         """Set item clicked in treeView Active."""
@@ -494,7 +500,7 @@ class MainWindow(QMainWindow):
             self.itemClicked = None
 
     def setItemActive(self, item):
-        """From tree view item, set (part, wp or assy) to be active."""
+        """Set (part, wp or assy) represented by treeView item to be active."""
         if item:
             name = item.text(0)
             uid = item.text(1)
@@ -542,6 +548,7 @@ class MainWindow(QMainWindow):
                 self.showItemActive(uid)
 
     def setTransparent(self):
+        """Set treeView item clicked transparent"""
         item = self.itemClicked
         if item:
             uid = item.text(1)
@@ -552,6 +559,7 @@ class MainWindow(QMainWindow):
             self.itemClicked = None
 
     def setOpaque(self):
+        """Set treeView item clicked opaque"""
         item = self.itemClicked
         if item:
             uid = item.text(1)
@@ -561,7 +569,8 @@ class MainWindow(QMainWindow):
                 self.draw_shape(uid)
             self.itemClicked = None
 
-    def editName(self):  # Edit name of item clicked in treeView
+    def editName(self):
+        """Edit name of treeView item clicked"""
         item = self.itemClicked
         if item:
             name = item.text(0)
@@ -583,15 +592,15 @@ class MainWindow(QMainWindow):
     #############################################
 
     def get_wp_uid(self, wp_objct):
-        """Assign a new uid to a new workplane, return uid. Also:
-
-        Add item to treeview (2D), Make wp active & Add to self.wp_dict."""
-
-        # Generate new uid and update self.wp_dict
+        """ Assign (and return) a new uid to a new workplane.
+            Add item to treeview (2D)
+            Make wp active
+            Add to self.wp_dict.
+        """
         uid = "wp%i" % self._wpNmbr
         self._wpNmbr += 1
         self.wp_dict[uid] = wp_objct
-        # Add item to treeView
+        # Add treeView item
         itemName = [uid, uid]
         item = QTreeWidgetItem(self.wp_root, itemName)
         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
@@ -600,7 +609,8 @@ class MainWindow(QMainWindow):
         self.setActiveWp(uid)
         return uid
 
-    def appendToStack(self):  # called when <ret> is pressed on line edit
+    def appendToStack(self):
+        """Called when <ret> is pressed on line edit"""
         self.lineEditStack.append(self.lineEdit.text())
         self.lineEdit.clear()
         cb = self.registeredCallback
@@ -610,7 +620,7 @@ class MainWindow(QMainWindow):
             self.lineEditStack.pop()
 
     def setActivePart(self, uid):
-        """Change active part status in coordinated manner."""
+        """Change active part status in a coordinated manner."""
         # modify status in self
         self.activePartUID = uid
         if uid:
@@ -646,6 +656,7 @@ class MainWindow(QMainWindow):
             print(value)
 
     def clearLEStack(self):
+        """Clear lineEditStack"""
         self.lineEditStack = []
 
     def clearAllStacks(self):
@@ -680,15 +691,16 @@ class MainWindow(QMainWindow):
     #############################################
 
     def fitAll(self):
+        """Fit all displayed parts and wp's to the screen"""
         self.canvas._display.FitAll()
 
     def eraseAll(self):
-        """Clear all from 3D diplay"""
+        """Erase all parts & workplanes from 3D Display"""
         context = self.canvas._display.Context
         context.RemoveAll(True)
 
     def redraw(self):
-        """Redraw all parts in 3D Display"""
+        """Redraw all parts & workplanes except those in self.hide_list"""
         context = self.canvas._display.Context
         if not self.registeredCallback:
             self.canvas._display.SetSelectionModeNeutral()
@@ -698,18 +710,18 @@ class MainWindow(QMainWindow):
         for uid in doc.part_dict:
             if uid not in self.hide_list:
                 self.draw_shape(uid)
-        # Redraw workplanes
+        # Redraw workplanes except those hidden
         self.redraw_workplanes()
 
     def redraw_workplanes(self):
-        """Redraw all workplanes except those hidden"""
+        """Redraw all workplanes except those in self.hide_list"""
 
         for uid in self.wp_dict:
             if uid not in self.hide_list:
                 self.draw_wp(uid)
 
     def draw_wp(self, uid):
-        """Draw the workplane identified by uid."""
+        """Draw the workplane with uid."""
         context = self.canvas._display.Context
         if uid:
             wp = self.wp_dict[uid]
@@ -754,14 +766,14 @@ class MainWindow(QMainWindow):
             self.canvas._display.Repaint()
 
     def erase_shape(self, uid):
-        """Erase (incrementally) the part with uid."""
+        """Erase the part (shape) with uid."""
         if uid in self.ais_shape_dict:
             context = self.canvas._display.Context
             aisShape = self.ais_shape_dict[uid]
             context.Remove(aisShape, True)
 
     def draw_shape(self, uid):
-        """Draw (incrementally) the part with uid."""
+        """Draw the part (shape) with uid."""
         context = self.canvas._display.Context
         if uid:
             if uid in self.transparency_dict:
@@ -790,17 +802,20 @@ class MainWindow(QMainWindow):
     #############################################
 
     def launchCalc(self):
+        """Launch Calculator"""
         if not self.calculator:
             self.calculator = rpnCalculator.Calculator(self)
             self.calculator.show()
 
     def setUnits(self, units):
+        """Set units of linear distance (Default is 'mm')"""
         if units in self._unitDict.keys():
             self.units = units
             self.unitscale = self._unitDict[self.units]
             self.unitsLabel.setText("Units: %s " % self.units)
 
     def distPtPt(self):
+        """Measure distance between 2 selectable points on model or workplane"""
         if len(self.ptStack) == 2:
             p2 = self.ptStack.pop()
             p1 = self.ptStack.pop()
@@ -816,7 +831,8 @@ class MainWindow(QMainWindow):
             statusText = "Select 2 points to measure distance."
             self.statusBar().showMessage(statusText)
 
-    def distPtPtC(self, shapeList, *args):  # callback (collector) for distPtPt
+    def distPtPtC(self, shapeList, *args):
+        """Callback (collector) for distPtPt"""
         logger.debug("Edges selected: %s", shapeList)
         logger.debug("args: %s", args)  # args = x, y mouse coords
         for shape in shapeList:
@@ -827,6 +843,7 @@ class MainWindow(QMainWindow):
             self.distPtPt()
 
     def edgeLen(self):
+        """Measure length of a part edge or geometry profile line"""
         if self.edgeStack:
             edge = self.edgeStack.pop()
             edgelen = CPnts_AbscissaPoint_Length(BRepAdaptor_Curve(edge))
@@ -839,7 +856,8 @@ class MainWindow(QMainWindow):
             statusText = "Pick an edge to measure."
             self.statusBar().showMessage(statusText)
 
-    def edgeLenC(self, shapeList, *args):  # callback (collector) for edgeLen
+    def edgeLenC(self, shapeList, *args):
+        """Callback (collector) for edgeLen"""
         logger.debug("Edges selected: %s", shapeList)
         logger.debug("args: %s", args)  # args = x, y mouse coords
         for shape in shapeList:
