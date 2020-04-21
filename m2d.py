@@ -22,13 +22,8 @@
 #
 
 
-import logging
-
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopoDS import TopoDS_Vertex, topods_Vertex
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # set to DEBUG | INFO | ERROR
 
 
 class M2D:
@@ -473,7 +468,7 @@ class M2D:
         self.delCl()
 
     def delEl(self):
-        """Delete selected construction element."""
+        """Delete selected geometry profile element."""
         wp = self.win.activeWp
         if self.win.shapeStack:
             while self.win.shapeStack:
@@ -485,7 +480,7 @@ class M2D:
             self.win.registerCallback(self.delElC)
             self.display.SetSelectionModeEdge()
             self.win.xyPtStack = []
-            statusText = "Select an element to delete."
+            statusText = "Select a geometry profile element to delete."
             self.win.statusBar().showMessage(statusText)
 
     def delElC(self, shapeList, *args):

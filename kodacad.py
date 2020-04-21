@@ -96,7 +96,8 @@ def wpBy3Pts(*args):
         return
 
 
-def wpBy3PtsC(shapeList, *args):  # callback (collector) for wpBy3Pts
+def wpBy3PtsC(shapeList, *args):
+    """Callbask (collector) for wpBy3Pts"""
     for shape in shapeList:
         vrtx = topods_Vertex(shape)
         gpPt = BRep_Tool.Pnt(vrtx)  # convert vertex to gp_Pnt
@@ -128,7 +129,8 @@ def wpOnFace(*args):
     win.clearCallback()
 
 
-def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
+def wpOnFaceC(shapeList, *args):
+    """Callback (collector) for wpOnFace"""
     if not shapeList:
         shapeList = []
     for shape in shapeList:
@@ -141,7 +143,8 @@ def wpOnFaceC(shapeList, *args):  # callback (collector) for wpOnFace
         wpOnFace()
 
 
-def makeWP(self):  # Default workplane located in X-Y plane at 0,0,0
+def makeWP(self):
+    """Default workplane located in X-Y plane at 0,0,0"""
     wp = workplane.WorkPlane(100)
     uid = win.get_wp_uid(wp)
     win.redraw_workplanes()
@@ -265,6 +268,7 @@ def revolveC(shapeList, *args):
 
 
 def rotateAP():
+    """Experimental... useful methods to come"""
     ax1 = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
     aRotTrsf = gp_Trsf()
     angle = math.pi / 18  # 10 degrees
@@ -352,6 +356,7 @@ def pullC(shapeList, *args):
 
 
 def fillet(event=None):
+    """Fillet (blend) edges of active part"""
     if win.lineEditStack and win.edgeStack:
         topo = Topology.Topo(win.activePart)
         text = win.lineEditStack.pop()
@@ -403,7 +408,7 @@ def filletC(shapeList, *args):
 
 
 def fuse():
-    """Fuse two solid shapes together."""
+    """Fuse an adjacent or overlapping solid shape to active part."""
     if win.shapeStack:
         shape = win.shapeStack.pop()
         workpart = win.activePart
@@ -429,6 +434,7 @@ def fuseC(shapeList, *args):
 
 
 def shell(event=None):
+    """Shell active part"""
     if win.lineEditStack and win.faceStack:
         text = win.lineEditStack.pop()
         faces = TopTools_ListOfShape()
@@ -469,6 +475,8 @@ def shellC(shapeList, *args):
 
 
 def load_stp_at_top():
+    """Load STEP file and assign it to self.doc
+    This effectively allows step to be a surrogate for file save/load."""
     win.setActivePart(0)
     win.setActiveAsy(0)
     doc.load_stp_at_top()
@@ -478,6 +486,7 @@ def load_stp_at_top():
 
 
 def load_stp_cmpnt():
+    """Load root level shape(s) in step file as component(s) under top."""
     doc.load_stp_cmpnt()
     win.build_tree()
     win.redraw()
@@ -485,6 +494,7 @@ def load_stp_cmpnt():
 
 
 def load_stp_undr_top():
+    """Copy root label (with located components) of step file under top."""
     doc.load_stp_undr_top()
     win.build_tree()
     win.redraw()
