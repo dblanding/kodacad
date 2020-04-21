@@ -274,8 +274,10 @@ def rotateAP():
     angle = math.pi / 18  # 10 degrees
     aRotTrsf.SetRotation(ax1, angle)
     aTopLoc = TopLoc_Location(aRotTrsf)
+    uid = win.activePartUID
+    win.erase_shape(uid)
     win.activePart.Move(aTopLoc)
-    win.redraw()
+    win.draw_shape(uid)
 
 
 #############################################
