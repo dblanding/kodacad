@@ -301,9 +301,10 @@ def mill():
         aPrismVec = wp.wVec * -depth
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
+        win.erase_shape(uid)
         doc.replaceShape(uid, newPart)
+        win.draw_shape(uid)
         win.setActivePart(uid)
-        win.redraw()
         win.statusBar().showMessage("Mill operation complete")
         win.clearCallback()
     else:
@@ -336,9 +337,10 @@ def pull():
         aPrismVec = wp.wVec * length
         tool = BRepPrimAPI_MakePrism(pullProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
+        win.erase_shape(uid)
         doc.replaceShape(uid, newPart)
+        win.draw_shape(uid)
         win.setActivePart(uid)
-        win.redraw()
         win.statusBar().showMessage("Pull operation complete")
         win.clearCallback()
     else:
@@ -383,12 +385,13 @@ def fillet(event=None):
             mkFillet.Add(filletR, edge)
         try:
             newPart = mkFillet.Shape()
+            win.erase_shape(uid)
             doc.replaceShape(uid, newPart)
+            win.draw_shape(uid)
             win.statusBar().showMessage("Fillet operation complete")
         except RuntimeError as e:
             print(f"Unable to make Fillet. {e}")
         win.setActivePart(uid)
-        win.redraw()
         win.clearCallback()
     else:
         win.registerCallback(filletC)
@@ -414,9 +417,10 @@ def fuse():
         workpart = win.activePart
         uid = win.activePartUID
         newPart = BRepAlgoAPI_Fuse(workpart, shape).Shape()
+        win.erase_shape(uid)
         doc.replaceShape(uid, newPart)
+        win.draw_shape(uid)
         win.setActivePart(uid)
-        win.redraw()
         win.statusBar().showMessage("Fuse operation complete")
         win.clearCallback()
     else:
@@ -445,9 +449,10 @@ def shell(event=None):
         uid = win.activePartUID
         shellT = float(text) * win.unitscale
         newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.0e-3).Shape()
+        win.erase_shape(uid)
         doc.replaceShape(uid, newPart)
+        win.draw_shape(uid)
         win.setActivePart(uid)
-        win.redraw()
         win.statusBar().showMessage("Shell operation complete")
         win.clearCallback()
     else:
