@@ -412,11 +412,7 @@ class MainWindow(QMainWindow):
         """
 
         unchecked = self.uncheckedToList()
-<<<<<<< HEAD
         unchecked_set = set(unchecked)
-=======
-        uncheckedSet = set(unchecked)
->>>>>>> 2c1c91e5799e8de6b04c509a7cad3594e06c928a
         hide_list = list(self.hide_list)
         hide_set = set(hide_list)
         newly_unchecked = unchecked_set - hide_set
@@ -427,11 +423,7 @@ class MainWindow(QMainWindow):
                 self.hide_list.append(uid)
                 self.redraw()
             # Otherwise, we can do an incremental change in the display
-<<<<<<< HEAD
             elif uid in doc.part_dict:
-=======
-            elif uid in self.part_dict:
->>>>>>> 2c1c91e5799e8de6b04c509a7cad3594e06c928a
                 self.erase_shape(uid)  # Erase the shape
         for uid in newly_checked:
             if uid in doc.part_dict:
