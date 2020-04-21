@@ -27,13 +27,13 @@ from PyQt5.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (
     QLabel,
+    QLineEdit,
     QMainWindow,
     QTreeWidget,
     QMenu,
     QDockWidget,
     QDesktopWidget,
     QToolButton,
-    QLineEdit,
     QTreeWidgetItem,
     QAction,
     QFrame,
@@ -411,26 +411,25 @@ class MainWindow(QMainWindow):
         all the workplanes that are not in the hide_list.
         """
 
-        # Get up to date list of uids of unchecked items
         unchecked = self.uncheckedToList()
-        # Check to see if a workplane is being unchecked (hidden)
-        for uid in unchecked:
+        uncheckedSet = set(unchecked)
+        hide_list = list(self.hide_list)
+        hide_set = set(hide_list)
+        newly_unchecked = unchecked_set - hide_set
+        newly_checked = hide_set - unchecked_set
+        for uid in newly_unchecked:
+            # If a workplane is newly unchecked, redraw is needed
             if uid in self.wp_dict:
-                # If so, clear the display and redraw
-                self.hide_list = unchecked
-                self.eraseAll()
+                self.hide_list.append(uid)
                 self.redraw()
-        # Otherwise, we can do an incremental change in the display
-        for uid in unchecked:
-            if uid not in self.hide_list:  # Newly unchecked item
-                if uid in doc.part_dict:
-                    self.erase_shape(uid)  # Erase the shape
-        for uid in self.hide_list:
-            if uid not in unchecked:  # Newly checked item
-                if uid in doc.part_dict:
-                    self.draw_shape(uid)  # Draw the shape
-                elif uid in self.wp_dict:
-                    self.draw_wp(uid)  # Draw the workplane
+            # Otherwise, we can do an incremental change in the display
+            elif uid in self.part_dict:
+                self.erase_shape(uid)  # Erase the shape
+        for uid in newly_checked:
+            if uid in doc.part_dict:
+                self.draw_shape(uid)  # Draw the shape
+            elif uid in self.wp_dict:
+                self.draw_wp(uid)  # Draw the workplane
         self.hide_list = unchecked
 
     def syncUncheckedToHideList(self):
@@ -504,7 +503,6 @@ class MainWindow(QMainWindow):
             if uid in pd:
                 self.setActivePart(uid)
                 sbText = f"{name} [uid={uid}] is now the active part"
-                # self.redraw()
             elif uid in wd:
                 self.setActiveWp(uid)
                 sbText = f"{name} [uid={uid}] is now the active workplane"
@@ -549,7 +547,8 @@ class MainWindow(QMainWindow):
             uid = item.text(1)
             if uid in doc.part_dict:
                 self.transparency_dict[uid] = 0.6
-                self.redraw()
+                self.erase_shape(uid)
+                self.draw_shape(uid)
             self.itemClicked = None
 
     def setOpaque(self):
@@ -558,7 +557,8 @@ class MainWindow(QMainWindow):
             uid = item.text(1)
             if uid in doc.part_dict:
                 self.transparency_dict.pop(uid)
-                self.redraw()
+                self.erase_shape(uid)
+                self.draw_shape(uid)
             self.itemClicked = None
 
     def editName(self):  # Edit name of item clicked in treeView
@@ -672,7 +672,6 @@ class MainWindow(QMainWindow):
             self.currOpLabel.setText("Current Operation: None ")
             self.statusBar().showMessage("")
             self.canvas._display.SetSelectionModeNeutral()
-            # self.redraw()
 
     #############################################
     #
@@ -833,7 +832,6 @@ class MainWindow(QMainWindow):
             edgelen = CPnts_AbscissaPoint_Length(BRepAdaptor_Curve(edge))
             edgelen = edgelen / self.unitscale
             self.calculator.putx(edgelen)
-            # self.redraw()
             self.edgeLen()
         else:
             self.registerCallback(self.edgeLenC)
