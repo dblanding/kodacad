@@ -71,6 +71,7 @@ DEFAULT_COLOR = Quantity_Color(0.6, 0.6, 0.4, Quantity_TOC_RGB)
 def wpBy3Pts(*args):
     """Direction from pt1 to pt2 sets wDir, pt2 is wpOrigin.
     Direction from pt2 to pt3 sets uDir."""
+    prev_uid = win.activeWpUID  # uid of currently active workplane
     if win.ptStack:
         # Finish
         p3 = win.ptStack.pop()
@@ -83,8 +84,8 @@ def wpBy3Pts(*args):
         uDir = gp_Dir(uVec)
         axis3 = gp_Ax3(origin, wDir, uDir)
         wp = workplane.WorkPlane(100, ax3=axis3)
-        uid = win.get_wp_uid(wp)
-        win.redraw_workplanes()
+        new_uid = win.get_wp_uid(wp)
+        display_new_active_wp(prev_uid, new_uid)
         win.clearCallback()
     else:
         # Initial setup
@@ -114,6 +115,7 @@ def wpBy3PtsC(shapeList, *args):
 
 def wpOnFace(*args):
     """ First face defines plane of wp. Second face defines uDir."""
+    prev_uid = win.activeWpUID  # uid of currently active workplane
     if not win.faceStack:
         win.registerCallback(wpOnFaceC)
         display.selected_shape = None
@@ -124,8 +126,8 @@ def wpOnFace(*args):
     faceU = win.faceStack.pop()
     faceW = win.faceStack.pop()
     wp = workplane.WorkPlane(100, face=faceW, faceU=faceU)
-    uid = win.get_wp_uid(wp)
-    win.redraw_workplanes()
+    new_uid = win.get_wp_uid(wp)
+    display_new_active_wp(prev_uid, new_uid)
     win.clearCallback()
 
 
@@ -143,11 +145,21 @@ def wpOnFaceC(shapeList, *args):
         wpOnFace()
 
 
-def makeWP(self):
+def makeWP():
     """Default workplane located in X-Y plane at 0,0,0"""
+    prev_uid = win.activeWpUID  # uid of currently active workplane
     wp = workplane.WorkPlane(100)
-    uid = win.get_wp_uid(wp)
-    win.redraw_workplanes()
+    new_uid = win.get_wp_uid(wp)
+    display_new_active_wp(prev_uid, new_uid)
+
+
+def display_new_active_wp(prev_uid, new_uid):
+    """Display new active wp & redraw previous active wp if it is displayed."""
+    # If currently active wp is displayed, redraw to show its new border color
+    if prev_uid and prev_uid not in win.hide_list:
+        win.redraw_workplanes()
+    else:
+        win.draw_wp(new_uid)
 
 
 #############################################
