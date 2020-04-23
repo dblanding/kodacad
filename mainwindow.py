@@ -76,13 +76,13 @@ doc = DocModel()
 
 
 class TreeView(QTreeWidget):
-    """Assembly structure display
+    """Part & Assembly structure display
 
-    The Part/Assy tree view GUI and is kept in sync with the XCAF data model
+    The Part/Assy treeView display is kept in sync with the XCAF data model
     by calling the function build_tree() whenever changes in the data model
-    cause the tree view display to become out of date. By first clicking on a
-    tree view item, then right clicking, a drop down list of options appears,
-    allowing some modifications to be made to the model. Although the tree view
+    cause the treeView display to become out of date. By first clicking on a
+    treeView item, then right clicking, a drop down list of options appears,
+    allowing some modifications to be made to the model. Although the treeView
     display currently permits the user to make 'drag & drop' modifications,
     those changes are currently not propagated to the data model.
     """
@@ -260,8 +260,6 @@ class MainWindow(QMainWindow):
         self.treeDockWidget.setWidget(self.treeView)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.treeDockWidget)
 
-    ####  PyQt menuBar & general methods:
-
     def centerOnScreen(self):
         """Centers the window on the screen."""
         resolution = QDesktopWidget().screenGeometry()
@@ -269,6 +267,10 @@ class MainWindow(QMainWindow):
             (resolution.width() / 2) - (self.frameSize().width() / 2),
             (resolution.height() / 2) - (self.frameSize().height() / 2),
         )
+
+    def contextMenu(self, point):
+        self.menu = QMenu()
+        self.popMenu.exec_(self.mapToGlobal(point))
 
     def add_menu(self, menu_name):
         _menu = self.menu_bar.addMenu("&" + menu_name)
@@ -295,7 +297,7 @@ class MainWindow(QMainWindow):
 
     #############################################
     #
-    # 'treeView' (QTreeWidget) related methods:
+    # treeView (QTreeWidget) building methods:
     #
     #############################################
 
@@ -334,12 +336,6 @@ class MainWindow(QMainWindow):
         self.sync_treeview_to_active()
         # self.syncCheckedToDrawList()
 
-    def addItemToTreeView(self, name, uid):
-        itemName = [name, str(uid)]
-        item = QTreeWidgetItem(self.assy_root, itemName)
-        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-        item.setCheckState(0, Qt.Checked)
-
     def clearTree(self):
         """Remove all tree view widget items and replace root item"""
         self.treeView.clear()
@@ -367,11 +363,11 @@ class MainWindow(QMainWindow):
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(0, Qt.Checked)
 
-    def contextMenu(self, point):
-        self.menu = QMenu()
-        action = self.popMenu.exec_(self.mapToGlobal(point))
-
-    # new draw/hide code
+    #############################################
+    #
+    # treeView item action methods:
+    #
+    #############################################
 
     def treeViewItemClicked(self, item):
         """Called when treeView item is clicked"""
@@ -405,7 +401,7 @@ class MainWindow(QMainWindow):
         great many ais_shapes, ais lines, ais_circles and topoDS_shapes (edges &
         border) as well, it isn't practical to keep track of them all just so
         they can removed incrementally. Also, when a new workplane is created,
-        it set active, so the old active workplane needs to be redrawn with a
+        it is set active, so the old active workplane needs to be redrawn with a
         duller border color. Therefore, if there is a change in the hide_list
         involving a workplane, it is best to just clear the display and redraw
         all the workplanes that are not in the hide_list.
@@ -686,7 +682,7 @@ class MainWindow(QMainWindow):
 
     #############################################
     #
-    # 3D Display (Draw / Hide) methods:
+    # 3D Display Draw/Hide methods:
     #
     #############################################
 
@@ -694,13 +690,8 @@ class MainWindow(QMainWindow):
         """Fit all displayed parts and wp's to the screen"""
         self.canvas._display.FitAll()
 
-    def eraseAll(self):
-        """Erase all parts & workplanes from 3D Display"""
-        context = self.canvas._display.Context
-        context.RemoveAll(True)
-
     def redraw(self):
-        """Redraw all parts & workplanes except those in self.hide_list"""
+        """Erase & redraw all parts & workplanes except those in hide_list."""
         context = self.canvas._display.Context
         if not self.registeredCallback:
             self.canvas._display.SetSelectionModeNeutral()
@@ -765,13 +756,6 @@ class MainWindow(QMainWindow):
                 self.canvas._display.DisplayShape(edge, color="WHITE")
             self.canvas._display.Repaint()
 
-    def erase_shape(self, uid):
-        """Erase the part (shape) with uid."""
-        if uid in self.ais_shape_dict:
-            context = self.canvas._display.Context
-            aisShape = self.ais_shape_dict[uid]
-            context.Remove(aisShape, True)
-
     def draw_shape(self, uid):
         """Draw the part (shape) with uid."""
         context = self.canvas._display.Context
@@ -794,6 +778,13 @@ class MainWindow(QMainWindow):
                 context.HilightWithColor(aisShape, drawer, True)
             except AttributeError as e:
                 print(e)
+
+    def erase_shape(self, uid):
+        """Erase the part (shape) with uid."""
+        if uid in self.ais_shape_dict:
+            context = self.canvas._display.Context
+            aisShape = self.ais_shape_dict[uid]
+            context.Remove(aisShape, True)
 
     #############################################
     #
