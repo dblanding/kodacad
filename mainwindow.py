@@ -62,7 +62,8 @@ used_backend = OCC.Display.backend.load_backend()
 # from OCC.Display import qtDisplay
 # import local version instead (allows changing rotate/pan/zoom controls)
 from OCC import VERSION
-import myDisplay.qtDisplay as qtDisplay
+# import myDisplay.qtDisplay as qtDisplay  # For pythonocc-7.4
+from OCC.Display import qtDisplay  # For pythonocc-7.5
 import rpnCalculator
 from docmodel import DocModel
 from version import APP_VERSION
