@@ -545,6 +545,7 @@ class DocModel():
             print(e)
             return
         newLabel = shape_tool.AddComponent(rootLabel, shape, True)
+        entry = newLabel.EntryDumpToString()
         # Get referrred label and apply color to it
         refLabel = TDF_Label()  # label of referred shape
         isRef = shape_tool.GetReferredShape(newLabel, refLabel)
@@ -555,7 +556,6 @@ class DocModel():
         shape_tool.UpdateAssemblies()
         self.doc = self.doc_linter()  # This gets color to work
         self.parse_doc()
-        entry = newLabel.EntryDumpToString()
         uid = entry + '.0'  # this should work OK since it is new
         return uid
 
