@@ -559,6 +559,32 @@ class DocModel():
         uid = entry + '.0'  # this should work OK since it is new
         return uid
 
+    def add_component_to_asy(self, shape, name, color, tag=1):
+        """Add new shape to label at root with tag & return uid"""
+        labels = TDF_LabelSequence()
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        shape_tool.GetShapes(labels)
+        try:
+            asyLabel = labels.Value(tag)  # label at root with tag
+        except RuntimeError as e:
+            print(e)
+            return
+        newLabel = shape_tool.AddComponent(asyLabel, shape, True)
+        entry = newLabel.EntryDumpToString()
+        # Get referred label and apply color to it
+        refLabel = TDF_Label()  # label of referred shape
+        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
+        if isRef:
+            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
+        self.setLabelName(newLabel, name)
+        logger.info('Part %s added to root label', name)
+        shape_tool.UpdateAssemblies()
+        self.doc = self.doc_linter()  # This gets color to work
+        self.parse_doc()
+        uid = entry + '.0'  # this should work OK since it is new
+        return uid
+
     def getLabelName(self, label):
         return label.GetLabelName()
 

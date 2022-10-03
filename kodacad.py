@@ -61,6 +61,7 @@ print("TOLERANCE = ", TOL)
 # DEFAULT_COLOR = Quantity_ColorRGBA(0.6, 0.6, 0.4, 1.0)
 DEFAULT_COLOR = Quantity_Color(0.6, 0.6, 0.4, Quantity_TOC_RGB)
 
+
 #############################################
 #
 # Workplane creation functions
@@ -169,11 +170,24 @@ def display_new_active_wp(prev_uid, new_uid):
 #############################################
 
 
+def get_tag_of_active_asy():
+    """Get tag of active assy, if any else top assembly"""
+    tag = 1  # value of tag for first label at root (default)
+    act_asy_uid = win.activeAsyUID
+    if act_asy_uid:
+        if doc.label_dict[act_asy_uid]["is_assy"]:
+            ref_entry = doc.label_dict[act_asy_uid]["ref_entry"]
+            if ref_entry:
+                tag = int(ref_entry.split(':')[-1])
+    return tag
+
+
 def makeBox():
-    """Quick box used for debuggging"""
+    """Add box to active assembly, if any, else to top"""
+    tag = get_tag_of_active_asy()
     name = "Box"
-    myBody = BRepPrimAPI_MakeBox(60, 60, 50).Shape()
-    uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
+    box = BRepPrimAPI_MakeBox(30, 30, 20).Shape()
+    uid = doc.add_component_to_asy(box, name, DEFAULT_COLOR, tag)
     win.build_tree()
     win.setActivePart(uid)
     win.draw_shape(uid)
@@ -181,10 +195,11 @@ def makeBox():
 
 
 def makeCyl():
-    """Quick cylinder used for debuggging"""
+    """Add cylinder to active assembly, if any, else to top"""
+    tag = get_tag_of_active_asy()
     name = "Cylinder"
-    myBody = BRepPrimAPI_MakeCylinder(40, 80).Shape()
-    uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
+    cyl = BRepPrimAPI_MakeCylinder(20, 40).Shape()
+    uid = doc.add_component_to_asy(cyl, name, DEFAULT_COLOR, tag)
     win.build_tree()
     win.setActivePart(uid)
     win.draw_shape(uid)
@@ -192,7 +207,9 @@ def makeCyl():
 
 
 def extrude():
-    """Extrude profile on active WP to create a new part."""
+    """Extrude profile on active WP to create a new part.
+    Add new part to active assembly, if any, else to top"""
+    tag = get_tag_of_active_asy()
     wp = win.activeWp
     if len(win.lineEditStack) == 2:
         name = win.lineEditStack.pop()
@@ -203,8 +220,8 @@ def extrude():
             return
         myFaceProfile = BRepBuilderAPI_MakeFace(wp.wire)
         aPrismVec = wp.wVec * length
-        myBody = BRepPrimAPI_MakePrism(myFaceProfile.Shape(), aPrismVec).Shape()
-        uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
+        new_part = BRepPrimAPI_MakePrism(myFaceProfile.Shape(), aPrismVec).Shape()
+        uid = doc.add_component_to_asy(new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
         win.draw_shape(uid)
@@ -226,7 +243,9 @@ def extrudeC(shapeList, *args):
 
 
 def revolve():
-    """Revolve profile on active WP to create a new part."""
+    """Revolve profile on active WP to create a new part.
+    Add new part to active assembly, if any, else to top"""
+    tag = get_tag_of_active_asy()
     wp = win.activeWp
     if win.lineEditStack and len(win.ptStack) == 2:
         p2 = win.ptStack.pop()
@@ -239,8 +258,8 @@ def revolve():
             return
         face = BRepBuilderAPI_MakeFace(wp.wire).Shape()
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
-        myBody = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
-        uid = doc.addComponent(myBody, name, DEFAULT_COLOR)
+        new_part = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
+        uid = doc.add_component_to_asy(new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
         win.draw_shape(uid)
@@ -294,7 +313,7 @@ def rotateAP():
 
 #############################################
 #
-# 3D Geometry modification functons
+# 3D Geometry modification functions
 #
 #############################################
 
