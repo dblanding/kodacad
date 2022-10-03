@@ -29,9 +29,11 @@
     <li>Where Construction elements intersect, 'selectable' yellow <b>Points</b> are
     shown.</li>
 
-    <li><b>Profile</b> elements are the ones that get assembled into a closed loop which
-    is then used to create or modify 3D bodies. They are drawn by clicking on
-    <b>Points</b> or by entering values on the <b>User Input</b> widget.</li>
+    <li><b>Profile</b> elements, if they form a closed loop, get converted to a <b>wire</b>
+    which is then used to create or modify 3D bodies.</li>
+    
+    <li>Both  <b>Construction</b> elements and <b>Profile</b> elements are drawn by 
+    clicking on <b>Points</b> or by entering values on the <b>User Input</b> widget.</li>
   </ul>
 
   <h3>The User Interface</h3><img src="images/ui.png" width="792" height="509" border="0"
@@ -47,11 +49,14 @@
     (using the checkboxes) and shows (by color):
 
       <ul>
-        <li>Which part is <b>Active</b>, (the part that will be the subject of the
-        current modification or operation).</li>
+        <li>Which <b>Part</b> is <b>Active</b> (the part that will be acted upon by
+        the current modification or operation).</li>
 
-        <li>Which Workplane is <b>Active</b>, (the workplane that will receive the
-        effects from any toolbar buttons).</li>
+        <li>Which <b>Workplane</b> is <b>Active</b> (the workplane that will be
+        acted upon by any toolbar buttons).</li>
+        
+        <li>Which <b>Assembly</b> is <b>Active</b> (Newly created parts will be added to
+        the active assembly).</li>
       </ul>
     </li>
 
@@ -83,34 +88,46 @@
 
   <h3>Navigation</h3>
 
-  <p>In order to avoid accidental screen picks when using the mouse for navigation, the
-  control key must be used with the mouse when panning or rotating the view.</p>
+  <p>Using a scroll-wheel mouse, the user can rotate, pan and zoom the model in 
+  the 3D Display Window.</p>
 
   <ul>
-    <li>LMB for screen picks</li>
+    <li>LMB for rotation</li>
 
-    <li>CTRL-LMB to pan the view</li>
+    <li>MMB to pan the view</li>
 
-    <li>CTRL-MMB to rotate the view</li>
-
-    <li>CTRL-RMB (Or scroll wheel) to Zoom the view</li>
+    <li>Scroll wheel to Zoom the view</li>
 
     <li>RMB for popup options (on both Display and Tree View)</li>
   </ul>
 
   <h3>Download &amp; Installation:</h3>
 
-  <p><b>KodaCAD</b> is very much still in development, so it isn't being made available
+  <p><b>KodaCAD</b> is very much still in development and is not being made available
   in an executable binary format. In order to run it, you need to have Python version 3.7
-  (or higher) and the latest version of pythonOCC installed on your computer. The easiest
-  way to get this (the way I did it) is to download and install <a href=
+  (or higher) and pythonOCC (version 7.4 or 7.5) installed on your computer. The easiest
+  way to get this (the way I did it) is to:
+  
+  <ul>
+
+    <li>Download and install <a href=
   "https://docs.conda.io/projects/conda/en/latest/user-guide/install/download.html"
-  target="_blank">Conda</a> (Choose Python3, not Python2.7.) Then install the latest
-  version of <a href="https://anaconda.org/dlr-sc/pythonocc-core" target=
-  "_blank">PythonOCC</a>. Once you have got that, set up a PythonOCC environment within
-  Conda. Clone the KodaCAD GitHub <a href="https://github.com/dblanding/kodacad" target=
-  "_blank">repository</a> onto your computer, then from within the PythonOCC environment,
-  run the file "kodacad.py".</p>
+  target="_blank">Conda</a> (Choose Python3, not Python2.7.)</li>
+
+    <li>Once you have got that, set up a PythonOCC environment within Conda.</li>
+
+    <li>Within that environment, install    <a href="https://anaconda.org/dlr-sc/pythonocc-core" target=
+  "_blank">pythonocc-core</a> and <a href="https://anaconda.org/anaconda/pyqt" target=
+  "_blank">pyqt</a>.</li>
+    
+    <li>Clone the KodaCAD GitHub <a href="https://github.com/dblanding/kodacad" target=
+  "_blank">repository</a> onto your computer.</li>
+  
+    <li>Then from within the PythonOCC environment, run the file "kodacad.py".</li>
+
+  </ul>
+  
+  </p>
 
   <h3>Tutorial: Creating the Classic OCC Bottle</h3>
 
