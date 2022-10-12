@@ -299,7 +299,7 @@ def revolveC(shapeList, *args):
 
 
 def rotateAP():
-    """Experimental... useful methods to come"""
+    """Experimental... Rotate active part incrementally"""
     ax1 = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
     aRotTrsf = gp_Trsf()
     angle = math.pi / 18  # 10 degrees
@@ -309,6 +309,27 @@ def rotateAP():
     win.erase_shape(uid)
     win.activePart.Move(aTopLoc)
     win.draw_shape(uid)
+
+def rev_rotateAP():
+    """Experimental... rotate back"""
+    ax1 = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
+    aRotTrsf = gp_Trsf()
+    angle = math.pi / 18  # 10 degrees
+    aRotTrsf.SetRotation(ax1, angle)
+    aTopLoc = TopLoc_Location(aRotTrsf)
+    aTopLoc = aTopLoc.Inverted()
+    uid = win.activePartUID
+    win.erase_shape(uid)
+    win.activePart.Move(aTopLoc)
+    win.draw_shape(uid)
+
+def moveAP():
+    """Experiment to move newly created component to loc of its wire"""
+
+    print(f"Moving active part")
+    loc = doc.part_dict['0:1:1:6:4.0']['loc']
+    loc = loc.Inverted()
+    win.activePart.Move(loc)
 
 
 #############################################
@@ -648,6 +669,8 @@ if __name__ == "__main__":
     win.add_function_to_menu("Create 3D", "Revolve", revolve)
     win.add_menu("Modify Active Part")
     win.add_function_to_menu("Modify Active Part", "Rotate Act Part", rotateAP)
+    win.add_function_to_menu("Modify Active Part", "Reverse Rotate Act Part", rev_rotateAP)
+    win.add_function_to_menu("Modify Active Part", "Move Act Part", moveAP)
     win.add_function_to_menu("Modify Active Part", "Mill", mill)
     win.add_function_to_menu("Modify Active Part", "Pull", pull)
     win.add_function_to_menu("Modify Active Part", "Fillet", fillet)

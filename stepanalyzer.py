@@ -133,11 +133,13 @@ class StepAnalyzer():
         Components of an assembly are, by definition, references which refer
         to either a shape or another assembly. Components are essentially
         'instances' of the referred shape or assembly, and carry a location
-        vector specifing the location of the referred shape or assembly.
+        vector specifying the location of the referred shape or assembly.
         """
         for j in range(comps.Length()):
             c_label = comps.Value(j+1)  # component label <class 'TDF_Label'>
             c_name = c_label.GetLabelName()
+            if c_name.startswith('=>['):
+                c_name = None
             c_entry = c_label.EntryDumpToString()
             uid = self.get_uid_from_entry(c_entry)
             ref_label = TDF_Label()  # label of referred shape (or assembly)
@@ -146,8 +148,8 @@ class StepAnalyzer():
                 ref_entry = ref_label.EntryDumpToString()
                 ref_name = ref_label.GetLabelName()
                 indent = "\t" * self.indent
-                self.output += f"{uid}{indent}[{c_entry}] {c_name}"
-                self.output += f" => [{ref_entry}] {ref_name}\n"
+                self.output += f"{uid}{indent}[{c_entry}] ({c_name})"
+                self.output += f" => [{ref_entry}] ({ref_name})\n"
                 if self.shape_tool.IsAssembly(ref_label):
                     self.indent += 1
                     ref_comps = TDF_LabelSequence() # Components of Assy
