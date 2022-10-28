@@ -231,7 +231,7 @@ class DocModel():
         Components of an assembly are, by definition, references which refer
         to either a simple shape or a compound shape (an assembly).
         Components are essentially 'instances' of the referred shape or assembly
-        and carry a location vector specifing the location of the referred
+        and carry a location vector specifying the location of the referred
         shape or assembly."""
 
         for j in range(comps.Length()):

@@ -25,8 +25,8 @@ STEP file. The structure is presented as an indented text outline."""
 
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.STEPCAFControl import STEPCAFControl_Reader
-from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDF import TDF_Label, TDF_LabelSequence
+from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import XCAFDoc_DocumentTool_ShapeTool
@@ -38,11 +38,10 @@ class StepAnalyzer():
     def __init__(self, document=None, filename=None):
         """Supply one or the other: document or STEP filename."""
 
+        self.uid = 1
         self.indent = 0
         self.output = ""
         self.fname = filename
-        # Initialize self._share_dict
-        self._share_dict = {'0:1:1': 0}  # {entry: ser_nbr}
         if filename:
             self.doc = self.read_file(filename)
         elif document:
@@ -72,21 +71,6 @@ class StepAnalyzer():
             step_reader.Transfer(doc)
         return doc
 
-    def get_uid_from_entry(self, entry):
-        """Generate uid from label entry
-
-        In order to distinguish among multiple instances of shared data
-        a uid is comprised of 'entry.serial_number', starting with 0.
-        """
-        if entry in self._share_dict:
-            value = self._share_dict[entry]
-        else:
-            value = -1
-        value += 1
-        # update serial number in self._share_dict
-        self._share_dict[entry] = value
-        return entry + '.' + str(value)
-
     def dump(self):
         """Return assembly structure in indented outline form.
 
@@ -109,14 +93,13 @@ class StepAnalyzer():
         # Get information from root label
         name = rootlabel.GetLabelName()
         entry = rootlabel.EntryDumpToString()
-        uid = self.get_uid_from_entry(entry)
         is_assy = self.shape_tool.IsAssembly(rootlabel)
         if is_assy:
             # If 1st label at root holds an assembly, it is the Top Assy.
             # Through this label, the entire assembly is accessible.
             # There is no need to explicitly examine other labels at root.
-            self.output += f"{uid}\t[{entry}] {name}\t"
-
+            self.output += f"{self.uid}\t[{entry}] {name}\t"
+            self.uid += 1
             self.indent += 2
             top_comps = TDF_LabelSequence() # Components of Top Assy
             subchilds = False
@@ -133,23 +116,21 @@ class StepAnalyzer():
         Components of an assembly are, by definition, references which refer
         to either a shape or another assembly. Components are essentially
         'instances' of the referred shape or assembly, and carry a location
-        vector specifying the location of the referred shape or assembly.
+        vector specifing the location of the referred shape or assembly.
         """
         for j in range(comps.Length()):
             c_label = comps.Value(j+1)  # component label <class 'TDF_Label'>
             c_name = c_label.GetLabelName()
-            if c_name.startswith('=>['):
-                c_name = None
             c_entry = c_label.EntryDumpToString()
-            uid = self.get_uid_from_entry(c_entry)
             ref_label = TDF_Label()  # label of referred shape (or assembly)
             is_ref = self.shape_tool.GetReferredShape(c_label, ref_label)
-            if is_ref:  # just in case all components are not references
+            if is_ref:  # just in case all components are not references 
                 ref_entry = ref_label.EntryDumpToString()
                 ref_name = ref_label.GetLabelName()
                 indent = "\t" * self.indent
-                self.output += f"{uid}{indent}[{c_entry}] ({c_name})"
-                self.output += f" => [{ref_entry}] ({ref_name})\n"
+                self.output += f"{self.uid}{indent}[{c_entry}] {c_name}"
+                self.output += f" => [{ref_entry}] {ref_name}\n"
+                self.uid += 1
                 if self.shape_tool.IsAssembly(ref_label):
                     self.indent += 1
                     ref_comps = TDF_LabelSequence() # Components of Assy
@@ -164,6 +145,6 @@ class StepAnalyzer():
 if __name__ == "__main__":
     SA = StepAnalyzer(filename="step/as1-oc-214.stp")
     print(SA.dump())
-    # The step file below doesn't get sorted out as neatly as the one above.
-    #SA2 = StepAnalyzer(filename="step/as1_pe_203.stp")
-    #print(SA2.dump())
+
+    SA2 = StepAnalyzer(filename="step/as1_pe_203.stp")
+    print(SA2.dump())
