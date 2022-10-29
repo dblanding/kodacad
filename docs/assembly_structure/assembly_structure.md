@@ -93,7 +93,9 @@ Assembly structure of doc:
 
 ### The hierarchical assembly structure is represented with labels having depth=5
 
-* Our method of exploration will be to drill down, depth first, to discover all the children of each of the labels at root.
+* Our method of exploration will be to drill down, depth first, into the first label at root.
+    * In this particular step file, this is the only **Free Shape**.
+    * As we will soon see, all the other shapes at root will be accessed by reference from componenet labels
     * Each successive row of the document discovers a component of the parent assembly above.
 * For example, the top assembly `[0:1:1:1] Top` (depth=4) has exactly 1 component (1 child label) named `as1-oc-214` whose entry is composed of its parent's entry plus its own tag (:1) appended `[0:1:1:1:1]`.
 * In the 2nd row of our doc dump example, you can see that `as1-oc-214` is shown 'referring to' assembly `as1`. This means that `as1-oc-214` is an instance of the assembly `as1`. In this case, it's the **only** instance.
@@ -105,12 +107,12 @@ Assembly structure of doc:
     * `[0:1:1:2:1] rod-assembly_1` refers to `[0:1:1:3] rod-assembly`
 * On the 4th, 5th, and 6th rows, we drill into `[0:1:1:3] rod-assembly` looking for its children, but find only parts, no assemblies. So we have drilled as deep as we can go.
 * On the 7th row, we find the 2nd component of `[0:1:1:2] as1` to be `[0:1:1:2:2] l-bracket-assembly_1`
-* ... And so on ...
+* ... And so on ... Eventually, we will have visisted all the labels at root.
 
 ### Location data are stored on component labels
 
-* Components of an assembly are, by definition, instances referring to either a simple shape (part) or a compound shape (assembly), but which are usually positioned somewhere else.
-* Components get their shape information from their referred shape but also carry a location vector specifing their location relative to the referred shape or assembly.
+* Components of an assembly are, by definition, instances referring to a root label representing either a simple shape (part) or a compound shape (assembly), but which are usually positioned somewhere else.
+* Components get their shape information from their referred shape but they also carry a location vector specifing where their referred shape or assembly is to be located.
 * When parsing our STEP file, we need to keep track of the location vectors of each component with respect to its referred shape.
 * Let's look at the 2 instances of `[0:1:1:6] l-bracket-assembly` for example.
     * `[0:1:1:2:2] l-bracket-assembly_1` and `[0:1:1:2:4] l-bracket-assembly_2` are very clearly identical instances with different locations.
@@ -128,7 +130,7 @@ Assembly structure of doc:
     * Then extrude the circle 3 mm high to create the new component.
 * ![Button created](images/button_created.png)
 * Not surprisingly, both L-bracket assemblies get the new button, since they are shared instances.
-* But a user of this CAD would probably be annoyed when the button shows up in somewhere other than where it is supposed to be!
-* We need to fix this.
-    * We need to move the component by applying the cascade of location vectors (in reverse) to make sure the button shows up in the exact spot where it is being extruded.
+* But a user of this CAD would probably be annoyed when the button shows up somewhere other than where it was intended to be!
+* Apparently, by virtue of being hierarchically contained within the assembly `[0:1:1:2:2] l-bracket-assembly_2`, the button component is having its postion transformed by the location vector of its containing assembly. 
+    * In ordeer to fix this, when we create a new component, we need to apply the reverse transform of the containing assembly, allowing the component to stay where we want it.
 
