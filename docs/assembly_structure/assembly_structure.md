@@ -2,13 +2,28 @@
 
 * We will use the file `as-ooc-214.stp` as an example in this discussion
 
-### It is possible to load this file as components (without any assembly structure)
-* I can't think of any reason for wanting to do this, but here it is:
+### If the file is loaded as **component** (without any assembly structure)
+* Use `File -> Load STEP Component` option
 
 ![components only](images/components.png)
 
-* There are 5 ToopoDS_shapes, all loaded under the document root level, all located at or near the global origin
+* We see these five **prototype shapes** located in a pile, right where they were created:
+* Only the 5 simple shapes can be seen in the display, not the assemblies
 
+```
+  Entry  | Name
+[0:1:1:1] Top
+[0:1:1:2] as1
+[0:1:1:3] rod-assembly
+[0:1:1:4] nut
+[0:1:1:5] rod
+[0:1:1:6] l-bracket-assembly
+[0:1:1:7] nut-bolt-assembly
+[0:1:1:8] bolt
+[0:1:1:9] l-bracket
+[0:1:1:10] plate
+```
+* Clicking on `Utility -> dump doc` shows the cad model document:
 ```
 Assembly structure of doc:
 
@@ -20,8 +35,9 @@ Assembly structure of doc:
 0:1:1:1:5.0		[0:1:1:1:5] plate => [0:1:1:6] SOLID
 ```
 
-## The same file, loaded with its assembly structure is much more useful
+## The same file, loaded with its assembly structure is much more useful:
 ![step file loaded under Top](images/as1-loaded-under-top.png)
+* Use `File -> Load STEP At Top` option.
 * Below is the Kodacad `document dump` immediately after loading this file in **under** TOP.
     * The left column are UID values, needed by Kodacad to identify and differentiate between multiple shared instances of CAD components.
         * UID's are comprised of OCAF label `entries` (':' separated integers) with an appended '.' and trailing integer (used to distinguish between multiple instances of the same part or assembly).
@@ -69,23 +85,8 @@ Assembly structure of doc:
         
 ## How assembly structure is represented in an OCAF (or XCAF) document
 * When a STEP file is read in, it is parsed and then organized into a hierarchical tree structure in which each leaf of the tree (called a **label**) contains CAD data for a particular component, and also contains a unique **entry** to keep track of its place in the tree structure.
-* Each and every **unique component** (part or assembly) is attached to a label which is a "sibling" of the root label (TOP assembly).
+* Each and every **unique component** (part or assembly) is a **located instance** of a **prototype shape** attached to a label which is a "sibling" of the root label (TOP assembly).
 
-### The labels at root:
-
-* Entry  |  Name
-```
-[0:1:1:1] Top
-[0:1:1:2] as1
-[0:1:1:3] rod-assembly
-[0:1:1:4] nut
-[0:1:1:5] rod
-[0:1:1:6] l-bracket-assembly
-[0:1:1:7] nut-bolt-assembly
-[0:1:1:8] bolt
-[0:1:1:9] l-bracket
-[0:1:1:10] plate
-```
 * In our example, there are 10 labels at root. As mentioned above, CAD data are attached  to these labels as attributes.
 * The data for 5 of these labels are parts (TopoDS_shapes) and the other 5 are assemblies.
 * Each of these labels has an **entry** of depth=4.
