@@ -29,7 +29,7 @@ import sys
 
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
-from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace, BRepBuilderAPI_Transform
 from OCC.Core.BRepFilletAPI import BRepFilletAPI_MakeFillet
 from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_MakeThickSolid
 from OCC.Core.BRepPrimAPI import (
@@ -182,11 +182,22 @@ def get_tag_of_active_asy():
     return tag
 
 
+def get_inv_loc_of_active_asy():
+    """Get inverse location vector, if any, of active assembly"""
+    loc = TopLoc_Location()
+    act_asy_uid = win.activeAsyUID
+    if act_asy_uid:
+        loc = doc.label_dict[act_asy_uid]["inv_loc"]
+    return loc
+
+
 def makeBox():
     """Add box to active assembly, if any, else to top"""
     tag = get_tag_of_active_asy()
+    loc = get_inv_loc_of_active_asy()
     name = "Box"
     box = BRepPrimAPI_MakeBox(30, 30, 20).Shape()
+    loc_box = BRepBuilderAPI_Transform(box, loc.Transformation()).Shape()
     uid = doc.add_component_to_asy(box, name, DEFAULT_COLOR, tag)
     win.build_tree()
     win.setActivePart(uid)
@@ -210,6 +221,7 @@ def extrude():
     """Extrude profile on active WP to create a new part.
     Add new part to active assembly, if any, else to top"""
     tag = get_tag_of_active_asy()
+    loc = get_inv_loc_of_active_asy()
     wp = win.activeWp
     if len(win.lineEditStack) == 2:
         name = win.lineEditStack.pop()
@@ -221,7 +233,8 @@ def extrude():
         myFaceProfile = BRepBuilderAPI_MakeFace(wp.wire)
         aPrismVec = wp.wVec * length
         new_part = BRepPrimAPI_MakePrism(myFaceProfile.Shape(), aPrismVec).Shape()
-        uid = doc.add_component_to_asy(new_part, name, DEFAULT_COLOR, tag)
+        loc_new_part = BRepBuilderAPI_Transform(new_part, loc.Transformation()).Shape()
+        uid = doc.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
         win.draw_shape(uid)

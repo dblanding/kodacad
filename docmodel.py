@@ -294,6 +294,9 @@ class DocModel():
                     # Location vector is carried by component
                     aLoc = TopLoc_Location()
                     aLoc = shape_tool.GetLocation(c_label)
+                    # store inverted location transform in label_dict for this assembly
+                    inv_loc = aLoc.Inverted()
+                    self.label_dict[c_uid].update({'inv_loc': inv_loc})
                     self.assy_loc_stack.append(aLoc)
                     self.assy_entry_stack.append(ref_entry)
                     self.parent_uid_stack.append(c_uid)
