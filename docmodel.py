@@ -25,6 +25,7 @@ import logging
 import os
 import os.path
 
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
@@ -263,10 +264,10 @@ class DocModel():
                         res_loc = temp_assy_loc_stack.pop(0)
                         for loc in temp_assy_loc_stack:
                             res_loc = res_loc.Multiplied(loc)
-                        c_shape.Move(res_loc)
+                        display_shape = BRepBuilderAPI_Transform(c_shape, res_loc.Transformation()).Shape()
                     elif len(temp_assy_loc_stack) == 1:
                         res_loc = temp_assy_loc_stack.pop()
-                        c_shape.Move(res_loc)
+                        display_shape = BRepBuilderAPI_Transform(c_shape, res_loc.Transformation()).Shape()
                     else:
                         res_loc = None
                     # It is possible for this component to both specify a
@@ -283,7 +284,7 @@ class DocModel():
                         loc = res_loc.Multiplied(c_loc)
                     color = Quantity_Color()
                     color_tool.GetColor(ref_shape, XCAFDoc_ColorSurf, color)
-                    self.part_dict[c_uid] = {'shape': c_shape,
+                    self.part_dict[c_uid] = {'shape': display_shape,
                                              'color': color,
                                              'name': c_name,
                                              'loc': loc}
@@ -307,7 +308,7 @@ class DocModel():
                         logger.debug("Parsing components of label entry %s)", ref_entry)
                         self.parse_components(r_comps, shape_tool, color_tool)
             else:
-                print(f"I was wrong: All components are *not* references {c_uid}")
+                print(f"Oops! All components are *not* references {c_uid}")
         self.assy_entry_stack.pop()
         self.assy_loc_stack.pop()
         self.parent_uid_stack.pop()
