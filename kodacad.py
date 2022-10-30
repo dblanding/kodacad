@@ -171,7 +171,7 @@ def display_new_active_wp(prev_uid, new_uid):
 
 
 def get_tag_of_active_asy():
-    """Get tag of active assy, if any else top assembly"""
+    """Get tag of active assy, if any, else top assembly"""
     tag = 1  # value of tag for first label at root (default)
     act_asy_uid = win.activeAsyUID
     if act_asy_uid:

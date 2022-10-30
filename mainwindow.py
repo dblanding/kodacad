@@ -401,7 +401,7 @@ class MainWindow(QMainWindow):
         a newly unchecked part is erased. However, because workplanes have a
         great many ais_shapes, ais lines, ais_circles and topoDS_shapes (edges &
         border) as well, it isn't practical to keep track of them all just so
-        they can removed incrementally. Also, when a new workplane is created,
+        they can be removed incrementally. Also, when a new workplane is created,
         it is set active, so the old active workplane needs to be redrawn with a
         duller border color. Therefore, if there is a change in the hide_list
         involving a workplane, it is best to just clear the display and redraw
@@ -785,7 +785,8 @@ class MainWindow(QMainWindow):
         if uid in self.ais_shape_dict:
             context = self.canvas._display.Context
             aisShape = self.ais_shape_dict[uid]
-            context.Remove(aisShape, True)
+            context.Remove(aisShape, True)  # This did the job prior to PyOCC 7.6
+            context.Erase(aisShape, True)  # Added to get 'hide' working in PyOCC 7.6
 
     #############################################
     #
