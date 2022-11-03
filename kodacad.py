@@ -219,7 +219,7 @@ def makeCyl():
 
 def extrude():
     """Extrude profile on active WP to create a new part.
-    Add new part to active assembly, if any, else to top"""
+    Add new part to active assembly, if any, else to Top"""
     tag = get_tag_of_active_asy()
     loc = get_inv_loc_of_active_asy()
     wp = win.activeWp
@@ -257,8 +257,9 @@ def extrudeC(shapeList, *args):
 
 def revolve():
     """Revolve profile on active WP to create a new part.
-    Add new part to active assembly, if any, else to top"""
+    Add new part to active assembly, if any, else to Top"""
     tag = get_tag_of_active_asy()
+    loc = get_inv_loc_of_active_asy()
     wp = win.activeWp
     if win.lineEditStack and len(win.ptStack) == 2:
         p2 = win.ptStack.pop()
@@ -272,7 +273,8 @@ def revolve():
         face = BRepBuilderAPI_MakeFace(wp.wire).Shape()
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
         new_part = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
-        uid = doc.add_component_to_asy(new_part, name, DEFAULT_COLOR, tag)
+        loc_new_part = BRepBuilderAPI_Transform(new_part, loc.Transformation()).Shape()
+        uid = doc.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
         win.draw_shape(uid)
