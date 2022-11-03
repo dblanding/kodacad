@@ -149,7 +149,7 @@ class DocModel():
         self.assy_entry_stack.append(root_entry)
         self.label_dict = {root_uid: {'entry': root_entry, 'name': root_name,
                                       'parent_uid': None, 'ref_entry': None,
-                                      'is_assy': True}}
+                                      'is_assy': True, 'inv_loc': loc.Inverted()}}
         self.parent_uid_stack.append(root_uid)
         top_comps = TDF_LabelSequence() # Components of Top Assy
         subchilds = False
