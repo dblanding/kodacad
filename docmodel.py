@@ -81,23 +81,6 @@ class TreeModel():
             itlbl.Next()
         return childlabels
 
-    def getAllChildLabels(self, label, first=True):
-        """Return list of all child labels (recursively) below label.
-
-        This doesn't find anything at the second level down because
-        the component labels of root do not have children, but rather
-        they have references."""
-        print("Entering 'getAllChildLabels'")
-        if first:
-            self.allChildLabels = []
-        childLabels = self.getChildLabels(label)
-        print(f"len(childLabels) = {len(childLabels)}")
-        self.allChildLabels += childLabels
-        print(f"len(allChildLabels) = {len(self.allChildLabels)}")
-        for lbl in childLabels:
-            self.getAllChildLabels(lbl, first=False)
-        return self.allChildLabels
-
     def saveDoc(self, filename="foo.caf"):
         """Save doc to file (for educational purposes) (not working yet)
 
@@ -195,6 +178,7 @@ class DocModel():
 
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
+        # shape_tool.SetAutoNaming(True)  # not sure what this does, OK w/ or w/out
 
         # Find root label of self.doc
         labels = TDF_LabelSequence()
@@ -224,7 +208,7 @@ class DocModel():
             logger.debug("Parsing components of label entry %s)", root_entry)
             self.parse_components(top_comps, shape_tool, color_tool)
         else:
-            print("Something is wrong.")
+            print("Something went wrong while parsing document.")
 
     def parse_components(self, comps, shape_tool, color_tool):
         """Parse components from comps (LabelSequence).
@@ -330,10 +314,10 @@ class DocModel():
         step_writer.Transfer(doc, STEPControl_AsIs)
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
-        # Create new TreeModel and read STEP data
-        tmodel = TreeModel("DOC")
-        shape_tool = tmodel.shape_tool
-        color_tool = tmodel.color_tool
+
+        # Create temporary document to receive STEP data
+        temp_doc = TDocStd_Document(TCollection_ExtendedString("linter"))
+
         step_reader = STEPCAFControl_Reader()
         step_reader.SetColorMode(True)
         step_reader.SetLayerMode(True)
@@ -342,9 +326,9 @@ class DocModel():
         status = step_reader.ReadFile(fname)
         if status == IFSelect_RetDone:
             logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
+            step_reader.Transfer(temp_doc)
             os.remove(fname)
-        return tmodel.doc
+        return temp_doc
 
     def copy_label(self, source_label, target_label):
         cp_label = TDF_CopyLabel()
@@ -366,10 +350,11 @@ class DocModel():
         if not fname:
             print("Load step cancelled")
             return
-        tmodel = TreeModel("DOC")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
 
+        # Create replacement document to receive STEP data
+        temp_doc = TDocStd_Document(TCollection_ExtendedString("step"))
+
+        # Create and prepare step reader
         step_reader = STEPCAFControl_Reader()
         step_reader.SetColorMode(True)
         step_reader.SetLayerMode(True)
@@ -378,11 +363,10 @@ class DocModel():
 
         status = step_reader.ReadFile(fname)
         if status == IFSelect_RetDone:
-            logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
-        self.doc = tmodel.doc
-        # Build new self.part_dict & self.label_dict
-        self.parse_doc()
+            step_reader.Transfer(temp_doc)
+            logger.info("Transfer temp_doc to STEPCAFControl_Reader")
+            self.doc = temp_doc
+            self.parse_doc()
 
     def load_stp_cmpnt(self):
         """Get OCAF document from STEP file and add (as component) to doc root.
