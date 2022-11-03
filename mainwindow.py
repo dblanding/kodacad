@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2020 Doug Blanding (dblanding@gmail.com)
+# Copyright 2022 Doug Blanding (dblanding@gmail.com)
 #
 # This file is part of kodacad.
 # The latest  version of this file can be found at:

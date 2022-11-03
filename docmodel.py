@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2020 Doug Blanding (dblanding@gmail.com)
+# Copyright 2022 Doug Blanding (dblanding@gmail.com)
 #
 # This file is part of kodacad.
 # The latest  version of this file can be found at:
@@ -32,70 +32,21 @@ from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
 from OCC.Core.STEPCAFControl import (STEPCAFControl_Reader,
                                      STEPCAFControl_Writer)
 from OCC.Core.STEPControl import STEPControl_AsIs
-from OCC.Core.TCollection import (TCollection_AsciiString,
-                                  TCollection_ExtendedString)
+from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
-from OCC.Core.TDF import (TDF_ChildIterator, TDF_CopyLabel, TDF_Label,
+from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
                           TDF_LabelSequence)
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
                               XCAFDoc_DocumentTool_ColorTool,
-                              XCAFDoc_DocumentTool_LayerTool,
-                              XCAFDoc_DocumentTool_MaterialTool,
                               XCAFDoc_DocumentTool_ShapeTool)
-from OCC.Core.XmlXCAFDrivers import (XmlXCAFDrivers_DocumentRetrievalDriver,
-                                     XmlXCAFDrivers_DocumentStorageDriver)
 from OCC.Core.XSControl import XSControl_WorkSession
 from PyQt5.QtWidgets import QFileDialog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
-
-
-class TreeModel():
-    """XCAF Tree Model of hierarchical CAD assembly data"""
-
-    def __init__(self, title):
-        # Create the application and document
-        doc = TDocStd_Document(TCollection_ExtendedString(title))
-        app = XCAFApp_Application_GetApplication()
-        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
-        self.app = app
-        self.doc = doc
-        # Initialize tools
-        self.shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
-        self.shape_tool.SetAutoNaming(True)
-        self.color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
-        self.layer_tool = XCAFDoc_DocumentTool_LayerTool(doc.Main())
-        self.l_materials = XCAFDoc_DocumentTool_MaterialTool(doc.Main())
-        self.allChildLabels = []
-
-    def getChildLabels(self, label):
-        """Return list of child labels directly below label."""
-        itlbl = TDF_ChildIterator(label, True)
-        childlabels = []
-        while itlbl.More():
-            childlabels.append(itlbl.Value())
-            itlbl.Next()
-        return childlabels
-
-    def saveDoc(self, filename="foo.caf"):
-        """Save doc to file (for educational purposes) (not working yet)
-
-        https://www.opencascade.com/doc/occt-7.4.0/overview/html/occt_user_guides__ocaf.html#occt_ocaf_11
-        """
-        frmte = TCollection_ExtendedString("Xml-XCAF")
-        #frmta = TCollection_AsciiString("MDTV-CAF")
-        self.app.DefineFormat(TCollection_AsciiString("DocumentFormat"),
-                              TCollection_AsciiString("MDTV-CAF"),
-                              TCollection_AsciiString("caf"),
-                              XmlXCAFDrivers_DocumentRetrievalDriver(),
-                              XmlXCAFDrivers_DocumentStorageDriver(frmte))
-        logger.debug("Saving doc to file")
-        savefilename = TCollection_ExtendedString(filename)
-        self.app.SaveAs(self.doc, savefilename)
 
 
 class DocModel():
@@ -381,9 +332,9 @@ class DocModel():
         if not fname:
             print("Load step cancelled")
             return
-        tmodel = TreeModel("DOC")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
+
+        # Create replacement document to receive STEP data
+        temp_doc = TDocStd_Document(TCollection_ExtendedString("step"))
 
         step_reader = STEPCAFControl_Reader()
         step_reader.SetColorMode(True)
@@ -394,17 +345,19 @@ class DocModel():
         status = step_reader.ReadFile(fname)
         if status == IFSelect_RetDone:
             logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
+            step_reader.Transfer(temp_doc)
+            shape_tool = XCAFDoc_DocumentTool_ShapeTool(temp_doc.Main())
+            color_tool = XCAFDoc_DocumentTool_ColorTool(temp_doc.Main())
         # Get root label of step data
         labels = TDF_LabelSequence()
-        step_shape_tool.GetShapes(labels)
+        shape_tool.GetShapes(labels)
         for j in range(labels.Length()):
             label = labels.Value(j+1)
-            shape = step_shape_tool.GetShape(label)
+            shape = shape_tool.GetShape(label)
             color = Quantity_Color()
             name = label.GetLabelName()
-            step_color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
-            isSimpleShape = step_shape_tool.IsSimpleShape(label)
+            color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
+            isSimpleShape = shape_tool.IsSimpleShape(label)
             if isSimpleShape:
                 _ = self.addComponent(shape, name, color)
 
@@ -431,11 +384,11 @@ class DocModel():
         if not fname:
             print("Load step cancelled")
             return
-        # Get the step data
-        tmodel = TreeModel("STEP")
-        step_shape_tool = tmodel.shape_tool
-        step_color_tool = tmodel.color_tool
 
+        # Create replacement document to receive STEP data
+        temp_doc = TDocStd_Document(TCollection_ExtendedString("step"))
+
+        # Create and prepare step reader
         step_reader = STEPCAFControl_Reader()
         step_reader.SetColorMode(True)
         step_reader.SetLayerMode(True)
@@ -445,9 +398,9 @@ class DocModel():
         status = step_reader.ReadFile(fname)
         if status == IFSelect_RetDone:
             logger.info("Transfer doc to STEPCAFControl_Reader")
-            step_reader.Transfer(tmodel.doc)
+            step_reader.Transfer(temp_doc)
         # Delint tmodel.doc & make new tools
-        step_doc = self.doc_linter(tmodel.doc)
+        step_doc = self.doc_linter(temp_doc)
         step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
         step_color_tool = XCAFDoc_DocumentTool_ColorTool(step_doc.Main())
 
@@ -465,7 +418,6 @@ class DocModel():
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         shape_tool.GetShapes(labels)
         n = labels.Length()   # number of labels at root
-        print(n)
         targetLabel = labels.Value(n)  # of ref shape of comp just added
         # Copy source label to target label
         self.copy_label(steprootLabel, targetLabel)
