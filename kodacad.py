@@ -191,32 +191,6 @@ def get_inv_loc_of_active_asy():
     return loc
 
 
-def makeBox():
-    """Add box to active assembly, if any, else to top"""
-    tag = get_tag_of_active_asy()
-    loc = get_inv_loc_of_active_asy()
-    name = "Box"
-    box = BRepPrimAPI_MakeBox(30, 30, 20).Shape()
-    loc_box = BRepBuilderAPI_Transform(box, loc.Transformation()).Shape()
-    uid = doc.add_component_to_asy(box, name, DEFAULT_COLOR, tag)
-    win.build_tree()
-    win.setActivePart(uid)
-    win.draw_shape(uid)
-    win.syncUncheckedToHideList()
-
-
-def makeCyl():
-    """Add cylinder to active assembly, if any, else to top"""
-    tag = get_tag_of_active_asy()
-    name = "Cylinder"
-    cyl = BRepPrimAPI_MakeCylinder(20, 40).Shape()
-    uid = doc.add_component_to_asy(cyl, name, DEFAULT_COLOR, tag)
-    win.build_tree()
-    win.setActivePart(uid)
-    win.draw_shape(uid)
-    win.syncUncheckedToHideList()
-
-
 def extrude():
     """Extrude profile on active WP to create a new part.
     Add new part to active assembly, if any, else to Top"""
@@ -678,8 +652,6 @@ if __name__ == "__main__":
     win.add_function_to_menu("Workplane", "On face", wpOnFace)
     win.add_function_to_menu("Workplane", "By 3 points", wpBy3Pts)
     win.add_menu("Create 3D")
-    win.add_function_to_menu("Create 3D", "Box", makeBox)
-    win.add_function_to_menu("Create 3D", "Cylinder", makeCyl)
     win.add_function_to_menu("Create 3D", "Extrude", extrude)
     win.add_function_to_menu("Create 3D", "Revolve", revolve)
     win.add_menu("Modify Active Part")
