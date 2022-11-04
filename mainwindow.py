@@ -250,6 +250,10 @@ class MainWindow(QMainWindow):
         self.showItemActive(0)
         self.setActiveAsy(self.activeAsyUID)
 
+        # Show 'Top' assy in initial tree view
+        doc.parse_doc()
+        self.build_tree()
+
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
         self.treeDockWidget.setObjectName("treeDockWidget")
