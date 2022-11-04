@@ -103,19 +103,27 @@ class DocModel():
         return entry + '.' + str(value)
 
     def parse_doc(self):
-        """Generate new part_dict & label_dict.
+        """Generate new part_dict & label_dict from self.doc
 
         part_dict (dict of dicts) is used primarily for 3D display
+        There is a one-to-one correspondence between
+        each 'display-able' part (instance) and each item in part_dict
+
         part_dict = {uid: {'shape': ,
                             'name': ,
                             'color': ,
                             'loc': }}
+
         label_dict (dict of dicts) is used primarily for tree view display
+        There is a one-to-one correspondence between
+        each item in the tree view and each item in label_dict
+
         label_dict = {uid:   {'entry': ,
                             'name': ,
                             'parent_uid': ,
                             'ref_entry': ,
-                            'is_assy': }}
+                            'is_assy': ,
+                            'inv_loc': }}
         """
 
         # Initialize dictionaries & list
@@ -137,10 +145,13 @@ class DocModel():
         root_label = labels.Value(1) # First label at root
         nbr = labels.Length()  # number of labels at root
         logger.debug('Number of labels at doc root : %i', nbr)
+
         # Get root label information
         # The first label at root holds an assembly, it is the Top Assy.
         # Through this label, the entire assembly is accessible.
         # There is no need to explicitly examine other labels at root.
+        # Also, the first label at root (Top Assy) is the only label
+        # at root represented in the tree view (in label_dict)
         root_name = root_label.GetLabelName()
         root_entry = root_label.EntryDumpToString()
         root_uid = self.get_uid_from_entry(root_entry)

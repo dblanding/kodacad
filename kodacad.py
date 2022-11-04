@@ -560,6 +560,10 @@ def print_uid_dict():
     pprint.pprint(doc.label_dict)
 
 
+def print_part_dict():
+    pprint.pprint(doc.part_dict)
+
+
 def dumpDoc():
     sa = stepanalyzer.StepAnalyzer(document=doc.doc)
     dumpdata = sa.dump()
@@ -665,6 +669,7 @@ if __name__ == "__main__":
     win.add_function_to_menu("Modify Active Part", "Fuse", fuse)
     win.add_menu("Utility")
     win.add_function_to_menu("Utility", "print label_dict", print_uid_dict)
+    win.add_function_to_menu("Utility", "print part_dict", print_part_dict)
     win.add_function_to_menu("Utility", "dump doc", dumpDoc)
     win.add_function_to_menu("Utility", "Topology of Act Prt", topoDumpAP)
     win.add_function_to_menu("Utility", "print(Active Wp Info)", printActiveWpInfo)
