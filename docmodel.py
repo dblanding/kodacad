@@ -25,9 +25,18 @@ import logging
 import os
 import os.path
 
+from OCC.Core.BinXCAFDrivers import binxcafdrivers_DefineFormat
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
+from OCC.Core.PCDM import (PCDM_SS_Failure,
+                           PCDM_SS_OK,
+                           PCDM_SS_WriteFailure,
+                           PCDM_SS_No_Obj,
+                           PCDM_SS_Doc_IsNull,
+                           PCDM_SS_DriverFailure,
+                           PCDM_SS_Failure
+                           )
 from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
 from OCC.Core.STEPCAFControl import (STEPCAFControl_Reader,
                                      STEPCAFControl_Writer)
@@ -60,7 +69,7 @@ class DocModel():
     shared data)."""
 
     def __init__(self):
-        self.doc = self.createDoc()
+        self.doc, self.app = self.createDoc()
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
         # To be used to construct treeView & access labels
@@ -70,24 +79,17 @@ class DocModel():
         self.assy_entry_stack = []  # entries of containing assemblies, immediate last
         self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
 
-    def load_doc(self):
-        pass
-
-    def save_doc(self):
-        pass
-
     def createDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1.
 
         This is done only once in __init__."""
 
         # Create the application and document with empty rootLabel
-        title = "Main document"
-        doc = TDocStd_Document(TCollection_ExtendedString(title))
+        doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
         app = XCAFApp_Application_GetApplication()
-        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
+        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)  # Was "MDTV-XCAF"
+        binxcafdrivers_DefineFormat(app)
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
         # type(doc.Main()) = <class 'OCC.Core.TDF.TDF_Label'>
         # 0:1 doc.Main().EntryDumpToString()
         # 0:1:1   shape_tool is at this label entry
@@ -95,7 +97,7 @@ class DocModel():
         # 0:1:1:1 rootLabel created at this entry
         rootLabel = shape_tool.NewShape()
         self.setLabelName(rootLabel, "Top")
-        return doc
+        return doc, app
 
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry. format: 'entry.serial_number' """
@@ -284,7 +286,10 @@ class DocModel():
         assert status == IFSelect_RetDone
 
         # Create temporary document to receive STEP data
-        temp_doc = TDocStd_Document(TCollection_ExtendedString("linter"))
+        temp_doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
+        app = XCAFApp_Application_GetApplication()
+        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), temp_doc)  # Was "MDTV-XCAF"
+        binxcafdrivers_DefineFormat(app)
 
         step_reader = STEPCAFControl_Reader()
         step_reader.SetColorMode(True)
@@ -320,7 +325,10 @@ class DocModel():
             return
 
         # Create replacement document to receive STEP data
-        temp_doc = TDocStd_Document(TCollection_ExtendedString("step"))
+        temp_doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
+        app = XCAFApp_Application_GetApplication()
+        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), temp_doc)
+        binxcafdrivers_DefineFormat(app)
 
         # Create and prepare step reader
         step_reader = STEPCAFControl_Reader()
@@ -465,6 +473,25 @@ class DocModel():
         step_writer.Transfer(self.doc, STEPControl_AsIs)
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
+
+    def load_doc(self):
+        pass
+
+    def save_doc(self):
+        """Save self.doc to file in eXtended Binary Format (.xbf)"""
+
+        prompt = 'Choose filename for step file.'
+        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
+                                                 "native CAD format (*.xbf)")
+        fname, _ = fnametuple
+        if not fname:
+            print("Save step cancelled.")
+            return
+
+        # One of the few places we need 'app'
+        save_status = self.app.SaveAs(self.doc, TCollection_ExtendedString(fname))
+        if save_status == PCDM_SS_OK:
+            print("File saved successfully.")
 
     def replaceShape(self, uid, modshape):
         """Replace referred shape with modshape of component with uid

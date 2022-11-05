@@ -550,11 +550,11 @@ def load_stp_undr_top():
 
 
 def load_doc():
-    pass
+    doc.load_doc()
 
 
 def save_doc():
-    pass
+    doc.save_doc()
 
 
 #############################################
