@@ -70,6 +70,12 @@ class DocModel():
         self.assy_entry_stack = []  # entries of containing assemblies, immediate last
         self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
 
+    def load_doc(self):
+        pass
+
+    def save_doc(self):
+        pass
+
     def createDoc(self):
         """Create XCAF doc with an empty assembly at entry 0:1:1:1.
 
@@ -359,17 +365,19 @@ class DocModel():
             step_reader.Transfer(temp_doc)
             shape_tool = XCAFDoc_DocumentTool_ShapeTool(temp_doc.Main())
             color_tool = XCAFDoc_DocumentTool_ColorTool(temp_doc.Main())
+
         # Get root label of step data
         labels = TDF_LabelSequence()
-        shape_tool.GetShapes(labels)
-        for j in range(labels.Length()):
+        shape_tool.GetFreeShapes(labels)
+        number_free_shapes_at_root = labels.Length()
+        print(f"{number_free_shapes_at_root = }")
+        for j in range(number_free_shapes_at_root):
             label = labels.Value(j+1)
             shape = shape_tool.GetShape(label)
             color = Quantity_Color()
             name = label.GetLabelName()
             color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
-            isSimpleShape = shape_tool.IsSimpleShape(label)
-            if isSimpleShape:
+            if shape_tool.IsSimpleShape(label):
                 _ = self.addComponent(shape, name, color)
 
     def load_stp_undr_top(self):

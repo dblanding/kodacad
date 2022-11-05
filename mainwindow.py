@@ -280,6 +280,7 @@ class MainWindow(QMainWindow):
     def add_menu(self, menu_name):
         _menu = self.menu_bar.addMenu("&" + menu_name)
         self._menus[menu_name] = _menu
+        return _menu
 
     def add_function_to_menu(self, menu_name, text, _callable):
         assert callable(_callable), "the function supplied is not callable"

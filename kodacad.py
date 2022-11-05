@@ -549,6 +549,14 @@ def load_stp_undr_top():
     win.fitAll()
 
 
+def load_doc():
+    pass
+
+
+def save_doc():
+    pass
+
+
 #############################################
 #
 #  Info & Utility functions
@@ -646,7 +654,11 @@ def setUnits_mm():
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = MainWindow()
-    win.add_menu("File")
+    menu = win.menuBar()
+    file_menu = win.add_menu("File")
+    win.add_function_to_menu("File", "Load File", load_doc)
+    win.add_function_to_menu("File", "Save File", save_doc)
+    file_menu.addSeparator()
     win.add_function_to_menu("File", "Load STEP At Top", load_stp_at_top)
     win.add_function_to_menu("File", "Load STEP Under Top", load_stp_undr_top)
     win.add_function_to_menu("File", "Load STEP Component", load_stp_cmpnt)
