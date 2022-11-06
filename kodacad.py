@@ -312,14 +312,6 @@ def rev_rotateAP():
     win.activePart.Move(aTopLoc)
     win.draw_shape(uid)
 
-def moveAP():
-    """Experiment to move newly created component to loc of its wire"""
-
-    print(f"Moving active part")
-    loc = doc.part_dict['0:1:1:6:4.0']['loc']
-    loc = loc.Inverted()
-    win.activePart.Move(loc)
-
 
 #############################################
 #
@@ -517,9 +509,17 @@ def shellC(shapeList, *args):
 
 #############################################
 #
-#  Load Step functions
+#  Load / Save functions
 #
 #############################################
+
+
+def load_doc():
+    doc.load_doc()
+
+
+def save_doc():
+    doc.save_doc()
 
 
 def load_stp_at_top():
@@ -547,14 +547,6 @@ def load_stp_undr_top():
     win.build_tree()
     win.redraw()
     win.fitAll()
-
-
-def load_doc():
-    doc.load_doc()
-
-
-def save_doc():
-    doc.save_doc()
 
 
 #############################################
@@ -673,7 +665,6 @@ if __name__ == "__main__":
     win.add_menu("Modify Active Part")
     win.add_function_to_menu("Modify Active Part", "Rotate Act Part", rotateAP)
     win.add_function_to_menu("Modify Active Part", "Reverse Rotate Act Part", rev_rotateAP)
-    win.add_function_to_menu("Modify Active Part", "Move Act Part", moveAP)
     win.add_function_to_menu("Modify Active Part", "Mill", mill)
     win.add_function_to_menu("Modify Active Part", "Pull", pull)
     win.add_function_to_menu("Modify Active Part", "Fillet", fillet)

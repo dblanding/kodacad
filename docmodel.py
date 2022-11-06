@@ -44,9 +44,14 @@ from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
+                          TDF_TagSource,
                           TDF_LabelSequence)
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TopLoc import TopLoc_Location
+from OCC.Core.TopoDS import (TopoDS_Shape,
+                             TopoDS_Builder,
+                             TopoDS_Compound,
+                             )
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
                               XCAFDoc_DocumentTool_ColorTool,
@@ -426,7 +431,7 @@ class DocModel():
         if status == IFSelect_RetDone:
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(temp_doc)
-        # Delint tmodel.doc & make new tools
+        # Delint temp.doc & make new tools
         step_doc = self.doc_linter(temp_doc)
         step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
         step_color_tool = XCAFDoc_DocumentTool_ColorTool(step_doc.Main())
@@ -436,7 +441,7 @@ class DocModel():
         step_shape_tool.GetShapes(step_labels)
         steprootLabel = step_labels.Value(1)
         # Make a simple box and add it as a component
-        myBody = BRepPrimAPI_MakeBox(4, 4, 4).Shape()
+        myBody = BRepPrimAPI_MakeBox(1, 1, 1).Shape()
         _ = self.addComponent(myBody, filename, Quantity_ColorRGBA())
         step_shape_tool.UpdateAssemblies()
         # Get target label of self.doc
@@ -449,8 +454,10 @@ class DocModel():
         # Copy source label to target label
         self.copy_label(steprootLabel, targetLabel)
         shape_tool.UpdateAssemblies()
+
         # Repair self.doc by cycling through save/load
         self.doc = self.doc_linter()
+
         # Build new self.part_dict & tree view
         self.parse_doc()
 
