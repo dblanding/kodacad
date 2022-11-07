@@ -509,13 +509,14 @@ def shellC(shapeList, *args):
 
 #############################################
 #
-#  Load / Save functions
+#  Save / Open / Load functions
 #
 #############################################
 
 
-def load_doc():
-    doc.load_doc()
+def open_doc():
+    doc.open_doc()
+    win.build_tree()
 
 
 def save_doc():
@@ -648,7 +649,7 @@ if __name__ == "__main__":
     win = MainWindow()
     menu = win.menuBar()
     file_menu = win.add_menu("File")
-    win.add_function_to_menu("File", "Load File", load_doc)
+    win.add_function_to_menu("File", "Open File", open_doc)
     win.add_function_to_menu("File", "Save File", save_doc)
     file_menu.addSeparator()
     win.add_function_to_menu("File", "Load STEP At Top", load_stp_at_top)

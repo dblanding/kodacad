@@ -29,14 +29,7 @@ from OCC.Core.BinXCAFDrivers import binxcafdrivers_DefineFormat
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
-from OCC.Core.PCDM import (PCDM_SS_Failure,
-                           PCDM_SS_OK,
-                           PCDM_SS_WriteFailure,
-                           PCDM_SS_No_Obj,
-                           PCDM_SS_Doc_IsNull,
-                           PCDM_SS_DriverFailure,
-                           PCDM_SS_Failure
-                           )
+from OCC.Core.PCDM import PCDM_SS_OK, PCDM_RS_OK
 from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
 from OCC.Core.STEPCAFControl import (STEPCAFControl_Reader,
                                      STEPCAFControl_Writer)
@@ -75,6 +68,12 @@ class DocModel():
 
     def __init__(self):
         self.doc, self.app = self.createDoc()
+
+        # Create an empty assembly at entry 0:1:1:1
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
+        rootLabel = shape_tool.NewShape()
+        self.setLabelName(rootLabel, "Top")
+
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
         # To be used to construct treeView & access labels
@@ -85,23 +84,18 @@ class DocModel():
         self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
 
     def createDoc(self):
-        """Create XCAF doc with an empty assembly at entry 0:1:1:1.
+        """Create (and return) XCAF doc and app
 
-        This is done only once in __init__."""
+        entry   label <class 'OCC.Core.TDF.TDF_Label'>
+        0:1     doc.Main()
+        0:1:1   shape_tool is at this label entry
+        0:1:2   color_tool at this entry
 
-        # Create the application and document with empty rootLabel
+        """
         doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
         app = XCAFApp_Application_GetApplication()
-        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)  # Was "MDTV-XCAF"
+        app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
         binxcafdrivers_DefineFormat(app)
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
-        # type(doc.Main()) = <class 'OCC.Core.TDF.TDF_Label'>
-        # 0:1 doc.Main().EntryDumpToString()
-        # 0:1:1   shape_tool is at this label entry
-        # 0:1:2   color_tool at this entry
-        # 0:1:1:1 rootLabel created at this entry
-        rootLabel = shape_tool.NewShape()
-        self.setLabelName(rootLabel, "Top")
         return doc, app
 
     def get_uid_from_entry(self, entry):
@@ -154,10 +148,10 @@ class DocModel():
 
         # Find root label of self.doc
         labels = TDF_LabelSequence()
+        nbr = labels.Length()  # number of labels at root
+        logger.debug(f"Number of labels at doc root : {nbr}")
         shape_tool.GetShapes(labels)
         root_label = labels.Value(1) # First label at root
-        nbr = labels.Length()  # number of labels at root
-        logger.debug('Number of labels at doc root : %i', nbr)
 
         # Get root label information
         # The first label at root holds an assembly, it is the Top Assy.
@@ -431,28 +425,30 @@ class DocModel():
         if status == IFSelect_RetDone:
             logger.info("Transfer doc to STEPCAFControl_Reader")
             step_reader.Transfer(temp_doc)
-        # Delint temp.doc & make new tools
-        step_doc = self.doc_linter(temp_doc)
-        step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
-        step_color_tool = XCAFDoc_DocumentTool_ColorTool(step_doc.Main())
 
         # Get root label of step data
         step_labels = TDF_LabelSequence()
+        step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(temp_doc.Main())
         step_shape_tool.GetShapes(step_labels)
-        steprootLabel = step_labels.Value(1)
-        # Make a simple box and add it as a component
+        step_root_label = step_labels.Value(1)
+
+        # Make a simple box and add it as a component of the top asy at root
+        # And while we are at it, assign it the name of our step file
         myBody = BRepPrimAPI_MakeBox(1, 1, 1).Shape()
         _ = self.addComponent(myBody, filename, Quantity_ColorRGBA())
         step_shape_tool.UpdateAssemblies()
-        # Get target label of self.doc
+
+        # By adding the box as a component, a new label was automatically
+        # added at root to hold the new prototype shape.
+        # This label will be used as our target label
         labels = TDF_LabelSequence()  # labels at root
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         shape_tool.GetShapes(labels)
         n = labels.Length()   # number of labels at root
-        targetLabel = labels.Value(n)  # of ref shape of comp just added
+        target_label = labels.Value(n)  # the new label just added
+
         # Copy source label to target label
-        self.copy_label(steprootLabel, targetLabel)
+        self.copy_label(step_root_label, target_label)
         shape_tool.UpdateAssemblies()
 
         # Repair self.doc by cycling through save/load
@@ -481,24 +477,61 @@ class DocModel():
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
 
-    def load_doc(self):
-        pass
+    def open_doc(self):
+        """Open (.xbf) file, assign it to self.doc
 
-    def save_doc(self):
-        """Save self.doc to file in eXtended Binary Format (.xbf)"""
-
-        prompt = 'Choose filename for step file.'
-        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
+        This isn't working yet.
+        Use workaround: saveStepDoc / load_stp_at_top
+        """
+        prompt = 'Choose filename to open.'
+        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
                                                  "native CAD format (*.xbf)")
         fname, _ = fnametuple
         if not fname:
             print("Save step cancelled.")
             return
 
-        # One of the few places we need 'app'
-        save_status = self.app.SaveAs(self.doc, TCollection_ExtendedString(fname))
+        # Create document to receive data from file
+        doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
+        self.app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
+
+        # Read file and transfer to doc
+        open_status = self.app.Open(TCollection_ExtendedString(fname), doc)
+        if open_status == PCDM_RS_OK:
+            # self.doc = doc
+            # self.parse_doc()
+            # print("File opened successfully.")
+
+            # Save new doc to have a look at it
+            self.save_doc(doc=doc)
+        else:
+            print("Unable to open file.")
+
+    def save_doc(self, doc=None):
+        """Save doc to file in eXtended Binary Format (.xbf)"""
+
+        # Enable using this method to save a doc other than self.doc
+        if not doc:
+            doc = self.doc
+
+        prompt = 'Choose filename for step file.'
+        save_dialog = QFileDialog()
+        fname, _ = save_dialog.getSaveFileName(None, prompt, './',
+                                               "native CAD format (*.xbf)")
+        if not fname:
+            print("Save step cancelled.")
+            return
+
+        # append ".xbf" if the user didn't
+        if not fname.endswith('.xbf'):
+            fname += '.xbf'
+
+        # One of the few places app is needed
+        save_status = self.app.SaveAs(doc, TCollection_ExtendedString(fname))
         if save_status == PCDM_SS_OK:
-            print("File saved successfully.")
+            print(f"File {fname} saved successfully.")
+        else:
+            print("File save failed.")
 
     def replaceShape(self, uid, modshape):
         """Replace referred shape with modshape of component with uid
@@ -547,9 +580,8 @@ class DocModel():
         self.setLabelName(newLabel, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
-        self.doc = self.doc_linter()  # This gets color to work
         self.parse_doc()
-        uid = entry + '.0'  # this should work OK since it is new
+        uid = self.get_uid_from_entry(entry)
         return uid
 
     def add_component_to_asy(self, shape, name, color, tag=1):
