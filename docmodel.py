@@ -81,11 +81,12 @@ class DocModel():
     def create_doc(self):
         """Create (and return) XCAF doc and app
 
-        entry   label <class 'OCC.Core.TDF.TDF_Label'>
-        0:1     doc.Main()
-        0:1:1   shape_tool is at this label entry
-        0:1:2   color_tool at this entry
-
+        entry       label <class 'OCC.Core.TDF.TDF_Label'>
+        0:1         doc.Main()                          (Depth = 1)
+        0:1:1       shape_tool is at this label entry   (Depth = 2)
+        0:1:2       color_tool at this entry            (Depth = 2)
+        0:1:1:1     root_label and all referred shapes  (Depth = 3)
+        0:1:1:x:x   component labels (references)       (Depth = 4)
         """
         doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
         app = XCAFApp_Application_GetApplication()
@@ -179,9 +180,12 @@ class DocModel():
 
         Components of an assembly are, by definition, references which refer
         to either a simple shape or a compound shape (an assembly).
-        Components are essentially 'instances' of the referred shape or assembly
+        Components are essentially 'instances' of a referred shape or assembly
         and carry a location vector specifying the location of the referred
-        shape or assembly."""
+        shape or assembly.
+        The root label and all referred labels have Depth = 3
+        All component labels (references) have Depth = 4
+        """
 
         for j in range(comps.Length()):
             logger.debug("Assy_entry_stack: %s", self.assy_entry_stack)
