@@ -337,7 +337,7 @@ def mill():
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
         win.erase_shape(uid)
-        doc.replaceShape(uid, newPart)
+        doc.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Mill operation complete")
@@ -373,7 +373,7 @@ def pull():
         tool = BRepPrimAPI_MakePrism(pullProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
         win.erase_shape(uid)
-        doc.replaceShape(uid, newPart)
+        doc.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Pull operation complete")
@@ -421,7 +421,7 @@ def fillet(event=None):
         try:
             newPart = mkFillet.Shape()
             win.erase_shape(uid)
-            doc.replaceShape(uid, newPart)
+            doc.replace_shape(uid, newPart)
             win.draw_shape(uid)
             win.statusBar().showMessage("Fillet operation complete")
         except RuntimeError as e:
@@ -453,7 +453,7 @@ def fuse():
         uid = win.activePartUID
         newPart = BRepAlgoAPI_Fuse(workpart, shape).Shape()
         win.erase_shape(uid)
-        doc.replaceShape(uid, newPart)
+        doc.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Fuse operation complete")
@@ -485,7 +485,7 @@ def shell(event=None):
         shellT = float(text) * win.unitscale
         newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.0e-3).Shape()
         win.erase_shape(uid)
-        doc.replaceShape(uid, newPart)
+        doc.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Shell operation complete")
@@ -655,7 +655,7 @@ if __name__ == "__main__":
     win.add_function_to_menu("File", "Load STEP At Top", load_stp_at_top)
     win.add_function_to_menu("File", "Load STEP Under Top", load_stp_undr_top)
     win.add_function_to_menu("File", "Load STEP Component", load_stp_cmpnt)
-    win.add_function_to_menu("File", "Save STEP (Top)", doc.saveStepDoc)
+    win.add_function_to_menu("File", "Save STEP (Top)", doc.save_step_doc)
     win.add_menu("Workplane")
     win.add_function_to_menu("Workplane", "At Origin, XY Plane", makeWP)
     win.add_function_to_menu("Workplane", "On face", wpOnFace)

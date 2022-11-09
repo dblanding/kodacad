@@ -37,14 +37,9 @@ from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
-                          TDF_TagSource,
                           TDF_LabelSequence)
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Core.TopoDS import (TopoDS_Shape,
-                             TopoDS_Builder,
-                             TopoDS_Compound,
-                             )
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
                               XCAFDoc_DocumentTool_ColorTool,
@@ -67,12 +62,12 @@ class DocModel():
     shared data)."""
 
     def __init__(self):
-        self.doc, self.app = self.createDoc()
+        self.doc, self.app = self.create_doc()
 
         # Create an empty assembly at entry 0:1:1:1
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        rootLabel = shape_tool.NewShape()
-        self.setLabelName(rootLabel, "Top")
+        root_label = shape_tool.NewShape()
+        self.set_label_name(root_label, "Top")
 
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
@@ -83,7 +78,7 @@ class DocModel():
         self.assy_entry_stack = []  # entries of containing assemblies, immediate last
         self.assy_loc_stack = []  # applicable <TopLoc_Location> locations
 
-    def createDoc(self):
+    def create_doc(self):
         """Create (and return) XCAF doc and app
 
         entry   label <class 'OCC.Core.TDF.TDF_Label'>
@@ -315,9 +310,8 @@ class DocModel():
         been saved as a STEP file."""
 
         prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
+        fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
+                                               "STEP files (*.stp *.STP *.step)")
         logger.debug("Load file name: %s", fname)
         if not fname:
             print("Load step cancelled")
@@ -349,9 +343,8 @@ class DocModel():
         This is the way to load step files containing a single shape at root."""
 
         prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
+        fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
+                                               "STEP files (*.stp *.STP *.step)")
         logger.debug("Load file name: %s", fname)
         if not fname:
             print("Load step cancelled")
@@ -385,7 +378,7 @@ class DocModel():
             name = label.GetLabelName()
             color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
             if shape_tool.IsSimpleShape(label):
-                _ = self.addComponent(shape, name, color)
+                _ = self.add_component(shape, name, color)
 
     def load_stp_undr_top(self):
         """Paste step root label under 1st label at self.doc root
@@ -401,9 +394,8 @@ class DocModel():
         """
 
         prompt = 'Select STEP file to import'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple  # fname = /path/to/some/filename.ext
+        fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
+                                               "STEP files (*.stp *.STP *.step)")
         base = os.path.basename(fname)  # filename.ext
         filename, ext = os.path.splitext(base)
         logger.debug("Load file name: %s", fname)
@@ -435,7 +427,7 @@ class DocModel():
         # Make a simple box and add it as a component of the top asy at root
         # And while we are at it, assign it the name of our step file
         myBody = BRepPrimAPI_MakeBox(1, 1, 1).Shape()
-        _ = self.addComponent(myBody, filename, Quantity_ColorRGBA())
+        _ = self.add_component(myBody, filename, Quantity_ColorRGBA())
         step_shape_tool.UpdateAssemblies()
 
         # By adding the box as a component, a new label was automatically
@@ -457,13 +449,12 @@ class DocModel():
         # Build new self.part_dict & tree view
         self.parse_doc()
 
-    def saveStepDoc(self):
+    def save_step_doc(self):
         """Export self.doc to STEP file."""
 
         prompt = 'Choose filename for step file.'
-        fnametuple = QFileDialog.getSaveFileName(None, prompt, './',
-                                                 "STEP files (*.stp *.STP *.step)")
-        fname, _ = fnametuple
+        fname, _ = QFileDialog.getSaveFileName(None, prompt, './',
+                                               "STEP files (*.stp *.STP *.step)")
         if not fname:
             print("Save step cancelled.")
             return
@@ -481,12 +472,12 @@ class DocModel():
         """Open (.xbf) file, assign it to self.doc
 
         This isn't working yet.
-        Use workaround: saveStepDoc / load_stp_at_top
+        Use workaround: save_step_doc / load_stp_at_top
         """
         prompt = 'Choose filename to open.'
-        fnametuple = QFileDialog.getOpenFileName(None, prompt, './',
-                                                 "native CAD format (*.xbf)")
-        fname, _ = fnametuple
+        fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
+                                               "native CAD format (*.xbf)")
+
         if not fname:
             print("Save step cancelled.")
             return
@@ -533,7 +524,7 @@ class DocModel():
         else:
             print("File save failed.")
 
-    def replaceShape(self, uid, modshape):
+    def replace_shape(self, uid, modshape):
         """Replace referred shape with modshape of component with uid
 
         The modified part is a located instance of a referred shape stored
@@ -559,27 +550,28 @@ class DocModel():
         shape_tool.UpdateAssemblies()
         self.parse_doc()  # generate new part_dict
 
-    def addComponent(self, shape, name, color):
+    def add_component(self, shape, name, color):
         """Add new shape to top assembly of self.doc & return uid"""
         labels = TDF_LabelSequence()
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         shape_tool.GetShapes(labels)
         try:
-            rootLabel = labels.Value(1) # First label at root
+            root_label = labels.Value(1) # First label at root
         except RuntimeError as e:
             print(e)
             return
-        newLabel = shape_tool.AddComponent(rootLabel, shape, True)
-        entry = newLabel.EntryDumpToString()
-        # Get referrred label and apply color to it
-        refLabel = TDF_Label()  # label of referred shape
-        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
+        new_label = shape_tool.AddComponent(root_label, shape, True)
+        entry = new_label.EntryDumpToString()
+        # Get referred label and apply color to it
+        ref_label = TDF_Label()  # label of referred shape
+        isRef = shape_tool.GetReferredShape(new_label, ref_label)
         if isRef:
-            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
-        self.setLabelName(newLabel, name)
+            color_tool.SetColor(ref_label, color, XCAFDoc_ColorGen)
+        self.set_label_name(new_label, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
+        self.doc = self.doc_linter()  # part names get hosed without this
         self.parse_doc()
         uid = self.get_uid_from_entry(entry)
         return uid
@@ -595,14 +587,14 @@ class DocModel():
         except RuntimeError as e:
             print(e)
             return
-        newLabel = shape_tool.AddComponent(asyLabel, shape, True)
-        entry = newLabel.EntryDumpToString()
+        new_label = shape_tool.AddComponent(asyLabel, shape, True)
+        entry = new_label.EntryDumpToString()
         # Get referred label and apply color to it
-        refLabel = TDF_Label()  # label of referred shape
-        isRef = shape_tool.GetReferredShape(newLabel, refLabel)
+        ref_label = TDF_Label()  # label of referred shape
+        isRef = shape_tool.GetReferredShape(new_label, ref_label)
         if isRef:
-            color_tool.SetColor(refLabel, color, XCAFDoc_ColorGen)
-        self.setLabelName(newLabel, name)
+            color_tool.SetColor(ref_label, color, XCAFDoc_ColorGen)
+        self.set_label_name(new_label, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
         self.doc = self.doc_linter()  # This gets color to work
@@ -610,10 +602,10 @@ class DocModel():
         uid = entry + '.0'  # this should work OK since it is new
         return uid
 
-    def getLabelName(self, label):
+    def get_label_name(self, label):
         return label.GetLabelName()
 
-    def setLabelName(self, label, name):
+    def set_label_name(self, label, name):
         TDataStd_Name.Set(label, TCollection_ExtendedString(name))
 
     def change_label_name(self, uid, name):
@@ -635,7 +627,7 @@ class DocModel():
         subchilds = False
         is_assy = shape_tool.GetComponents(label, comps, subchilds)
         target_label = comps.Value(k)
-        self.setLabelName(target_label, name)
+        self.set_label_name(target_label, name)
         shape_tool.UpdateAssemblies()
         print(f"Name {name} set for part with uid = {uid}.")
         self.parse_doc()
