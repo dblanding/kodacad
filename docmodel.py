@@ -403,8 +403,8 @@ class DocModel():
             print("Load step cancelled")
             return
 
-        # Create replacement document to receive STEP data
-        temp_doc = TDocStd_Document(TCollection_ExtendedString("step"))
+        # Create document to receive STEP data
+        temp_doc, temp_app = self.create_doc()
 
         # Create and prepare step reader
         step_reader = STEPCAFControl_Reader()

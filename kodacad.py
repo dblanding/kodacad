@@ -397,7 +397,12 @@ def fillet(event=None):
     if win.lineEditStack and win.edgeStack:
         topo = Topology.Topo(win.activePart)
         text = win.lineEditStack.pop()
-        filletR = float(text) * win.unitscale
+        try:
+            fillet_r = float(text) * win.unitscale
+        except ValueError:
+            print(f"Expected a number. You entered '{text}'")
+            win.clearCallback()
+            return
         edges = []
         # Test if edge(s) selected are in active part
         for edge in win.edgeStack:
@@ -417,7 +422,7 @@ def fillet(event=None):
         uid = win.activePartUID
         mkFillet = BRepFilletAPI_MakeFillet(workPart)
         for edge in edges:
-            mkFillet.Add(filletR, edge)
+            mkFillet.Add(fillet_r, edge)
         try:
             newPart = mkFillet.Shape()
             win.erase_shape(uid)
