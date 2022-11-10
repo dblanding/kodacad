@@ -534,7 +534,7 @@ def load_stp_at_top():
     This effectively allows step to be a surrogate for file save/load."""
     win.setActivePart(0)
     win.setActiveAsy(0)
-    docmodel.load_stp_at_top()
+    docmodel.load_stp_at_top(dm)
     win.build_tree()
     win.redraw()
     win.fitAll()
@@ -542,7 +542,7 @@ def load_stp_at_top():
 
 def load_stp_cmpnt():
     """Load root level shape(s) in step file as component(s) under top."""
-    docmodel.load_stp_cmpnt()
+    docmodel.load_stp_cmpnt(dm)
     win.build_tree()
     win.redraw()
     win.fitAll()

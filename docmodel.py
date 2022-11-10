@@ -453,32 +453,54 @@ class DocModel():
         print(f"Name {name} set for part with uid = {uid}.")
         self.parse_doc()
 
-    def get_name_from_uid(self, uid):
-        """Get name of label with uid."""
-        entry, _ = uid.split('.')
-        entry_parts = entry.split(':')
-        if len(entry_parts) == 4:  # first label at root
-            j = 1
-            k = None
-        elif len(entry_parts) == 5:  # part is a component of label at root
-            j = int(entry_parts[3])  # number of label at root
-            k = int(entry_parts[4])  # component number
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
-        labels = TDF_LabelSequence()  # labels at root of self.doc
-        shape_tool.GetShapes(labels)
-        label = labels.Value(j)
-        comps = TDF_LabelSequence()  # Components of root_label
-        subchilds = False
-        is_assy = shape_tool.GetComponents(label, comps, subchilds)
-        try:
-            target_label = comps.Value(k)
-            return target_label.GetLabelName()
-        except RuntimeError as e:
-            print(f"Index out of range {e}")
-            return None
 
+def set_name_from_uid(doc, uid, name):
+    """Set name of label with uid."""
+    entry, _ = uid.split('.')
+    entry_parts = entry.split(':')
+    if len(entry_parts) == 4:  # first label at root
+        j = 1
+        k = None
+    elif len(entry_parts) == 5:  # part is a component of label at root
+        j = int(entry_parts[3])  # number of label at root
+        k = int(entry_parts[4])  # component number
+    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+    labels = TDF_LabelSequence()  # labels at root of self.doc
+    shape_tool.GetShapes(labels)
+    label = labels.Value(j)
+    comps = TDF_LabelSequence()  # Components of root_label
+    subchilds = False
+    is_assy = shape_tool.GetComponents(label, comps, subchilds)
+    try:
+        target_label = comps.Value(k)
+        TDataStd_Name.Set(target_label, TCollection_ExtendedString(name))
+    except RuntimeError as e:
+        print(f"Index out of range {e}")
+        return None
 
+def get_name_from_uid(doc, uid):
+    """Get name of label with uid."""
+    entry, _ = uid.split('.')
+    entry_parts = entry.split(':')
+    if len(entry_parts) == 4:  # first label at root
+        j = 1
+        k = None
+    elif len(entry_parts) == 5:  # part is a component of label at root
+        j = int(entry_parts[3])  # number of label at root
+        k = int(entry_parts[4])  # component number
+    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+    labels = TDF_LabelSequence()  # labels at root of self.doc
+    shape_tool.GetShapes(labels)
+    label = labels.Value(j)
+    comps = TDF_LabelSequence()  # Components of root_label
+    subchilds = False
+    is_assy = shape_tool.GetComponents(label, comps, subchilds)
+    try:
+        target_label = comps.Value(k)
+        return target_label.GetLabelName()
+    except RuntimeError as e:
+        print(f"Index out of range {e}")
+        return None
 
 def doc_linter(dm):
     """Clean dm.doc by cycling through a STEP save/load cycle."""
@@ -517,25 +539,21 @@ def copy_label(source_label, target_label):
     cp_label.Perform()
     return cp_label.IsDone()
 
-def load_stp_at_top(dm):
-    """Get OCAF document from STEP file and assign it directly to self.doc.
-
-    This works as a surrogate for loading a CAD project that has previously
-    been saved as a STEP file."""
+def _load_step():
+    """Read step file at f_path, transfer data to doc, return doc."""
 
     prompt = 'Select STEP file to import'
-    fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
+    f_path, _ = QFileDialog.getOpenFileName(None, prompt, './',
                                            "STEP files (*.stp *.STP *.step)")
-    logger.debug("Load file name: %s", fname)
-    if not fname:
+    base = os.path.basename(f_path)  # f_name.ext
+    f_name, ext = os.path.splitext(base)
+    logger.debug("Load file name: %s", f_path)
+    if not f_path:
         print("Load step cancelled")
         return
 
-    # Create replacement document to receive STEP data
-    temp_doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
-    app = XCAFApp_Application_GetApplication()
-    app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), temp_doc)
-    binxcafdrivers_DefineFormat(app)
+    # Create a new instance of DocModel for the step file
+    doc, app = create_doc()
 
     # Create and prepare step reader
     step_reader = STEPCAFControl_Reader()
@@ -544,41 +562,31 @@ def load_stp_at_top(dm):
     step_reader.SetNameMode(True)
     step_reader.SetMatMode(True)
 
-    status = step_reader.ReadFile(fname)
+    status = step_reader.ReadFile(f_path)
     if status == IFSelect_RetDone:
-        step_reader.Transfer(temp_doc)
-        logger.info("Transfer temp_doc to STEPCAFControl_Reader")
-        self.doc = temp_doc
-        self.parse_doc()
+        logger.info("Transfer doc to STEPCAFControl_Reader")
+        step_reader.Transfer(doc)
+    return f_name, doc, app
+
+def load_stp_at_top(dm):
+    """Get OCAF document from STEP file and assign it directly to dm.doc.
+
+    This works as a surrogate for loading a CAD project that has previously
+    been saved as a STEP file."""
+
+    f_name, doc, app = _load_step()
+    logger.info("Transfer temp_doc to STEPCAFControl_Reader")
+    dm.doc = doc
+    dm.app = app
+    dm.parse_doc()
 
 def load_stp_cmpnt(dm):
     """Get OCAF document from STEP file and add (as component) to doc root.
 
     This is the way to load step files containing a single shape at root."""
-
-    prompt = 'Select STEP file to import'
-    fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
-                                           "STEP files (*.stp *.STP *.step)")
-    logger.debug("Load file name: %s", fname)
-    if not fname:
-        print("Load step cancelled")
-        return
-
-    # Create replacement document to receive STEP data
-    temp_doc = TDocStd_Document(TCollection_ExtendedString("step"))
-
-    step_reader = STEPCAFControl_Reader()
-    step_reader.SetColorMode(True)
-    step_reader.SetLayerMode(True)
-    step_reader.SetNameMode(True)
-    step_reader.SetMatMode(True)
-
-    status = step_reader.ReadFile(fname)
-    if status == IFSelect_RetDone:
-        logger.info("Transfer doc to STEPCAFControl_Reader")
-        step_reader.Transfer(temp_doc)
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(temp_doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(temp_doc.Main())
+    f_name, doc, app = _load_step()
+    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+    color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
 
     # Get root label of step data
     labels = TDF_LabelSequence()
@@ -592,120 +600,52 @@ def load_stp_cmpnt(dm):
         name = label.GetLabelName()
         color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
         if shape_tool.IsSimpleShape(label):
-            _ = self.add_component(shape, name, color)
+            _ = dm.add_component(shape, name, color)
 
 def load_stp_undr_top(dm):
     """Paste step root label under Top label at dm root
 
-    When copying file 'as1-oc-214.stp' to 0:1:1:2 (tag=2)
-    the part name of the first component under Top is wrong.
-    It should be the step file_name. Also, the part name of the first
-    component under the newly added step file gets over-written with
-    the step file_name. I'm not sure why this is.
-    Now, I go back and repair both of these names.
+    When pasting a step file onto the project document model,
+    the 0:1:1:2:1 label of the project document model and
+    the 0:1:1:2:1 label of the step file get messed up.
+    After the step file is pasted on, the 0:1:1:2:1 label
+    of the project document model should be f_name
+    and the 0:1:1:3:1 label should be set to the name of the
+    0:1:1:2:1 label of the step file doc prior to pasting on.
+    I don't why this is., but for now, both of these names
+    need to be repaired after the pasting the step file on.
+
     Also, step files loaded subsequently (at higher values of tag)
     don't get loaded with their colors.
     Doesn't work at all with some files (such as 'as1_pe_203.stp')
     loaded at any value of tag. ??
     """
+    f_name, step_doc, step_app = _load_step()
 
-    prompt = 'Select STEP file to import'
-    fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
-                                           "STEP files (*.stp *.STP *.step)")
-    base = os.path.basename(fname)  # filename.ext
-    filename, ext = os.path.splitext(base)
-    logger.debug("Load file name: %s", fname)
-    if not fname:
-        print("Load step cancelled")
-        return
+    uid = '0:1:1:2:1.0'
+    part_name = get_name_from_uid(step_doc, uid)
+    print(f"{part_name = }")
 
-    # Add a simple box component under the top assembly at root
+    # Add a box as a component under the top assembly at root
     shape = BRepPrimAPI_MakeBox(0.1, 0.1, 0.1).Shape()
     labels = TDF_LabelSequence()
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
     shape_tool.GetShapes(labels)
-    try:
-        root_label = labels.Value(1)  # First label at root
-    except RuntimeError as e:
-        print(f"Unable to find root label {e}")
-        return
-    print(f"root_label entry is {root_label.EntryDumpToString()}")
-    print(f"root label name is {root_label.GetLabelName()}")
+    root_label = labels.Value(1)  # First label at root
     c_label = shape_tool.AddComponent(root_label, shape, True)
-    c_entry = c_label.EntryDumpToString()
-    c_uid = dm.get_uid_from_entry(c_entry)
-    c_name = filename
-    TDataStd_Name.Set(c_label, TCollection_ExtendedString(filename))
-    print(f"component_label entry is {c_entry}")
-    print(f"Component label name is {c_label.GetLabelName()}")
 
     # By adding the box as a component, a new label is automatically
     # added at root to hold the new prototype shape.
-    # This label will be used as our target label
+    # This label will be the target for pasting step data.
     ref_label = TDF_Label()  # label of referred shape
     is_ref = shape_tool.GetReferredShape(c_label, ref_label)
+    target_label = ref_label
 
-    if is_ref:
-        target_label = ref_label
-        print("target label = ref label")
-
-    else:
-        n = labels.Length()   # number of labels at root
-        target_label = labels.Value(n)  # the new label just added
-        print("target label = label with highest value tag")
-
-    print(f"ref_label entry is {ref_label.EntryDumpToString()}")
-    print(f"ref_label name is {ref_label.GetLabelName()}")
-    shape_tool.UpdateAssemblies()
-
-    # Create a new instance of DocModel for the step file
-    step_doc, step_app = create_doc()
-
-    # Create and prepare step reader
-    step_reader = STEPCAFControl_Reader()
-    step_reader.SetColorMode(True)
-    step_reader.SetLayerMode(True)
-    step_reader.SetNameMode(True)
-    step_reader.SetMatMode(True)
-
-    status = step_reader.ReadFile(fname)
-    if status == IFSelect_RetDone:
-        logger.info("Transfer doc to STEPCAFControl_Reader")
-        step_reader.Transfer(step_doc)
-
-    # Get root label of step data
+    # Get root label of step data to paste
     step_labels = TDF_LabelSequence()
     step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
     step_shape_tool.GetShapes(step_labels)
     step_root_label = step_labels.Value(1)
-
-    """
-    # Find first component label of step_root_label
-    top_comps = TDF_LabelSequence() # Components of Top Assy
-    subchilds = False
-    is_assy = step_shape_tool.GetComponents(step_root_label, top_comps, subchilds)
-    if top_comps.Length():
-        step_comp_1 = top_comps.Value(1)
-        step_comp_name = step_comp_1.GetLabelName()
-        print(step_comp_name)
-
-    # find ref label of first component label
-    ref_label = TDF_Label()  # label of referred shape (or assembly)
-    is_ref = step_shape_tool.GetReferredShape(step_comp_1, ref_label)
-    print(f"{is_ref = }")
-    ref_name = ref_label.GetLabelName()
-    ref_entry = ref_label.EntryDumpToString()
-    print(f"{ref_name = } {ref_entry = }")
-
-    # find first component of ref label
-    comps = TDF_LabelSequence() # Components of ref label
-    subchilds = False
-    is_assy = step_shape_tool.GetComponents(ref_label, comps, subchilds)
-    if comps.Length():
-        step_comp_1 = comps.Value(1)
-        step_comp_name = step_comp_1.GetLabelName()
-        print(f"{step_comp_name = } [{step_comp_1.EntryDumpToString()}]")
-    """
 
     # Copy source label to target label
     copy_label(step_root_label, target_label)
@@ -713,11 +653,12 @@ def load_stp_undr_top(dm):
 
     # Restore part color by cycling through save/load
     dm.doc = doc_linter(dm)
-    # new self.doc means we need a new shape_tool
+
+    # new doc means we need a new shape_tool
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
     shape_tool.UpdateAssemblies()
 
-    # Repair component label name = step file_name
+    # Repair component label name under 'Top'
     labels = TDF_LabelSequence()
     shape_tool.GetShapes(labels)
     root_label = labels.Value(1)  # First label at root
@@ -726,10 +667,12 @@ def load_stp_undr_top(dm):
     is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
     n = top_comps.Length()
     new_comp_label = top_comps.Value(n)
-    # TDataStd_Name.Set(new_comp_label, TCollection_ExtendedString(filename))
+    TDataStd_Name.Set(new_comp_label, TCollection_ExtendedString(f_name))
     shape_tool.UpdateAssemblies()
 
     # Repair component label name inside step file
+    uid = '0:1:1:3:1.0'
+    set_name_from_uid(dm.doc, uid, part_name)
 
     # Build new self.part_dict & tree view
     dm.parse_doc()
