@@ -73,7 +73,7 @@ print("OCC version: %s" % VERSION)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)  # set to DEBUG | INFO | ERROR
 
-doc = DocModel()
+dm = DocModel()
 
 
 class TreeView(QTreeWidget):
@@ -161,7 +161,7 @@ class MainWindow(QMainWindow):
     be erased are erased and the items to be drawn are drawn, and the hide_list
     is then updated.
 
-    When a part is newly created or loaded (step), the doc model is changed and
+    When a part is newly created or loaded (step), the doc model (dm) is changed and
     this results in the regeneration of the tree view. As the new tree view
     items are generated, they are shown checked except for the ones that are
     contained in the hide_list. """
@@ -251,7 +251,7 @@ class MainWindow(QMainWindow):
         self.setActiveAsy(self.activeAsyUID)
 
         # Show 'Top' assy in initial tree view
-        doc.parse_doc()
+        dm.parse_doc()
         self.build_tree()
 
     def createDockWidget(self):
@@ -308,15 +308,15 @@ class MainWindow(QMainWindow):
     #############################################
 
     def build_tree(self):
-        """Build new tree view from doc.label_dict.
+        """Build new tree view from dm.label_dict.
 
-        This method is called whenever doc.doc is modified in a way that would
+        This method is called whenever dm.doc is modified in a way that would
         result in a change in the tree view. The tree view represents the
         hierarchical structure of the top assembly and its components."""
         self.clearTree()
         self.assy_list = []
         parent_item_dict = {}  # {uid: tree view item}
-        for uid, dic in doc.label_dict.items():
+        for uid, dic in dm.label_dict.items():
             # dic: {keys: 'entry', 'name', 'parent_uid', 'ref_entry'}
             entry = dic["entry"]
             name = dic["name"]
@@ -392,7 +392,7 @@ class MainWindow(QMainWindow):
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             if item.checkState(0) == Qt.Unchecked:
                 uid = item.text(1)
-                if (uid in doc.part_dict) or (uid in self.wp_dict):
+                if (uid in dm.part_dict) or (uid in self.wp_dict):
                     dl.append(uid)
         return dl
 
@@ -425,10 +425,10 @@ class MainWindow(QMainWindow):
                 self.hide_list.append(uid)
                 self.redraw()
             # Otherwise, we can do an incremental change in the display
-            elif uid in doc.part_dict:
+            elif uid in dm.part_dict:
                 self.erase_shape(uid)  # Erase the shape
         for uid in newly_checked:
-            if uid in doc.part_dict:
+            if uid in dm.part_dict:
                 self.draw_shape(uid)  # Draw the shape
             elif uid in self.wp_dict:
                 self.draw_wp(uid)  # Draw the workplane
@@ -439,7 +439,7 @@ class MainWindow(QMainWindow):
         that were previously hidden are still unchecked in new treeView."""
         for item in self.treeView.findItems("", Qt.MatchContains | Qt.MatchRecursive):
             uid = item.text(1)
-            if (uid in doc.part_dict) or (uid in self.wp_dict):
+            if (uid in dm.part_dict) or (uid in self.wp_dict):
                 if uid in self.hide_list:
                     item.setCheckState(0, Qt.Unchecked)
                 else:
@@ -456,7 +456,7 @@ class MainWindow(QMainWindow):
             item = iterator.value()
             name = item.text(0)
             uid = item.text(1)
-            if uid in doc.part_dict:
+            if uid in dm.part_dict:
                 pdict[uid] = item
             elif uid in self.assy_list:
                 adict[uid] = item
@@ -481,9 +481,9 @@ class MainWindow(QMainWindow):
             elif uid.startswith("wp"):
                 print(f"Workplane: uid: {uid}; name: {name}")
             else:
-                entry = doc.label_dict[uid]["entry"]
-                ref_ent = doc.label_dict[uid]["ref_entry"]
-                is_assy = doc.label_dict[uid]["is_assy"]
+                entry = dm.label_dict[uid]["entry"]
+                ref_ent = dm.label_dict[uid]["ref_entry"]
+                is_assy = dm.label_dict[uid]["is_assy"]
                 if is_assy:
                     print(
                         f"Assembly: uid: {uid}; name: {name}; entry: {entry}; ref_entry: {ref_ent}"
@@ -554,7 +554,7 @@ class MainWindow(QMainWindow):
         item = self.itemClicked
         if item:
             uid = item.text(1)
-            if uid in doc.part_dict:
+            if uid in dm.part_dict:
                 self.transparency_dict[uid] = 0.6
                 self.erase_shape(uid)
                 self.draw_shape(uid)
@@ -565,7 +565,7 @@ class MainWindow(QMainWindow):
         item = self.itemClicked
         if item:
             uid = item.text(1)
-            if uid in doc.part_dict:
+            if uid in dm.part_dict:
                 self.transparency_dict.pop(uid)
                 self.erase_shape(uid)
                 self.draw_shape(uid)
@@ -584,7 +584,7 @@ class MainWindow(QMainWindow):
                 print(f"UID= {uid}, name = {newName}")
                 self.treeView.clearSelection()
                 self.itemClicked = None
-                doc.change_label_name(uid, newName)
+                dm.change_label_name(uid, newName)
                 self.build_tree()
 
     #############################################
@@ -626,7 +626,7 @@ class MainWindow(QMainWindow):
         # modify status in self
         self.activePartUID = uid
         if uid:
-            self.activePart = doc.part_dict[uid]["shape"]
+            self.activePart = dm.part_dict[uid]["shape"]
             # show as active in treeView
             self.showItemActive(uid)
         else:
@@ -704,7 +704,7 @@ class MainWindow(QMainWindow):
             context.SetAutoActivateSelection(True)
         context.RemoveAll(True)
         # Redraw all parts except those hidden
-        for uid in doc.part_dict:
+        for uid in dm.part_dict:
             if uid not in self.hide_list:
                 self.draw_shape(uid)
         # Redraw workplanes except those hidden
@@ -770,7 +770,7 @@ class MainWindow(QMainWindow):
                 transp = self.transparency_dict[uid]
             else:
                 transp = 0.0
-            part_data = doc.part_dict[uid]
+            part_data = dm.part_dict[uid]
             shape = part_data["shape"]
             color = part_data["color"]
             try:

@@ -48,7 +48,8 @@ from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
 
 from m2d import M2D
 import stepanalyzer
-from mainwindow import MainWindow, doc
+import docmodel
+from mainwindow import MainWindow, dm
 from OCCUtils import Topology
 import workplane
 
@@ -175,8 +176,8 @@ def get_tag_of_active_asy():
     tag = 1  # value of tag for first label at root (default)
     act_asy_uid = win.activeAsyUID
     if act_asy_uid:
-        if doc.label_dict[act_asy_uid]["is_assy"]:
-            ref_entry = doc.label_dict[act_asy_uid]["ref_entry"]
+        if dm.label_dict[act_asy_uid]["is_assy"]:
+            ref_entry = dm.label_dict[act_asy_uid]["ref_entry"]
             if ref_entry:
                 tag = int(ref_entry.split(':')[-1])
     return tag
@@ -187,7 +188,7 @@ def get_inv_loc_of_active_asy():
     loc = TopLoc_Location()
     act_asy_uid = win.activeAsyUID
     if act_asy_uid:
-        loc = doc.label_dict[act_asy_uid]["inv_loc"]
+        loc = dm.label_dict[act_asy_uid]["inv_loc"]
     return loc
 
 
@@ -208,7 +209,7 @@ def extrude():
         aPrismVec = wp.wVec * length
         new_part = BRepPrimAPI_MakePrism(myFaceProfile.Shape(), aPrismVec).Shape()
         loc_new_part = BRepBuilderAPI_Transform(new_part, loc.Transformation()).Shape()
-        uid = doc.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
+        uid = dm.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
         win.draw_shape(uid)
@@ -248,7 +249,7 @@ def revolve():
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
         new_part = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
         loc_new_part = BRepBuilderAPI_Transform(new_part, loc.Transformation()).Shape()
-        uid = doc.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
+        uid = dm.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
         win.draw_shape(uid)
@@ -337,7 +338,7 @@ def mill():
         tool = BRepPrimAPI_MakePrism(punchProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Cut(workPart, tool).Shape()
         win.erase_shape(uid)
-        doc.replace_shape(uid, newPart)
+        dm.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Mill operation complete")
@@ -373,7 +374,7 @@ def pull():
         tool = BRepPrimAPI_MakePrism(pullProfile.Shape(), aPrismVec).Shape()
         newPart = BRepAlgoAPI_Fuse(workPart, tool).Shape()
         win.erase_shape(uid)
-        doc.replace_shape(uid, newPart)
+        dm.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Pull operation complete")
@@ -426,7 +427,7 @@ def fillet(event=None):
         try:
             newPart = mkFillet.Shape()
             win.erase_shape(uid)
-            doc.replace_shape(uid, newPart)
+            dm.replace_shape(uid, newPart)
             win.draw_shape(uid)
             win.statusBar().showMessage("Fillet operation complete")
         except RuntimeError as e:
@@ -458,7 +459,7 @@ def fuse():
         uid = win.activePartUID
         newPart = BRepAlgoAPI_Fuse(workpart, shape).Shape()
         win.erase_shape(uid)
-        doc.replace_shape(uid, newPart)
+        dm.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Fuse operation complete")
@@ -490,7 +491,7 @@ def shell(event=None):
         shellT = float(text) * win.unitscale
         newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.0e-3).Shape()
         win.erase_shape(uid)
-        doc.replace_shape(uid, newPart)
+        dm.replace_shape(uid, newPart)
         win.draw_shape(uid)
         win.setActivePart(uid)
         win.statusBar().showMessage("Shell operation complete")
@@ -520,12 +521,12 @@ def shellC(shapeList, *args):
 
 
 def open_doc():
-    doc.open_doc()
+    dm.open_doc()
     win.build_tree()
 
 
 def save_doc():
-    doc.save_doc()
+    dm.save_doc()
 
 
 def load_stp_at_top():
@@ -533,7 +534,7 @@ def load_stp_at_top():
     This effectively allows step to be a surrogate for file save/load."""
     win.setActivePart(0)
     win.setActiveAsy(0)
-    doc.load_stp_at_top()
+    docmodel.load_stp_at_top()
     win.build_tree()
     win.redraw()
     win.fitAll()
@@ -541,7 +542,7 @@ def load_stp_at_top():
 
 def load_stp_cmpnt():
     """Load root level shape(s) in step file as component(s) under top."""
-    doc.load_stp_cmpnt()
+    docmodel.load_stp_cmpnt()
     win.build_tree()
     win.redraw()
     win.fitAll()
@@ -549,7 +550,7 @@ def load_stp_cmpnt():
 
 def load_stp_undr_top():
     """Copy root label (with located components) of step file under top."""
-    doc.load_stp_undr_top()
+    docmodel.load_stp_undr_top(dm)
     win.build_tree()
     win.redraw()
     win.fitAll()
@@ -563,15 +564,15 @@ def load_stp_undr_top():
 
 
 def print_uid_dict():
-    pprint.pprint(doc.label_dict)
+    pprint.pprint(dm.label_dict)
 
 
 def print_part_dict():
-    pprint.pprint(doc.part_dict)
+    pprint.pprint(dm.part_dict)
 
 
 def dumpDoc():
-    sa = stepanalyzer.StepAnalyzer(document=doc.doc)
+    sa = stepanalyzer.StepAnalyzer(document=dm.doc)
     dumpdata = sa.dump()
     print(dumpdata)
 
@@ -584,7 +585,7 @@ def topoDumpAP():
 def printActiveAsyInfo():
     uid = win.activeAsyUID
     if uid:
-        name = doc.label_dict[uid]["name"]
+        name = dm.label_dict[uid]["name"]
         print(f"Active Assembly (uid) Name: ({uid}) {name}")
     else:
         print("None active")
@@ -602,7 +603,7 @@ def printActiveWpInfo():
 def printActivePartInfo():
     uid = win.activePartUID
     if uid:
-        name = doc.label_dict[uid]["name"]
+        name = dm.label_dict[uid]["name"]
         print(f"Active Part (uid) Name: ({uid}) {name}")
     else:
         print("None active")
@@ -660,7 +661,7 @@ if __name__ == "__main__":
     win.add_function_to_menu("File", "Load STEP At Top", load_stp_at_top)
     win.add_function_to_menu("File", "Load STEP Under Top", load_stp_undr_top)
     win.add_function_to_menu("File", "Load STEP Component", load_stp_cmpnt)
-    win.add_function_to_menu("File", "Save STEP (Top)", doc.save_step_doc)
+    win.add_function_to_menu("File", "Save STEP (Top)", dm.save_step_doc)
     win.add_menu("Workplane")
     win.add_function_to_menu("Workplane", "At Origin, XY Plane", makeWP)
     win.add_function_to_menu("Workplane", "On face", wpOnFace)
