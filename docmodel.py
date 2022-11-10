@@ -605,23 +605,23 @@ def load_stp_cmpnt(dm):
 def load_stp_undr_top(dm):
     """Paste step root label under Top label at dm root
 
+    There are some problems:
     When pasting a step file onto the project document model,
     the 0:1:1:2:1 label of the project document model and
-    the 0:1:1:2:1 label of the step file get messed up.
-    After the step file is pasted on, the 0:1:1:2:1 label
-    of the project document model should be f_name
-    and the 0:1:1:3:1 label should be set to the name of the
-    0:1:1:2:1 label of the step file doc prior to pasting on.
-    I don't why this is., but for now, both of these names
-    need to be repaired after the pasting the step file on.
-
+    the 0:1:1:2:1 label of the step file (prior to pasting)
+    both get messed up. I don't know the exact cause of this,
+    but it is occurring right at the target label where the step
+    file is being pasted, so it probably is related to this.
+    For now, both names are being repaired after the step file
+    is pasted on.
     Also, step files loaded subsequently (at higher values of tag)
     don't get loaded with their colors.
-    Doesn't work at all with some files (such as 'as1_pe_203.stp')
-    loaded at any value of tag. ??
+    Some step files (such as 'as1_pe_203.stp') defy being loaded
+    under Top at any value of tag. ??
     """
     f_name, step_doc, step_app = _load_step()
 
+    # Get part name (needed later for repair)
     uid = '0:1:1:2:1.0'
     part_name = get_name_from_uid(step_doc, uid)
     print(f"{part_name = }")
@@ -671,9 +671,57 @@ def load_stp_undr_top(dm):
     shape_tool.UpdateAssemblies()
 
     # Repair component label name inside step file
-    uid = '0:1:1:3:1.0'
-    set_name_from_uid(dm.doc, uid, part_name)
+    ref_label = find_ref_label_of_first_component_of_label(dm.doc)
+    ref_lab = find_ref_label_of_first_component_of_label(dm.doc, ref_label)
+    comp = find_first_component_of_label(dm.doc, ref_lab)
+    TDataStd_Name.Set(comp, TCollection_ExtendedString(part_name))
 
     # Build new self.part_dict & tree view
     dm.parse_doc()
 
+def find_ref_label_of_first_component_of_label(doc, label=None):
+    """return referred label of first component of label in doc
+    except if label=None, then find last component
+    """
+    first_comp = True
+    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+    if not label:
+        labels = TDF_LabelSequence()
+        shape_tool.GetShapes(labels)
+        root_label = labels.Value(1)  # First label at root
+        label = root_label
+        first_comp = False
+    top_comps = TDF_LabelSequence()
+    subchilds = False
+    is_assy = shape_tool.GetComponents(label, top_comps, subchilds)
+    if top_comps.Length():
+        n = top_comps.Length()
+        if first_comp:
+            n = 1
+        ref_label = TDF_Label()  # label of referred shape (or assembly)
+        comp_1 = top_comps.Value(n)
+
+        print(f"{comp_1.GetLabelName() = }")
+        print(f"{comp_1.Depth() = }")
+        print(f"{shape_tool.IsReference(comp_1) = }")
+        print(f"{shape_tool.GetReferredShape(comp_1, ref_label) = }")
+        print(f"{ref_label.GetLabelName() = }")
+        print(f"{ref_label.EntryDumpToString() = }")
+        print(f"{ref_label.Depth() = }")
+        return ref_label
+    else:
+        return None
+
+def find_first_component_of_label(doc, label):
+    """return referred label of first component of label in doc"""
+    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+    comps = TDF_LabelSequence()
+    subchilds = False
+    is_assy = shape_tool.GetComponents(label, comps, subchilds)
+    if comps.Length():
+        comp = comps.Value(1)
+        print(f"{comp.GetLabelName() = }")
+        print(f"{comp.Depth() = }")
+        return comp
+    else:
+        return None
