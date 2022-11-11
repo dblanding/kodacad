@@ -30,17 +30,16 @@ from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.PCDM import PCDM_SS_OK, PCDM_RS_OK
-from OCC.Core.Quantity import Quantity_Color, Quantity_ColorRGBA
+from OCC.Core.Quantity import Quantity_Color
 from OCC.Core.STEPCAFControl import (STEPCAFControl_Reader,
                                      STEPCAFControl_Writer)
 from OCC.Core.STEPControl import STEPControl_AsIs
-from OCC.Core.TCollection import TCollection_ExtendedString, TCollection_AsciiString
+from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
                           TDF_LabelSequence)
 from OCC.Core.TDocStd import TDocStd_Document
 from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Core.TopoDS import TopoDS_TCompound
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
                               XCAFDoc_DocumentTool_ColorTool,
@@ -50,23 +49,6 @@ from PyQt5.QtWidgets import QFileDialog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
-
-
-def create_doc():
-    """Create (and return) XCAF doc and app
-
-    entry       label <class 'OCC.Core.TDF.TDF_Label'>
-    0:1         doc.Main()                          (Depth = 1)
-    0:1:1       shape_tool is at this label entry   (Depth = 2)
-    0:1:2       color_tool at this entry            (Depth = 2)
-    0:1:1:1     root_label and all referred shapes  (Depth = 3)
-    0:1:1:x:x   component labels (references)       (Depth = 4)
-    """
-    doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
-    app = XCAFApp_Application_GetApplication()
-    app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
-    binxcafdrivers_DefineFormat(app)
-    return doc, app
 
 
 class DocModel():
@@ -85,7 +67,7 @@ class DocModel():
         # Create an empty assembly at entry 0:1:1:1
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         root_label = shape_tool.NewShape()
-        self.set_label_name(root_label, "Top")
+        set_label_name(root_label, "Top")
 
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
@@ -389,7 +371,7 @@ class DocModel():
         isRef = shape_tool.GetReferredShape(component_label, ref_label)
         if isRef:
             color_tool.SetColor(ref_label, color, XCAFDoc_ColorGen)
-        self.set_label_name(component_label, name)
+        set_label_name(component_label, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
         self.doc = self.doc_linter()  # part names get hosed without this
@@ -415,19 +397,13 @@ class DocModel():
         isRef = shape_tool.GetReferredShape(new_label, ref_label)
         if isRef:
             color_tool.SetColor(ref_label, color, XCAFDoc_ColorGen)
-        self.set_label_name(new_label, name)
+        set_label_name(new_label, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
         self.doc = self.doc_linter()  # This gets color to work
         self.parse_doc()
         uid = entry + '.0'  # this should work OK since it is new
         return uid
-
-    def get_label_name(self, label):
-        return label.GetLabelName()
-
-    def set_label_name(self, label, name):
-        TDataStd_Name.Set(label, TCollection_ExtendedString(name))
 
     def change_label_name(self, uid, name):
         """Change the name of component with uid."""
@@ -448,35 +424,33 @@ class DocModel():
         subchilds = False
         is_assy = shape_tool.GetComponents(label, comps, subchilds)
         target_label = comps.Value(k)
-        self.set_label_name(target_label, name)
+        set_label_name(target_label, name)
         shape_tool.UpdateAssemblies()
         print(f"Name {name} set for part with uid = {uid}.")
         self.parse_doc()
 
 
-def set_name_from_uid(doc, uid, name):
-    """Set name of label with uid."""
-    entry, _ = uid.split('.')
-    entry_parts = entry.split(':')
-    if len(entry_parts) == 4:  # first label at root
-        j = 1
-        k = None
-    elif len(entry_parts) == 5:  # part is a component of label at root
-        j = int(entry_parts[3])  # number of label at root
-        k = int(entry_parts[4])  # component number
-    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
-    labels = TDF_LabelSequence()  # labels at root of self.doc
-    shape_tool.GetShapes(labels)
-    label = labels.Value(j)
-    comps = TDF_LabelSequence()  # Components of root_label
-    subchilds = False
-    is_assy = shape_tool.GetComponents(label, comps, subchilds)
-    try:
-        target_label = comps.Value(k)
-        TDataStd_Name.Set(target_label, TCollection_ExtendedString(name))
-    except RuntimeError as e:
-        print(f"Index out of range {e}")
-        return None
+def create_doc():
+    """Create (and return) XCAF doc and app
+
+    entry       label <class 'OCC.Core.TDF.TDF_Label'>
+    0:1         doc.Main()                          (Depth = 1)
+    0:1:1       shape_tool is at this label entry   (Depth = 2)
+    0:1:2       color_tool at this entry            (Depth = 2)
+    0:1:1:1     root_label and all referred shapes  (Depth = 3)
+    0:1:1:x:x   component labels (references)       (Depth = 4)
+    """
+    doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
+    app = XCAFApp_Application_GetApplication()
+    app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
+    binxcafdrivers_DefineFormat(app)
+    return doc, app
+
+def get_label_name(label):
+    return label.GetLabelName()
+
+def set_label_name(label, name):
+    TDataStd_Name.Set(label, TCollection_ExtendedString(name))
 
 def get_name_from_uid(doc, uid):
     """Get name of label with uid."""
@@ -498,6 +472,30 @@ def get_name_from_uid(doc, uid):
     try:
         target_label = comps.Value(k)
         return target_label.GetLabelName()
+    except RuntimeError as e:
+        print(f"Index out of range {e}")
+        return None
+
+def set_name_from_uid(doc, uid, name):
+    """Set name of label with uid."""
+    entry, _ = uid.split('.')
+    entry_parts = entry.split(':')
+    if len(entry_parts) == 4:  # first label at root
+        j = 1
+        k = None
+    elif len(entry_parts) == 5:  # part is a component of label at root
+        j = int(entry_parts[3])  # number of label at root
+        k = int(entry_parts[4])  # component number
+    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+    labels = TDF_LabelSequence()  # labels at root of self.doc
+    shape_tool.GetShapes(labels)
+    label = labels.Value(j)
+    comps = TDF_LabelSequence()  # Components of root_label
+    subchilds = False
+    is_assy = shape_tool.GetComponents(label, comps, subchilds)
+    try:
+        target_label = comps.Value(k)
+        set_label_name(target_label, name)
     except RuntimeError as e:
         print(f"Index out of range {e}")
         return None
@@ -607,15 +605,16 @@ def load_stp_undr_top(dm):
 
     There are some problems:
     When pasting a step file onto the project document model,
-    the 0:1:1:2:1 label of the project document model and
-    the 0:1:1:2:1 label of the step file (prior to pasting)
+    the name of the 0:1:1:2:1 label of the project document model and
+    the name of the 0:1:1:2:1 label of the step file (prior to pasting)
     both get messed up. I don't know the exact cause of this,
     but it is occurring right at the target label where the step
-    file is being pasted, so it probably is related to this.
-    For now, both names are being repaired after the step file
-    is pasted on.
+    file gets pasted, so it probably is related to this. For now,
+    both names are being repaired after the step file is pasted on.
+
     Also, step files loaded subsequently (at higher values of tag)
     don't get loaded with their colors.
+
     Some step files (such as 'as1_pe_203.stp') defy being loaded
     under Top at any value of tag. ??
     """
@@ -641,7 +640,7 @@ def load_stp_undr_top(dm):
     is_ref = shape_tool.GetReferredShape(c_label, ref_label)
     target_label = ref_label
 
-    # Get root label of step data to paste
+    # Get root label of step data to paste (source label)
     step_labels = TDF_LabelSequence()
     step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
     step_shape_tool.GetShapes(step_labels)
@@ -666,22 +665,22 @@ def load_stp_undr_top(dm):
     subchilds = False
     is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
     n = top_comps.Length()
-    new_comp_label = top_comps.Value(n)
-    TDataStd_Name.Set(new_comp_label, TCollection_ExtendedString(f_name))
+    comp_label = top_comps.Value(n)
+    set_label_name(comp_label, f_name)
     shape_tool.UpdateAssemblies()
 
     # Repair component label name inside step file
     ref_label = find_ref_label_of_first_component_of_label(dm.doc)
     ref_lab = find_ref_label_of_first_component_of_label(dm.doc, ref_label)
     comp = find_first_component_of_label(dm.doc, ref_lab)
-    TDataStd_Name.Set(comp, TCollection_ExtendedString(part_name))
+    set_label_name(comp, part_name)
 
     # Build new self.part_dict & tree view
     dm.parse_doc()
 
 def find_ref_label_of_first_component_of_label(doc, label=None):
-    """return referred label of first component of label in doc
-    except if label=None, then find last component
+    """Return referred label of first component of label in doc
+    except if label=None, then find referred label of last component
     """
     first_comp = True
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
@@ -700,7 +699,7 @@ def find_ref_label_of_first_component_of_label(doc, label=None):
             n = 1
         ref_label = TDF_Label()  # label of referred shape (or assembly)
         comp_1 = top_comps.Value(n)
-
+        print(f"{n = }")
         print(f"{comp_1.GetLabelName() = }")
         print(f"{comp_1.Depth() = }")
         print(f"{shape_tool.IsReference(comp_1) = }")
@@ -713,7 +712,7 @@ def find_ref_label_of_first_component_of_label(doc, label=None):
         return None
 
 def find_first_component_of_label(doc, label):
-    """return referred label of first component of label in doc"""
+    """Return first component of label in doc"""
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
     comps = TDF_LabelSequence()
     subchilds = False
