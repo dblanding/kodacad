@@ -38,7 +38,7 @@ from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
                           TDF_LabelSequence)
-from OCC.Core.TDocStd import TDocStd_Document
+from OCC.Core.TDocStd import TDocStd_Document, TDocStd_XLinkTool
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
@@ -62,6 +62,7 @@ class DocModel():
     shared data)."""
 
     def __init__(self):
+
         self.doc, self.app = create_doc()
 
         # Create an empty assembly at entry 0:1:1:1
@@ -80,6 +81,7 @@ class DocModel():
 
     def get_uid_from_entry(self, entry):
         """Generate uid from label entry. format: 'entry.serial_number' """
+
         if entry in self._share_dict:
             value = self._share_dict[entry]
         else:
@@ -277,6 +279,7 @@ class DocModel():
         This isn't working yet.
         Use workaround: save_step_doc / load_stp_at_top
         """
+
         prompt = 'Choose filename to open.'
         fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
                                                "native CAD format (*.xbf)")
@@ -334,6 +337,7 @@ class DocModel():
         at doc root. The user doesn't have access to this root shape. In order
         to modify this referred shape, the modified instance shape is moved
         back to the original location at doc root, then saved."""
+
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         # shape is stored at label entry '0:1:1:n'
@@ -355,6 +359,7 @@ class DocModel():
 
     def add_component(self, shape, name, color):
         """Add new shape to top assembly of self.doc & return uid"""
+
         labels = TDF_LabelSequence()
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
@@ -381,6 +386,7 @@ class DocModel():
 
     def add_component_to_asy(self, shape, name, color, tag=1):
         """Add new shape to label at root with tag & return uid"""
+
         labels = TDF_LabelSequence()
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
@@ -407,6 +413,7 @@ class DocModel():
 
     def change_label_name(self, uid, name):
         """Change the name of component with uid."""
+
         entry, _ = uid.split('.')
         entry_parts = entry.split(':')
         if len(entry_parts) == 4:  # first label at root
@@ -440,6 +447,7 @@ def create_doc():
     0:1:1:1     root_label and all referred shapes  (Depth = 3)
     0:1:1:x:x   component labels (references)       (Depth = 4)
     """
+
     doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
     app = XCAFApp_Application_GetApplication()
     app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
@@ -454,6 +462,7 @@ def set_label_name(label, name):
 
 def get_name_from_uid(doc, uid):
     """Get name of label with uid."""
+
     entry, _ = uid.split('.')
     entry_parts = entry.split(':')
     if len(entry_parts) == 4:  # first label at root
@@ -478,6 +487,7 @@ def get_name_from_uid(doc, uid):
 
 def set_name_from_uid(doc, uid, name):
     """Set name of label with uid."""
+
     entry, _ = uid.split('.')
     entry_parts = entry.split(':')
     if len(entry_parts) == 4:  # first label at root
@@ -531,11 +541,19 @@ def doc_linter(dm):
         os.remove(fname)
     return temp_doc
 
-def copy_label(source_label, target_label):
+def copy_label_within_doc(source_label, target_label):
+    """Intra-document copy (within a document)"""
+
     cp_label = TDF_CopyLabel()
     cp_label.Load(source_label, target_label)
     cp_label.Perform()
     return cp_label.IsDone()
+
+def copy_label(source_label, target_label):
+    """Inter-document copy (between 2 documents)"""
+
+    XLinkTool = TDocStd_XLinkTool()
+    XLinkTool.Copy(target_label, source_label)
 
 def _load_step():
     """Read step file at f_path, transfer data to doc, return doc."""

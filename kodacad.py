@@ -32,17 +32,13 @@ from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace, BRepBuilderAPI_Transform
 from OCC.Core.BRepFilletAPI import BRepFilletAPI_MakeFillet
 from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_MakeThickSolid
-from OCC.Core.BRepPrimAPI import (
-    BRepPrimAPI_MakeBox,
-    BRepPrimAPI_MakeCylinder,
-    BRepPrimAPI_MakePrism,
-    BRepPrimAPI_MakeRevol,
-)
+from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeRevol
 from OCC.Core.gp import gp_Ax1, gp_Ax3, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
 from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.TopoDS import topods_Edge, topods_Face, topods_Vertex
 from OCC.Core.TopTools import TopTools_ListOfShape
+
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QMenu, QTreeWidgetItemIterator
 
@@ -73,6 +69,7 @@ DEFAULT_COLOR = Quantity_Color(0.6, 0.6, 0.4, Quantity_TOC_RGB)
 def wpBy3Pts(*args):
     """Direction from pt1 to pt2 sets wDir, pt2 is wpOrigin.
     Direction from pt2 to pt3 sets uDir."""
+
     prev_uid = win.activeWpUID  # uid of currently active workplane
     if win.ptStack:
         # Finish
@@ -101,6 +98,7 @@ def wpBy3Pts(*args):
 
 def wpBy3PtsC(shapeList, *args):
     """Callbask (collector) for wpBy3Pts"""
+
     for shape in shapeList:
         vrtx = topods_Vertex(shape)
         gpPt = BRep_Tool.Pnt(vrtx)  # convert vertex to gp_Pnt
@@ -117,6 +115,7 @@ def wpBy3PtsC(shapeList, *args):
 
 def wpOnFace(*args):
     """ First face defines plane of wp. Second face defines uDir."""
+
     prev_uid = win.activeWpUID  # uid of currently active workplane
     if not win.faceStack:
         win.registerCallback(wpOnFaceC)
@@ -135,6 +134,7 @@ def wpOnFace(*args):
 
 def wpOnFaceC(shapeList, *args):
     """Callback (collector) for wpOnFace"""
+
     if not shapeList:
         shapeList = []
     for shape in shapeList:
@@ -149,6 +149,7 @@ def wpOnFaceC(shapeList, *args):
 
 def makeWP():
     """Default workplane located in X-Y plane at 0,0,0"""
+
     prev_uid = win.activeWpUID  # uid of currently active workplane
     wp = workplane.WorkPlane(100)
     new_uid = win.get_wp_uid(wp)
@@ -157,6 +158,7 @@ def makeWP():
 
 def display_new_active_wp(prev_uid, new_uid):
     """Display new active wp & redraw previous active wp if it is displayed."""
+
     # If currently active wp is displayed, redraw to show its new border color
     if prev_uid and prev_uid not in win.hide_list:
         win.redraw_workplanes()
@@ -173,6 +175,7 @@ def display_new_active_wp(prev_uid, new_uid):
 
 def get_tag_of_active_asy():
     """Get tag of active assy, if any, else top assembly"""
+
     tag = 1  # value of tag for first label at root (default)
     act_asy_uid = win.activeAsyUID
     if act_asy_uid:
@@ -185,6 +188,7 @@ def get_tag_of_active_asy():
 
 def get_inv_loc_of_active_asy():
     """Get inverse location vector, if any, of active assembly"""
+
     loc = TopLoc_Location()
     act_asy_uid = win.activeAsyUID
     if act_asy_uid:
@@ -195,6 +199,7 @@ def get_inv_loc_of_active_asy():
 def extrude():
     """Extrude profile on active WP to create a new part.
     Add new part to active assembly, if any, else to Top"""
+
     tag = get_tag_of_active_asy()
     loc = get_inv_loc_of_active_asy()
     wp = win.activeWp
@@ -225,6 +230,7 @@ def extrude():
 
 def extrudeC(shapeList, *args):
     """Callback (collector) for extrude"""
+
     win.lineEdit.setFocus()
     if len(win.lineEditStack) == 2:
         extrude()
@@ -233,6 +239,7 @@ def extrudeC(shapeList, *args):
 def revolve():
     """Revolve profile on active WP to create a new part.
     Add new part to active assembly, if any, else to Top"""
+
     tag = get_tag_of_active_asy()
     loc = get_inv_loc_of_active_asy()
     wp = win.activeWp
@@ -266,6 +273,7 @@ def revolve():
 
 def revolveC(shapeList, *args):
     """Callback (collector) for revolve"""
+
     for shape in shapeList:
         vrtx = topods_Vertex(shape)
         gpPt = BRep_Tool.Pnt(vrtx)  # convert vertex to gp_Pnt
@@ -290,6 +298,7 @@ def revolveC(shapeList, *args):
 
 def rotateAP():
     """Experimental... Rotate active part incrementally"""
+
     ax1 = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
     aRotTrsf = gp_Trsf()
     angle = math.pi / 18  # 10 degrees
@@ -302,6 +311,7 @@ def rotateAP():
 
 def rev_rotateAP():
     """Experimental... rotate back"""
+
     ax1 = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
     aRotTrsf = gp_Trsf()
     angle = math.pi / 18  # 10 degrees
@@ -323,6 +333,7 @@ def rev_rotateAP():
 
 def mill():
     """Mill profile on active WP into active part."""
+
     wp = win.activeWp
     if win.lineEditStack:
         depth = float(win.lineEditStack.pop()) * win.unitscale
@@ -352,6 +363,7 @@ def mill():
 
 def millC(shapeList, *args):
     """Callback (collector) for mill"""
+
     win.lineEdit.setFocus()
     if win.lineEditStack:
         mill()
@@ -359,6 +371,7 @@ def millC(shapeList, *args):
 
 def pull():
     """Pull profile on active WP onto active part."""
+
     wp = win.activeWp
     if win.lineEditStack:
         length = float(win.lineEditStack.pop()) * win.unitscale
@@ -388,6 +401,7 @@ def pull():
 
 def pullC(shapeList, *args):
     """Callback (collector) for pull"""
+
     win.lineEdit.setFocus()
     if win.lineEditStack:
         pull()
@@ -395,6 +409,7 @@ def pullC(shapeList, *args):
 
 def fillet(event=None):
     """Fillet (blend) edges of active part"""
+
     if win.lineEditStack and win.edgeStack:
         topo = Topology.Topo(win.activePart)
         text = win.lineEditStack.pop()
@@ -443,6 +458,7 @@ def fillet(event=None):
 
 def filletC(shapeList, *args):
     """Callback (collector) for fillet"""
+
     win.lineEdit.setFocus()
     for shape in shapeList:
         edge = topods_Edge(shape)
@@ -453,6 +469,7 @@ def filletC(shapeList, *args):
 
 def fuse():
     """Fuse an adjacent or overlapping solid shape to active part."""
+
     if win.shapeStack:
         shape = win.shapeStack.pop()
         workpart = win.activePart
@@ -472,6 +489,7 @@ def fuse():
 
 def fuseC(shapeList, *args):
     """Callback (collector) for fuse"""
+
     for shape in shapeList:
         win.shapeStack.append(shape)
     if win.shapeStack:
@@ -480,6 +498,7 @@ def fuseC(shapeList, *args):
 
 def shell(event=None):
     """Shell active part"""
+
     if win.lineEditStack and win.faceStack:
         text = win.lineEditStack.pop()
         faces = TopTools_ListOfShape()
@@ -505,6 +524,7 @@ def shell(event=None):
 
 def shellC(shapeList, *args):
     """Callback (collector) for shell"""
+
     win.lineEdit.setFocus()
     for shape in shapeList:
         face = topods_Face(shape)
@@ -532,6 +552,7 @@ def save_doc():
 def load_stp_at_top():
     """Load STEP file and assign it to self.doc
     This effectively allows step to be a surrogate for file save/load."""
+
     win.setActivePart(0)
     win.setActiveAsy(0)
     docmodel.load_stp_at_top(dm)
@@ -542,6 +563,7 @@ def load_stp_at_top():
 
 def load_stp_cmpnt():
     """Load root level shape(s) in step file as component(s) under top."""
+
     docmodel.load_stp_cmpnt(dm)
     win.build_tree()
     win.redraw()
@@ -550,6 +572,7 @@ def load_stp_cmpnt():
 
 def load_stp_undr_top():
     """Copy root label (with located components) of step file under top."""
+
     docmodel.load_stp_undr_top(dm)
     win.build_tree()
     win.redraw()
@@ -620,6 +643,7 @@ def printActPart():
 
 def printTreeView():
     """Print 'uid'; 'name'; 'parent' for all items in treeView."""
+
     iterator = QTreeWidgetItemIterator(win.treeView)
     while iterator.value():
         item = iterator.value()
