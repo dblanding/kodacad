@@ -26,6 +26,7 @@ import os
 import os.path
 
 from OCC.Core.BinXCAFDrivers import binxcafdrivers_DefineFormat
+from OCC.Core.XmlXCAFDrivers import xmlxcafdrivers_DefineFormat
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
@@ -49,6 +50,28 @@ from PyQt5.QtWidgets import QFileDialog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
+
+def create_doc():
+    """Create (and return) XCAF doc and app
+
+    entry       label <class 'OCC.Core.TDF.TDF_Label'>
+    0:1         doc.Main()                          (Depth = 1)
+    0:1:1       shape_tool is at this label entry   (Depth = 2)
+    0:1:2       color_tool at this entry            (Depth = 2)
+    0:1:1:1     root_label and all referred shapes  (Depth = 3)
+    0:1:1:x:x   component labels (references)       (Depth = 4)
+    """
+
+    # Initialize the document
+    # Choose format for TDocStd_Document
+    # format = "BinXCAF"  # Use file ext .bxf to save in binary format
+    format = "XmlXCAF"  # Use file ext .xml to save in xml format
+    doc = TDocStd_Document(TCollection_ExtendedString(format))
+    app = XCAFApp_Application_GetApplication()
+    app.NewDocument(TCollection_ExtendedString(format), doc)
+    binxcafdrivers_DefineFormat(app)
+    xmlxcafdrivers_DefineFormat(app)
+    return doc, app
 
 
 class DocModel():
@@ -274,7 +297,7 @@ class DocModel():
         assert status == IFSelect_RetDone
 
     def open_doc(self):
-        """Open (.xbf) file, assign it to self.doc
+        """Open (.xml) file, assign it to self.doc
 
         This isn't working yet.
         Use workaround: save_step_doc / load_stp_at_top
@@ -282,18 +305,17 @@ class DocModel():
 
         prompt = 'Choose filename to open.'
         fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
-                                               "native CAD format (*.xbf)")
+                                               "native CAD format (*.xml)")
 
         if not fname:
             print("Save step cancelled.")
             return
 
         # Create document to receive data from file
-        doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
-        self.app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
+        doc, app = create_doc()
 
         # Read file and transfer to doc
-        open_status = self.app.Open(TCollection_ExtendedString(fname), doc)
+        open_status = app.Open(TCollection_ExtendedString(fname), doc)
         if open_status == PCDM_RS_OK:
             # self.doc = doc
             # self.parse_doc()
@@ -305,7 +327,7 @@ class DocModel():
             print("Unable to open file.")
 
     def save_doc(self, doc=None):
-        """Save doc to file in eXtended Binary Format (.xbf)"""
+        """Save doc to file in XML Format (.xml)"""
 
         # Enable using this method to save a doc other than self.doc
         if not doc:
@@ -314,14 +336,14 @@ class DocModel():
         prompt = 'Choose filename for step file.'
         save_dialog = QFileDialog()
         fname, _ = save_dialog.getSaveFileName(None, prompt, './',
-                                               "native CAD format (*.xbf)")
+                                               "native CAD format (*.xml)")
         if not fname:
             print("Save step cancelled.")
             return
 
-        # append ".xbf" if the user didn't
-        if not fname.endswith('.xbf'):
-            fname += '.xbf'
+        # append ".xml" if the user didn't
+        if not fname.endswith('.xml'):
+            fname += '.xml'
 
         # One of the few places app is needed
         save_status = self.app.SaveAs(doc, TCollection_ExtendedString(fname))
@@ -436,23 +458,6 @@ class DocModel():
         print(f"Name {name} set for part with uid = {uid}.")
         self.parse_doc()
 
-
-def create_doc():
-    """Create (and return) XCAF doc and app
-
-    entry       label <class 'OCC.Core.TDF.TDF_Label'>
-    0:1         doc.Main()                          (Depth = 1)
-    0:1:1       shape_tool is at this label entry   (Depth = 2)
-    0:1:2       color_tool at this entry            (Depth = 2)
-    0:1:1:1     root_label and all referred shapes  (Depth = 3)
-    0:1:1:x:x   component labels (references)       (Depth = 4)
-    """
-
-    doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
-    app = XCAFApp_Application_GetApplication()
-    app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
-    binxcafdrivers_DefineFormat(app)
-    return doc, app
 
 def get_label_name(label):
     return label.GetLabelName()
@@ -650,6 +655,7 @@ def load_stp_undr_top(dm):
     shape_tool.GetShapes(labels)
     root_label = labels.Value(1)  # First label at root
     c_label = shape_tool.AddComponent(root_label, shape, True)
+    set_label_name(c_label, part_name)
 
     # By adding the box as a component, a new label is automatically
     # added at root to hold the new prototype shape.
