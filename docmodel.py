@@ -21,6 +21,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from dataclasses import dataclass
 import logging
 import os
 import os.path
@@ -41,6 +42,7 @@ from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
                           TDF_LabelSequence)
 from OCC.Core.TDocStd import TDocStd_Document, TDocStd_XLinkTool
 from OCC.Core.TopLoc import TopLoc_Location
+from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape, TopoDS_Builder
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
                               XCAFDoc_DocumentTool_ColorTool,
@@ -50,6 +52,16 @@ from PyQt5.QtWidgets import QFileDialog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
+
+# Define dataclass (Python equivalent of a C struct)
+# Instantiate: foo_proto = prototype(shape, label)
+# Retrieve: foo_proto.shape  or  foo_proto.label
+@dataclass
+class prototype:
+    """A shape and its associated label"""
+    shape: TopoDS_Shape
+    label: TDF_Label
+
 
 def create_doc():
     """Create (and return) XCAF doc and app
@@ -88,10 +100,13 @@ class DocModel():
 
         self.doc, self.app = create_doc()
 
-        # Create an empty assembly at entry 0:1:1:1
+        # Create root compound shape & label, store in prototype dataclass
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        root_label = shape_tool.NewShape()
-        set_label_name(root_label, "Top")
+        root_comp = TopoDS_Compound()
+        self.root_builder = TopoDS_Builder()
+        self.root_builder.MakeCompound(root_comp)
+        self.root_proto = prototype(root_comp, shape_tool.AddShape(root_comp, True))
+        set_label_name(self.root_proto.label, "Top")
 
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
