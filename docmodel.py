@@ -91,12 +91,13 @@ def create_doc():
 class DocModel:
     """Maintain the 3D CAD model in OCAF XDE format.
 
-    Generates self.part_dict and self.label_dict by parsing self.doc.
-    These dictionaries provide mainwindow with convenient access to CAD data.
-    Each item in the tree view represents a component label in the OCAF document and
-    has a uid comprising the label entry appended with a '.' and an integer. The
-    integer makes it unique (allowing to distinguish between different instances of
-    shared data)."""
+    Maintains self.part_dict and self.label_dict by parsing self.doc.
+    These 2 dicts provide mainwindow with convenient access to CAD data.
+    With the exception of the Top assembly, each item in the tree view
+    represents a component label in the OCAF document and has a uid
+    comprising the label entry with an appended '.' followed by an integer.
+    The integer makes each instance unique (allowing to distinguish between
+    different instances of shared data)."""
 
     def __init__(self):
 
@@ -137,19 +138,19 @@ class DocModel:
         """Generate new part_dict & label_dict from self.doc
 
         part_dict (dict of dicts) is used primarily for 3D display
-        There is a one-to-one correspondence between
-        each 'display-able' part (instance) and each item in part_dict
+        There is a one-to-one correspondence between each 'display-able'
+        part (instance) and each item in part_dict
 
-        part_dict = {uid: {'shape': ,
+        part_dict = {uid:  {'shape': ,
                             'name': ,
                             'color': ,
                             'loc': }}
 
         label_dict (dict of dicts) is used primarily for tree view display
-        There is a one-to-one correspondence between
-        each item in the tree view and each item in label_dict
+        There is a one-to-one correspondence between each item in the
+        tree view and each item in label_dict
 
-        label_dict = {uid:   {'entry': ,
+        label_dict = {uid: {'entry': ,
                             'name': ,
                             'parent_uid': ,
                             'ref_entry': ,
@@ -206,11 +207,11 @@ class DocModel:
     def parse_components(self, comps, shape_tool, color_tool):
         """Parse components from comps (LabelSequence).
 
-        Components of an assembly are, by definition, references which refer
-        to either a simple shape or a compound shape (an assembly).
-        Components are essentially 'instances' of a referred shape or assembly
-        and carry a location vector specifying the location of the referred
-        shape or assembly.
+        Components of an assembly are, by definition, references which
+        refer to either a simple shape or a compound shape (an assembly).
+        Components are essentially 'instances' of a referred shape or
+        assembly and carry a location vector specifying the location of
+        the referred shape or assembly.
         The root label and all referred labels have Depth = 3
         All component labels (references) have Depth = 4
         """
@@ -671,22 +672,21 @@ def load_stp_cmpnt(dm):
 
 
 def load_stp_undr_top(dm):
-    """Paste step root label under Top label at dm root
+    """Add step file as a component under Top (root) label of dm
 
-    There are some problems:
-    When pasting a step file onto the project document model,
-    the name of the 0:1:1:2:1 label of the project document model and
-    the name of the 0:1:1:2:1 label of the step file (prior to pasting)
-    both get messed up. I don't know the exact cause of this,
-    but it is occurring right at the target label where the step
-    file gets pasted, so it probably is related to this. For now,
-    both names are being repaired after the step file is pasted on.
+    It's working better now than it used to,
+    but there are still some problems:
+
+    Some step files (such as 'as1_pe_203.stp') are more difficult
+    than others (such as 'as1-oc-214.stp)
+
+    When a step file is copied onto the project document model, sometimes
+    the name of the 0:1:1:2:1 label of the project document model and / or
+    the name of the 0:1:1:2:1 label of the step file (prior to copying)
+    get messed up. For now, both names are repaired after copying.
 
     Also, step files loaded subsequently (at higher values of tag)
     don't get loaded with their colors.
-
-    Some step files (such as 'as1_pe_203.stp') defy being loaded
-    under Top at any value of tag. ??
     """
     f_name, step_doc, step_app = _load_step()
 
@@ -695,20 +695,21 @@ def load_stp_undr_top(dm):
     part_name = get_name_from_uid(step_doc, uid)
     print(f"{part_name = }")
 
-    # Add a box as a component under the top assembly at root
-    shape = BRepPrimAPI_MakeBox(0.1, 0.1, 0.1).Shape()
+    # Add a compound shape as a component under dm.doc root label
+    comp = TopoDS_Compound()
+    builder = TopoDS_Builder()
+    builder.MakeCompound(comp)
     labels = TDF_LabelSequence()
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
     shape_tool.GetShapes(labels)
     root_label = labels.Value(1)  # First label at root
-    c_label = shape_tool.AddComponent(root_label, shape, True)
-    set_label_name(c_label, part_name)
+    c_label = shape_tool.AddComponent(root_label, comp, True)
 
-    # By adding the box as a component, a new label is automatically
-    # added at root to hold the new prototype shape.
-    # This label will be the target for pasting step data.
+    # Adding the compound shape as a component of root created a
+    # 'sibling' label at root level holding the new prototype shape.
+    # This label will be the target for pasting the step root label.
     ref_label = TDF_Label()  # label of referred shape
-    is_ref = shape_tool.GetReferredShape(c_label, ref_label)
+    __ = shape_tool.GetReferredShape(c_label, ref_label)
     target_label = ref_label
 
     # Get root label of step data to paste (source label)
@@ -721,6 +722,9 @@ def load_stp_undr_top(dm):
     copy_label(step_root_label, target_label)
     shape_tool.UpdateAssemblies()
 
+    # Set name of component label
+    set_label_name(c_label, part_name)
+
     # Restore part color by cycling through save/load
     dm.doc = doc_linter(dm.doc)
 
@@ -728,7 +732,7 @@ def load_stp_undr_top(dm):
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
     shape_tool.UpdateAssemblies()
 
-    # Repair component label name under 'Top'
+    # Repair name of component label referencing newly loaded step file
     labels = TDF_LabelSequence()
     shape_tool.GetShapes(labels)
     root_label = labels.Value(1)  # First label at root
@@ -741,10 +745,10 @@ def load_stp_undr_top(dm):
     shape_tool.UpdateAssemblies()
 
     # Repair component label name inside step file
-    ref_label = find_ref_label_of_first_component_of_label(dm.doc)
-    ref_lab = find_ref_label_of_first_component_of_label(dm.doc, ref_label)
-    comp = find_first_component_of_label(dm.doc, ref_lab)
-    set_label_name(comp, part_name)
+    # ref_label = find_ref_label_of_first_component_of_label(dm.doc)
+    # ref_lab = find_ref_label_of_first_component_of_label(dm.doc, ref_label)
+    # comp = find_first_component_of_label(dm.doc, ref_lab)
+    # set_label_name(comp, part_name)
 
     # Build new self.part_dict & tree view
     dm.parse_doc()
