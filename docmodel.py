@@ -52,12 +52,15 @@ from PyQt5.QtWidgets import QFileDialog
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)  # set to DEBUG | INFO | ERROR
 
-# Define dataclass (Python equivalent of a C struct)
-# Instantiate: foo_proto = prototype(shape, label)
-# Retrieve: foo_proto.shape  or  foo_proto.label
+
 @dataclass
 class Prototype:
-    """A shape and its associated label"""
+    """A prototype shape and its associated label
+
+    Instantiate: foo_proto = prototype(shape, label)
+    Retrieve: foo_proto.shape  or  foo_proto.label
+    """
+
     shape: TopoDS_Shape
     label: TDF_Label
 
@@ -192,7 +195,7 @@ class DocModel:
         self.parent_uid_stack.append(root_uid)
         top_comps = TDF_LabelSequence()  # Components of Top Assy
         subchilds = False
-        is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
+        __ = shape_tool.GetComponents(root_label, top_comps, subchilds)
         if top_comps.Length():  # if root_label is_assy:
             logger.debug("")
             logger.debug("Parsing components of label entry %s)", root_entry)
@@ -257,7 +260,6 @@ class DocModel:
                     # track of the total location from the root shape to the
                     # instance, it needs to be accounted for (by mutiplying
                     # res_loc by it) before saving it to part_dict.
-                    c_loc = None
                     c_loc = shape_tool.GetLocation(c_label)
                     if c_loc:
                         loc = res_loc.Multiplied(c_loc)
@@ -300,8 +302,8 @@ class DocModel:
         """Export self.doc to STEP file."""
 
         prompt = 'Choose filename for step file.'
-        fname, _ = QFileDialog.getSaveFileName(None, prompt, './',
-                                               "STEP files (*.stp *.STP *.step)")
+        fname, __ = QFileDialog.getSaveFileName(None, prompt, './',
+                                                "STEP files (*.stp *.STP *.step)")
         if not fname:
             print("Save step cancelled.")
             return
@@ -323,8 +325,8 @@ class DocModel:
         """
 
         prompt = 'Choose filename to open.'
-        fname, _ = QFileDialog.getOpenFileName(None, prompt, './',
-                                               "native CAD format (*.xml)")
+        fname, __ = QFileDialog.getOpenFileName(None, prompt, './',
+                                                "native CAD format (*.xml)")
 
         if not fname:
             print("Save step cancelled.")
@@ -354,8 +356,8 @@ class DocModel:
 
         prompt = 'Choose filename for step file.'
         save_dialog = QFileDialog()
-        fname, _ = save_dialog.getSaveFileName(None, prompt, './',
-                                               "native CAD format (*.xml)")
+        fname, __ = save_dialog.getSaveFileName(None, prompt, './',
+                                                "native CAD format (*.xml)")
         if not fname:
             print("Save step cancelled.")
             return
@@ -455,7 +457,7 @@ class DocModel:
     def change_label_name(self, uid, name):
         """Change the name of component with uid."""
 
-        entry, _ = uid.split('.')
+        entry, __ = uid.split('.')
         entry_parts = entry.split(':')
         if len(entry_parts) == 4:  # first label at root
             j = 1
@@ -464,22 +466,17 @@ class DocModel:
             j = int(entry_parts[3])  # number of label at root
             k = int(entry_parts[4])  # component number
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        color_tool = XCAFDoc_DocumentTool_ColorTool(self.doc.Main())
         labels = TDF_LabelSequence()  # labels at root of self.doc
         shape_tool.GetShapes(labels)
         label = labels.Value(j)
         comps = TDF_LabelSequence()  # Components of root_label
         subchilds = False
-        is_assy = shape_tool.GetComponents(label, comps, subchilds)
+        __ = shape_tool.GetComponents(label, comps, subchilds)
         target_label = comps.Value(k)
         set_label_name(target_label, name)
         shape_tool.UpdateAssemblies()
         print(f"Name {name} set for part with uid = {uid}.")
         self.parse_doc()
-
-
-def get_label_name(label):
-    return label.GetLabelName()
 
 
 def set_label_name(label, name):
@@ -489,7 +486,7 @@ def set_label_name(label, name):
 def get_name_from_uid(doc, uid):
     """Get name of label with uid."""
 
-    entry, _ = uid.split('.')
+    entry, __ = uid.split('.')
     entry_parts = entry.split(':')
     if len(entry_parts) == 4:  # first label at root
         j = 1
@@ -503,7 +500,7 @@ def get_name_from_uid(doc, uid):
     label = labels.Value(j)
     comps = TDF_LabelSequence()  # Components of root_label
     subchilds = False
-    is_assy = shape_tool.GetComponents(label, comps, subchilds)
+    __ = shape_tool.GetComponents(label, comps, subchilds)
     try:
         target_label = comps.Value(k)
         return target_label.GetLabelName()
@@ -515,7 +512,7 @@ def get_name_from_uid(doc, uid):
 def set_name_from_uid(doc, uid, name):
     """Set name of label with uid."""
 
-    entry, _ = uid.split('.')
+    entry, __ = uid.split('.')
     entry_parts = entry.split(':')
     if len(entry_parts) == 4:  # first label at root
         j = 1
@@ -529,7 +526,7 @@ def set_name_from_uid(doc, uid, name):
     label = labels.Value(j)
     comps = TDF_LabelSequence()  # Components of root_label
     subchilds = False
-    is_assy = shape_tool.GetComponents(label, comps, subchilds)
+    __ = shape_tool.GetComponents(label, comps, subchilds)
     try:
         target_label = comps.Value(k)
         set_label_name(target_label, name)
@@ -591,8 +588,8 @@ def save_step_doc(doc):
     """Export doc to STEP file."""
 
     prompt = 'Choose filename for step file.'
-    fname, _ = QFileDialog.getSaveFileName(None, prompt, './',
-                                           "STEP files (*.stp *.STP *.step)")
+    fname, __ = QFileDialog.getSaveFileName(None, prompt, './',
+                                            "STEP files (*.stp *.STP *.step)")
     if not fname:
         print("Save step cancelled.")
         return
@@ -611,8 +608,8 @@ def _load_step():
     """Read step file at f_path, transfer data to doc, return doc."""
 
     prompt = 'Select STEP file to import'
-    f_path, _ = QFileDialog.getOpenFileName(None, prompt, './',
-                                            "STEP files (*.stp *.STP *.step)")
+    f_path, __ = QFileDialog.getOpenFileName(None, prompt, './',
+                                             "STEP files (*.stp *.STP *.step)")
     base = os.path.basename(f_path)  # f_name.ext
     f_name, ext = os.path.splitext(base)
     logger.debug("Load file name: %s", f_path)
@@ -670,7 +667,7 @@ def load_stp_cmpnt(dm):
         name = label.GetLabelName()
         color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
         if shape_tool.IsSimpleShape(label):
-            _ = dm.add_component(shape, name, color)
+            __ = dm.add_component(shape, name, color)
 
 
 def load_stp_undr_top(dm):
@@ -737,7 +734,7 @@ def load_stp_undr_top(dm):
     root_label = labels.Value(1)  # First label at root
     top_comps = TDF_LabelSequence()  # Components of Top Assy
     subchilds = False
-    is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
+    __ = shape_tool.GetComponents(root_label, top_comps, subchilds)
     n = top_comps.Length()
     comp_label = top_comps.Value(n)
     set_label_name(comp_label, f_name)
