@@ -212,8 +212,10 @@ def extrude():
             return
         myFaceProfile = BRepBuilderAPI_MakeFace(wp.wire)
         aPrismVec = wp.wVec * length
-        new_part = BRepPrimAPI_MakePrism(myFaceProfile.Shape(), aPrismVec).Shape()
-        loc_new_part = BRepBuilderAPI_Transform(new_part, loc.Transformation()).Shape()
+        new_part = BRepPrimAPI_MakePrism(
+            myFaceProfile.Shape(), aPrismVec).Shape()
+        loc_new_part = BRepBuilderAPI_Transform(
+            new_part, loc.Transformation()).Shape()
         uid = dm.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
@@ -255,7 +257,8 @@ def revolve():
         face = BRepBuilderAPI_MakeFace(wp.wire).Shape()
         revolve_axis = gp_Ax1(p1, gp_Dir(gp_Vec(p1, p2)))
         new_part = BRepPrimAPI_MakeRevol(face, revolve_axis).Shape()
-        loc_new_part = BRepBuilderAPI_Transform(new_part, loc.Transformation()).Shape()
+        loc_new_part = BRepBuilderAPI_Transform(
+            new_part, loc.Transformation()).Shape()
         uid = dm.add_component_to_asy(loc_new_part, name, DEFAULT_COLOR, tag)
         win.build_tree()
         win.setActivePart(uid)
@@ -308,6 +311,7 @@ def rotateAP():
     win.erase_shape(uid)
     win.activePart.Move(aTopLoc)
     win.draw_shape(uid)
+
 
 def rev_rotateAP():
     """Experimental... rotate back"""
@@ -508,7 +512,8 @@ def shell(event=None):
         workPart = win.activePart
         uid = win.activePartUID
         shellT = float(text) * win.unitscale
-        newPart = BRepOffsetAPI_MakeThickSolid(workPart, faces, -shellT, 1.0e-3).Shape()
+        newPart = BRepOffsetAPI_MakeThickSolid(
+            workPart, faces, -shellT, 1.0e-3).Shape()
         win.erase_shape(uid)
         dm.replace_shape(uid, newPart)
         win.draw_shape(uid)
@@ -695,7 +700,8 @@ if __name__ == "__main__":
     win.add_function_to_menu("Create 3D", "Revolve", revolve)
     win.add_menu("Modify Active Part")
     win.add_function_to_menu("Modify Active Part", "Rotate Act Part", rotateAP)
-    win.add_function_to_menu("Modify Active Part", "Reverse Rotate Act Part", rev_rotateAP)
+    win.add_function_to_menu("Modify Active Part",
+                             "Reverse Rotate Act Part", rev_rotateAP)
     win.add_function_to_menu("Modify Active Part", "Mill", mill)
     win.add_function_to_menu("Modify Active Part", "Pull", pull)
     win.add_function_to_menu("Modify Active Part", "Fillet", fillet)
@@ -706,10 +712,14 @@ if __name__ == "__main__":
     win.add_function_to_menu("Utility", "print part_dict", print_part_dict)
     win.add_function_to_menu("Utility", "dump doc", dumpDoc)
     win.add_function_to_menu("Utility", "Topology of Act Prt", topoDumpAP)
-    win.add_function_to_menu("Utility", "print(Active Wp Info)", printActiveWpInfo)
-    win.add_function_to_menu("Utility", "print(Active Asy Info)", printActiveAsyInfo)
-    win.add_function_to_menu("Utility", "print(Active Prt Info)", printActivePartInfo)
-    win.add_function_to_menu("Utility", "Clear Line Edit Stack", win.clearLEStack)
+    win.add_function_to_menu(
+        "Utility", "print(Active Wp Info)", printActiveWpInfo)
+    win.add_function_to_menu(
+        "Utility", "print(Active Asy Info)", printActiveAsyInfo)
+    win.add_function_to_menu(
+        "Utility", "print(Active Prt Info)", printActivePartInfo)
+    win.add_function_to_menu(
+        "Utility", "Clear Line Edit Stack", win.clearLEStack)
     win.add_function_to_menu("Utility", "Calculator", win.launchCalc)
     win.add_function_to_menu("Utility", "set Units ->in", setUnits_in)
     win.add_function_to_menu("Utility", "set Units ->mm", setUnits_mm)
@@ -738,13 +748,17 @@ if __name__ == "__main__":
     selectSubMenu.addAction("Neutral", display.SetSelectionModeNeutral)
     win.popMenu.addAction("Clear Callback", win.clearCallback)
     # Construction Line Toolbar buttons
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/hcl.gif")), "Horizontal", a2d.clineH)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/vcl.gif")), "Vertical", a2d.clineV)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/hvcl.gif")), "H + V", a2d.clineHV)
+    win.wcToolBar.addAction(
+        QIcon(QPixmap("icons/hcl.gif")), "Horizontal", a2d.clineH)
+    win.wcToolBar.addAction(
+        QIcon(QPixmap("icons/vcl.gif")), "Vertical", a2d.clineV)
+    win.wcToolBar.addAction(
+        QIcon(QPixmap("icons/hvcl.gif")), "H + V", a2d.clineHV)
     win.wcToolBar.addAction(
         QIcon(QPixmap("icons/tpcl.gif")), "By 2 Pnts", a2d.cline2Pts
     )
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/acl.gif")), "Angled", a2d.clineAng)
+    win.wcToolBar.addAction(
+        QIcon(QPixmap("icons/acl.gif")), "Angled", a2d.clineAng)
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/refangcl.gif')), 'Ref-Ang', a2d.clineRefAng)
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/abcl.gif')), 'Angular Bisector', a2d.clineAngBisec)
     win.wcToolBar.addAction(
@@ -754,7 +768,8 @@ if __name__ == "__main__":
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/perpcl.gif')), 'Perpendicular', a2d.clinePerp)
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan1.gif')), 'Tangent to circle', a2d.clineTan1)
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/cltan2.gif')), 'Tangent 2 circles', a2d.clineTan2)
-    win.wcToolBar.addAction(QIcon(QPixmap("icons/ccirc.gif")), "Circle", a2d.ccirc)
+    win.wcToolBar.addAction(
+        QIcon(QPixmap("icons/ccirc.gif")), "Circle", a2d.ccirc)
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/cc3p.gif')), 'Circle by 3Pts', a2d.ccirc)
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/cccirc.gif')), 'Concentric Circle', a2d.ccirc)
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/cctan2.gif')), 'Circ Tangent x2', a2d.ccirc)
@@ -763,14 +778,17 @@ if __name__ == "__main__":
     # win.wcToolBar.addAction(QIcon(QPixmap('icons/del_cel.gif')), 'Delete Constr', a2d.delCl)
     # Profile Line Toolbar buttons
     win.wgToolBar.addAction(QIcon(QPixmap("icons/line.gif")), "Line", a2d.line)
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/rect.gif")), "Rectangle", a2d.rect)
+    win.wgToolBar.addAction(
+        QIcon(QPixmap("icons/rect.gif")), "Rectangle", a2d.rect)
     # win.wgToolBar.addAction(QIcon(QPixmap('icons/poly.gif')), 'Polygon', a2d.geom)
     # win.wgToolBar.addAction(QIcon(QPixmap('icons/slot.gif')), 'Slot', a2d.geom)
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/circ.gif")), "Circle", a2d.circle)
+    win.wgToolBar.addAction(
+        QIcon(QPixmap("icons/circ.gif")), "Circle", a2d.circle)
     win.wgToolBar.addAction(
         QIcon(QPixmap("icons/arcc2p.gif")), "Arc Cntr-2Pts", a2d.arcc2p
     )
-    win.wgToolBar.addAction(QIcon(QPixmap("icons/arc3p.gif")), "Arc by 3Pts", a2d.arc3p)
+    win.wgToolBar.addAction(
+        QIcon(QPixmap("icons/arc3p.gif")), "Arc by 3Pts", a2d.arc3p)
     win.wgToolBar.addSeparator()
     # win.wgToolBar.addAction(QIcon(QPixmap('icons/translate.gif')), 'Translate Profile', a2d.geom)
     # win.wgToolBar.addAction(QIcon(QPixmap('icons/rotate.gif')), 'Rotate Profile', a2d.geom)

@@ -95,9 +95,12 @@ class Calculator(QDialog):
         self.mainLayout.addWidget(self.ydisplay, 2, 4, 1, 26)
         self.mainLayout.addWidget(self.xdisplay, 3, 4, 1, 26)
         self.butn("pi", 0, 30, self.pi, colspan=6)
-        self.butn("1/x", 1, 30, lambda state, op="1/x": self.func(op), colspan=6)
-        self.butn("2x", 2, 30, lambda state, op="x*2": self.func(op), colspan=6)
-        self.butn("x/2", 3, 30, lambda state, op="x/2": self.func(op), colspan=6)
+        self.butn("1/x", 1, 30, lambda state,
+                  op="1/x": self.func(op), colspan=6)
+        self.butn("2x", 2, 30, lambda state,
+                  op="x*2": self.func(op), colspan=6)
+        self.butn("x/2", 3, 30, lambda state,
+                  op="x/2": self.func(op), colspan=6)
 
         self.butn("mm -> in", 4, 0, self.mm2in, colspan=12)
         self.butn("in -> mm", 4, 12, self.in2mm, colspan=12)
@@ -107,28 +110,33 @@ class Calculator(QDialog):
         self.butn("7", 5, 0, lambda state, c="7": self.keyin(c), clr=myblue1)
         self.butn("8", 5, 6, lambda state, c="8": self.keyin(c), clr=myblue1)
         self.butn("9", 5, 12, lambda state, c="9": self.keyin(c), clr=myblue1)
-        self.butn("+", 5, 18, lambda state, op="+": self.calculate(op), clr=myblue2)
+        self.butn("+", 5, 18, lambda state,
+                  op="+": self.calculate(op), clr=myblue2)
         self.butn("R up", 5, 24, self.rotateup, clr=mygreen, colspan=6)
         self.butn("R dn", 5, 30, self.rotatedn, clr=mygreen, colspan=6)
 
         self.butn("4", 6, 0, lambda state, c="4": self.keyin(c), clr=myblue1)
         self.butn("5", 6, 6, lambda state, c="5": self.keyin(c), clr=myblue1)
         self.butn("6", 6, 12, lambda state, c="6": self.keyin(c), clr=myblue1)
-        self.butn("-", 6, 18, lambda state, op="-": self.calculate(op), clr=myblue2)
+        self.butn("-", 6, 18, lambda state,
+                  op="-": self.calculate(op), clr=myblue2)
         self.butn("<-", 6, 24, self.trimx, clr=myred, colspan=4)
         self.butn("X<>Y", 6, 28, self.swapxy, clr=mygreen, colspan=8)
 
         self.butn("1", 7, 0, lambda state, c="1": self.keyin(c), clr=myblue1)
         self.butn("2", 7, 6, lambda state, c="2": self.keyin(c), clr=myblue1)
         self.butn("3", 7, 12, lambda state, c="3": self.keyin(c), clr=myblue1)
-        self.butn("*", 7, 18, lambda state, op="*": self.calculate(op), clr=myblue2)
+        self.butn("*", 7, 18, lambda state,
+                  op="*": self.calculate(op), clr=myblue2)
         self.butn("CL X", 7, 24, self.clearx, clr=myred)
         self.butn("CLR", 7, 30, self.clearall, clr=myred)
 
         self.butn("0", 8, 0, lambda state, c="0": self.keyin(c), clr=myblue1)
         self.butn(".", 8, 6, lambda state, c=".": self.keyin(c), clr=myblue2)
-        self.butn("+/-", 8, 12, lambda state, op="+/-": self.calculate(op), clr=myblue2)
-        self.butn("/", 8, 18, lambda state, c="/": self.calculate(c), clr=myblue2)
+        self.butn("+/-", 8, 12, lambda state,
+                  op="+/-": self.calculate(op), clr=myblue2)
+        self.butn("/", 8, 18, lambda state,
+                  c="/": self.calculate(c), clr=myblue2)
         self.butn("ENTER", 8, 24, self.enter, clr=mygold, colspan=12)
 
         self.butn(
@@ -155,8 +163,10 @@ class Calculator(QDialog):
             clr=mygold,
             colspan=8,
         )
-        self.butn("x^2", 9, 24, lambda state, op="x*x": self.func(op), clr=mygold)
-        self.butn("10^x", 9, 30, lambda state, op="10**x": self.func(op), clr=mygold)
+        self.butn("x^2", 9, 24, lambda state,
+                  op="x*x": self.func(op), clr=mygold)
+        self.butn("10^x", 9, 30, lambda state,
+                  op="10**x": self.func(op), clr=mygold)
         self.butn(
             "ASin",
             10,
@@ -184,7 +194,8 @@ class Calculator(QDialog):
         self.butn(
             "Sqrt x", 10, 24, lambda state, op="math.sqrt(x)": self.func(op), clr=mygold
         )
-        self.butn("y^x", 10, 30, lambda state, op="y**x": self.func(op), clr=mygold)
+        self.butn("y^x", 10, 30, lambda state,
+                  op="y**x": self.func(op), clr=mygold)
 
         self.butn("Dist", 11, 0, self.caller.distPtPt, clr=mygray, colspan=8)
         self.butn("Len", 11, 8, self.caller.edgeLen, clr=mygray, colspan=8)

@@ -137,11 +137,13 @@ class TreeView(QTreeWidget):
                 if parent_index.isValid():
                     parent.insertChild(parent.childCount(), taken.pop(0))
                 else:
-                    self.insertTopLevelItem(self.topLevelItemCount(), taken.pop(0))
+                    self.insertTopLevelItem(
+                        self.topLevelItemCount(), taken.pop(0))
             else:
                 # insert the items at the specified position
                 if parent_index.isValid():
-                    parent.insertChild(min(target, parent.childCount()), taken.pop(0))
+                    parent.insertChild(
+                        min(target, parent.childCount()), taken.pop(0))
                 else:
                     self.insertTopLevelItem(
                         min(target, self.topLevelItemCount()), taken.pop(0)
@@ -212,7 +214,8 @@ class MainWindow(QMainWindow):
         self.endOpButton.clicked.connect(self.clearCallback)
         self.currOpLabel = QLabel()
         self.registeredCallback = None
-        self.currOpLabel.setText("Current Operation: %s " % self.registeredCallback)
+        self.currOpLabel.setText("Current Operation: %s " %
+                                 self.registeredCallback)
 
         self.lineEdit = QLineEdit()
         self.lineEdit.returnPressed.connect(self.appendToStack)
@@ -237,7 +240,8 @@ class MainWindow(QMainWindow):
         self.activePart = None  # <TopoDS_Shape> object
         self.activePartUID = 0
         self.transparency_dict = {}  # {uid: part display transparency}
-        self.ancestor_dict = defaultdict(list)  # {uid: [list of ancestor shapes]}
+        # {uid: [list of ancestor shapes]}
+        self.ancestor_dict = defaultdict(list)
         self.ais_shape_dict = {}  # {uid: <AIS_Shape> object}
 
         self.activeWp = None  # WorkPlane object
@@ -329,7 +333,8 @@ class MainWindow(QMainWindow):
             # create node in tree view
             item_name = [name, uid]
             item = QTreeWidgetItem(parent_item, item_name)
-            item.setFlags(item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+            item.setFlags(item.flags() | Qt.ItemIsTristate |
+                          Qt.ItemIsUserCheckable)
             if uid in self.hide_list:
                 item.setCheckState(0, Qt.Unchecked)
             else:
@@ -578,7 +583,8 @@ class MainWindow(QMainWindow):
             name = item.text(0)
             uid = item.text(1)
             prompt = "Enter new name for part %s" % name
-            newName, OK = QInputDialog.getText(self, "Input Dialog", prompt, text=name)
+            newName, OK = QInputDialog.getText(
+                self, "Input Dialog", prompt, text=name)
             if OK:
                 item.setText(0, newName)
                 print(f"UID= {uid}, name = {newName}")
@@ -675,7 +681,8 @@ class MainWindow(QMainWindow):
             self.clearCallback()
         self.canvas._display.register_select_callback(callback)
         self.registeredCallback = callback
-        self.currOpLabel.setText("Current Operation: %s " % callback.__name__[:-1])
+        self.currOpLabel.setText("Current Operation: %s " %
+                                 callback.__name__[:-1])
 
     def clearCallback(self):
         if self.registeredCallback:
@@ -790,8 +797,10 @@ class MainWindow(QMainWindow):
         if uid in self.ais_shape_dict:
             context = self.canvas._display.Context
             aisShape = self.ais_shape_dict[uid]
-            context.Remove(aisShape, True)  # This did the job prior to PyOCC 7.6
-            context.Erase(aisShape, True)  # Added to get 'hide' working in PyOCC 7.6
+            # This did the job prior to PyOCC 7.6
+            context.Remove(aisShape, True)
+            # Added to get 'hide' working in PyOCC 7.6
+            context.Erase(aisShape, True)
 
     #############################################
     #

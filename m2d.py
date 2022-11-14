@@ -60,7 +60,8 @@ class M2D:
         if "," in text:
             try:
                 xstr, ystr = text.split(",")
-                p = (float(xstr) * self.win.unitscale, float(ystr) * self.win.unitscale)
+                p = (float(xstr) * self.win.unitscale,
+                     float(ystr) * self.win.unitscale)
                 self.win.xyPtStack.append(p)
             except:
                 print("Problem with processing line edit stack")

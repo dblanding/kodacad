@@ -40,11 +40,12 @@ from OCCUtils.Construct import face_normal
 
 INFINITY = 1e+10  # mm (on the order of Earth's diameter)
 
-#===========================================================================
+# ===========================================================================
 #
 # Math & geometry 2D utility functions
 #
-#===========================================================================
+# ===========================================================================
+
 
 def intersection(cline1, cline2):
     """Return intersection (x,y) of 2 clines expressed as (a,b,c) coeff."""
@@ -57,6 +58,7 @@ def intersection(cline1, cline2):
         return (i/k, j/k)
     return None
 
+
 def cnvrt_2pts_to_coef(pt1, pt2):
     """Return (a,b,c) coefficients of cline defined by 2 (x,y) pts."""
     x1, y1 = pt1
@@ -66,6 +68,7 @@ def cnvrt_2pts_to_coef(pt1, pt2):
     c = x2*y1-x1*y2
     return (a, b, c)
 
+
 def proj_pt_on_line(cline, pt):
     """Return point which is the projection of pt on cline."""
     a, b, c = cline
@@ -73,9 +76,10 @@ def proj_pt_on_line(cline, pt):
     denom = a**2 + b**2
     if not denom:
         return pt
-    xp = (b**2*x - a*b*y -a*c)/denom
-    yp = (a**2*y - a*b*x -b*c)/denom
+    xp = (b**2*x - a*b*y - a*c)/denom
+    yp = (a**2*y - a*b*x - b*c)/denom
     return (xp, yp)
+
 
 def pnt_in_box_p(pnt, box):
     '''Point in box predicate: Return True if pnt is in box.'''
@@ -84,9 +88,11 @@ def pnt_in_box_p(pnt, box):
     if x1 < x < x2 and y1 < y < y2:
         return True
 
+
 def midpoint(p1, p2, f=.5):
     """Return point part way (f=.5 by def) between points p1 and p2."""
     return (((p2[0]-p1[0])*f)+p1[0], ((p2[1]-p1[1])*f)+p1[1])
+
 
 def p2p_dist(p1, p2):
     """Return the distance between two points"""
@@ -94,15 +100,19 @@ def p2p_dist(p1, p2):
     u, v = p2
     return math.sqrt((x-u)**2 + (y-v)**2)
 
+
 def p2p_angle(p0, p1):
     """Return angle (degrees) from p0 to p1."""
     return math.atan2(p1[1]-p0[1], p1[0]-p0[0])*180/math.pi
 
+
 def add_pt(p0, p1):
     return (p0[0]+p1[0], p0[1]+p1[1])
 
+
 def sub_pt(p0, p1):
     return (p0[0]-p1[0], p0[1]-p1[1])
+
 
 def seg_circ_inters(x1, y1, x2, y2, xc, yc, r):
     '''Return list of intersection pts of line defined by pts x1,y1 and x2,y2
@@ -130,6 +140,7 @@ def seg_circ_inters(x1, y1, x2, y2, xc, yc, r):
         intpnts.append(((x1 + u2*(x2-x1)), (y1 + u2*(y2-y1))))
     return intpnts
 
+
 def line_circ_inters(line, circle):
     '''Return list of intersection pts of line and circle.
 
@@ -153,6 +164,7 @@ def line_circ_inters(line, circle):
     # find intersection points of segment and circle
     return seg_circ_inters(x1, y1, x2, y2, xc, yc, r)
 
+
 def circ_circ_inters(circ1, circ2):
     '''Return list of intersection pts of 2 circles.
     Uses algorithm from Robert S. Wilson's web page.'''
@@ -174,10 +186,12 @@ def circ_circ_inters(circ1, circ2):
         pts.pop()   # circles are tangent
     return pts
 
+
 def same_pt_p(p1, p2):
     '''Return True if p1 and p2 are within 1e-10 of each other.'''
     if p2p_dist(p1, p2) < 1e-6:
         return True
+
 
 def cline_box_intrsctn(cline, box):
     """Return tuple of pts where line intersects edges of box."""
@@ -196,12 +210,14 @@ def cline_box_intrsctn(cline, box):
                     pts.append(pt)
     return tuple(pts)
 
+
 def para_line(cline, pt):
     """Return coeff of newline thru pt and parallel to cline."""
     a, b, c = cline
     x, y = pt
     cnew = -(a*x + b*y)
     return (a, b, cnew)
+
 
 def para_lines(cline, d):
     """Return 2 parallel lines straddling line, offset d."""
@@ -211,12 +227,14 @@ def para_lines(cline, d):
     cline2 = (a, b, c - c1)
     return (cline1, cline2)
 
+
 def perp_line(cline, pt):
     """Return coeff of newline thru pt and perpend to cline."""
     a, b, c = cline
     x, y = pt
     cnew = a*y - b*x
     return (b, -a, cnew)
+
 
 def closer(p0, p1, p2):
     """Return closer of p1 or p2 to point p0."""
@@ -226,6 +244,7 @@ def closer(p0, p1, p2):
         return p1
     return p2
 
+
 def farther(p0, p1, p2):
     """Return farther of p1 or p2 from point p0."""
     d1 = (p1[0] - p0[0])**2 + (p1[1] - p0[1])**2
@@ -233,6 +252,7 @@ def farther(p0, p1, p2):
     if d1 > d2:
         return p1
     return p2
+
 
 def find_fillet_pts(r, commonpt, end1, end2):
     """Return ctr of fillet (radius r) and tangent pts for corner
@@ -263,6 +283,7 @@ def find_fillet_pts(r, commonpt, end1, end2):
     p2 = proj_pt_on_line(line2, pc)
     return (pc, p1, p2)
 
+
 def find_common_pt(apair, bpair):
     """Return (common pt, other pt from a, other pt from b), where a and b
     are coordinate pt pairs in (p1, p2) format."""
@@ -288,6 +309,7 @@ def find_common_pt(apair, bpair):
         return
     return (cp, opa, opb)
 
+
 def cr_from_3p(p1, p2, p3):
     """Return ctr pt and radius of circle on which 3 pts reside.
     From Paul Bourke's web page."""
@@ -300,6 +322,7 @@ def cr_from_3p(p1, p2, p3):
         radius = p2p_dist(p1, ctr)
         return (ctr, radius)
 
+
 def extendline(p0, p1, d):
     """Return point which lies on extension of line segment p0-p1,
     beyond p1 by distance d."""
@@ -307,12 +330,14 @@ def extendline(p0, p1, d):
     if pts:
         return farther(p0, pts[0], pts[1])
 
+
 def shortenline(p0, p1, d):
     """Return point which lies on line segment p0-p1,
     short of p1 by distance d."""
     pts = seg_circ_inters(p0[0], p0[1], p1[0], p1[1], p1[0], p1[1], d)
     if pts:
         return closer(p0, pts[0], pts[1])
+
 
 def line_tan_to_circ(circ, p):
     """Return tan pts on circ of line through p."""
@@ -326,6 +351,7 @@ def line_tan_to_circ(circ, p):
     p2 = (c[0]+(r*math.cos(ang2)), c[1]+(r*math.sin(ang2)))
     return (p1, p2)
 
+
 def line_tan_to_2circs(circ1, circ2):
     """Return tangent pts on line tangent to 2 circles.
     Order of circle picks determines which tangent line."""
@@ -333,13 +359,14 @@ def line_tan_to_2circs(circ1, circ2):
     c2, r2 = circ2
     d = p2p_dist(c1, c2)    # distance between centers
     ang_loc = p2p_angle(c2, c1)*math.pi/180  # angle of line of centers
-    f = (r2/r1-1)/d # reciprocal dist from c1 to intersection of loc & tan line
+    f = (r2/r1-1)/d  # reciprocal dist from c1 to intersection of loc & tan line
     theta = math.asin(r1*f)    # angle between loc and tangent line
     ang1 = (ang_loc + math.pi/2 - theta)
     ang2 = (ang_loc - math.pi/2 + theta)
     p1 = (c1[0]+(r1*math.cos(ang1)), c1[1]+(r1*math.sin(ang1)))
     p2 = (c2[0]+(r2*math.cos(ang1)), c2[1]+(r2*math.sin(ang1)))
     return (p1, p2)
+
 
 def angled_cline(pt, angle):
     """Return cline through pt at angle (degrees)"""
@@ -349,6 +376,7 @@ def angled_cline(pt, angle):
     p2 = (pt[0]+dx, pt[1]+dy)
     cline = cnvrt_2pts_to_coef(pt, p2)
     return cline
+
 
 def ang_bisector(p0, p1, p2, f=0.5):
     """Return cline coefficients of line through vertex p0, factor=f
@@ -374,6 +402,7 @@ def pt_on_RHS_p(pt, p0, p1):
         if angline > angpt > angline-180:
             return True
 
+
 def rotate_pt(pt, ang, ctr):
     """Return coordinates of pt rotated ang (deg) CCW about ctr.
     This is a 3-step process:
@@ -386,7 +415,8 @@ def rotate_pt(pt, ang, ctr):
     v = y * math.cos(A) + x * math.sin(A)
     return add_pt((u, v), ctr)
 
-#===========================================================================
+# ===========================================================================
+
 
 class WorkPlane():
     """A 2D plane for creating 2D 'Profiles' for building or modifying 3D geometry.
@@ -399,6 +429,7 @@ class WorkPlane():
     2- By specification of a gp_Ax3 axis
     3- Default (located with U,V,W aligned with X,Y,Z)
     """
+
     def __init__(self, size, face=None, faceU=None, ax3=None):
         # gp_Ax3 of XYZ coord system
         origin = gp_Pnt(0, 0, 0)
@@ -441,9 +472,9 @@ class WorkPlane():
         self.face = face
         self.size = size
         self.border = self.makeWpBorder(self.size)
-        self.clines = set() # set of c-lines with (a, b, c) coefficients
-        self.ccircs = set() # set of c-circs with (pc, r) coefficients
-        self.edgeList = [] # List of profile lines type: <TopoDS_Edge>
+        self.clines = set()  # set of c-lines with (a, b, c) coefficients
+        self.ccircs = set()  # set of c-circs with (pc, r) coefficients
+        self.edgeList = []  # List of profile lines type: <TopoDS_Edge>
         self.wire = None
         self.accuracy = 1e-6   # min distance between two points
         self.hvcl((0, 0))    # Make H-V clines through origin
@@ -473,14 +504,14 @@ class WorkPlane():
             border = myFaceProfile.Face()
         return border  # TopoDS_Face
 
-    #=======================================================================
+    # =======================================================================
     # Utility functions (Relayed)
-    #=======================================================================
+    # =======================================================================
 
     def p2p_dist(self, p1, p2):
         return p2p_dist(p1, p2)
 
-    #=======================================================================
+    # =======================================================================
     # Construction Geometry
     # construction lines (clines) are "infinite" length lines
     # described by the equation:        ax + by + c = 0
@@ -493,15 +524,15 @@ class WorkPlane():
     # To create an 'AIS_Circle', type 'Geom_Circle' is needed.
     # In order to find intersection points (x, y), 'Geom2d_Circle' is needed.
     # Methods are provided to generate all the various types needed.
-    #=======================================================================
+    # =======================================================================
 
     def cline_gen(self, cline):
         a, b, c = cline
         unique = True
         for d, e, f in self.clines:
-            if (abs(a-d) < self.accuracy and\
-                abs(b-e) < self.accuracy and\
-                abs(c-f) < self.accuracy):
+            if (abs(a-d) < self.accuracy and
+                abs(b-e) < self.accuracy and
+                    abs(c-f) < self.accuracy):
                 unique = False
                 break
         if unique:
@@ -600,16 +631,16 @@ class WorkPlane():
                         points.add(pnt)
 
         # find intersection points among clines
-        clList = list(self.clines) # list of (a, b, c) 2d lines
+        clList = list(self.clines)  # list of (a, b, c) 2d lines
         newpoints = []  # new finite points
         for i in range(len(clList)):
             line0 = clList.pop()
             for line in clList:
                 P = intersection(line0, line)
                 if P:  # P is not None
-                    if (not points and abs(P[0]) < INFINITY and\
-                        abs(P[1]) < INFINITY):
-                        points.add(P) # first point, (not at inf.)
+                    if (not points and abs(P[0]) < INFINITY and
+                            abs(P[1]) < INFINITY):
+                        points.add(P)  # first point, (not at inf.)
                     else:
                         if abs(P[0]) < INFINITY and abs(P[1]) < INFINITY:
                             newpoints.append(P)
@@ -627,13 +658,13 @@ class WorkPlane():
                 pntList.append(pnt)
         return pntList
 
-    #=======================================================================
+    # =======================================================================
     # Profile Geometry
     # Profile lines are type 'TopoDS_Edge' lines, circles and arcs.
     # They will eventually get 'collected' into a closed loop and then used
     # to build a wire (type 'TopoDS_Wire'), which can then be used as a tool
     # to extrude or cut a solid body.
-    #=======================================================================
+    # =======================================================================
 
     def line(self, pnt1, pnt2):
         """Create a line between two end points."""
@@ -646,7 +677,6 @@ class WorkPlane():
         # Build the edge
         edge = BRepBuilderAPI_MakeEdge(seg).Edge()  # TopoDS_Edge
         self.edgeList.append(edge)
-
 
     def rect(self, pnt1, pnt2):
         """Create a rectangle from two diagonally opposite corners."""
@@ -679,7 +709,8 @@ class WorkPlane():
             self.ccircs.add(circ)
             self.hvcl(cntr)
         else:
-            edge = BRepBuilderAPI_MakeEdge(self.convert_circ_to_geomCirc(circ)).Edge()
+            edge = BRepBuilderAPI_MakeEdge(
+                self.convert_circ_to_geomCirc(circ)).Edge()
             self.edgeList.append(edge)
 
     def convert_circ_to_geomCirc(self, circ):
@@ -722,11 +753,11 @@ class WorkPlane():
         edge = BRepBuilderAPI_MakeEdge(geom_arc).Edge()
         self.edgeList.append(edge)
 
-    #=======================================================================
+    # =======================================================================
     # Topo_DS_Wire
     # This is the end result of the workplane: To generate a Topo_DS_Wire
     # Which can be used as a tool to build or modify a face or solid body.
-    #=======================================================================
+    # =======================================================================
 
     def makeWire(self):
         """Generate a wire from the edges in self.edgeList."""

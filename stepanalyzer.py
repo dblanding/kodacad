@@ -88,7 +88,7 @@ class StepAnalyzer():
         labels = TDF_LabelSequence()
         self.shape_tool.GetShapes(labels)
         nbr = labels.Length()
-        rootlabel = labels.Value(1) # First label at root
+        rootlabel = labels.Value(1)  # First label at root
 
         # Get information from root label
         name = rootlabel.GetLabelName()
@@ -101,7 +101,7 @@ class StepAnalyzer():
             self.output += f"{self.uid}\t[{entry}] {name}\t"
             self.uid += 1
             self.indent += 2
-            top_comps = TDF_LabelSequence() # Components of Top Assy
+            top_comps = TDF_LabelSequence()  # Components of Top Assy
             subchilds = False
             is_assy = self.shape_tool.GetComponents(rootlabel, top_comps,
                                                     subchilds)
@@ -124,7 +124,7 @@ class StepAnalyzer():
             c_entry = c_label.EntryDumpToString()
             ref_label = TDF_Label()  # label of referred shape (or assembly)
             is_ref = self.shape_tool.GetReferredShape(c_label, ref_label)
-            if is_ref:  # just in case all components are not references 
+            if is_ref:  # just in case all components are not references
                 ref_entry = ref_label.EntryDumpToString()
                 ref_name = ref_label.GetLabelName()
                 indent = "\t" * self.indent
@@ -133,7 +133,7 @@ class StepAnalyzer():
                 self.uid += 1
                 if self.shape_tool.IsAssembly(ref_label):
                     self.indent += 1
-                    ref_comps = TDF_LabelSequence() # Components of Assy
+                    ref_comps = TDF_LabelSequence()  # Components of Assy
                     subchilds = False
                     _ = self.shape_tool.GetComponents(ref_label, ref_comps,
                                                       subchilds)
@@ -141,6 +141,7 @@ class StepAnalyzer():
                         self.find_components(ref_comps)
 
         self.indent -= 1
+
 
 if __name__ == "__main__":
     SA = StepAnalyzer(filename="step/as1-oc-214.stp")

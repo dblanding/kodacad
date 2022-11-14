@@ -41,7 +41,6 @@ from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
                           TDF_LabelSequence)
 from OCC.Core.TDocStd import TDocStd_Document, TDocStd_XLinkTool
-from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape, TopoDS_Builder
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
@@ -51,13 +50,13 @@ from OCC.Core.XSControl import XSControl_WorkSession
 from PyQt5.QtWidgets import QFileDialog
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR) # set to DEBUG | INFO | ERROR
+logger.setLevel(logging.ERROR)  # set to DEBUG | INFO | ERROR
 
 # Define dataclass (Python equivalent of a C struct)
 # Instantiate: foo_proto = prototype(shape, label)
 # Retrieve: foo_proto.shape  or  foo_proto.label
 @dataclass
-class prototype:
+class Prototype:
     """A shape and its associated label"""
     shape: TopoDS_Shape
     label: TDF_Label
@@ -77,16 +76,16 @@ def create_doc():
     # Initialize the document
     # Choose format for TDocStd_Document
     # format = "BinXCAF"  # Use file ext .bxf to save in binary format
-    format = "XmlXCAF"  # Use file ext .xml to save in xml format
-    doc = TDocStd_Document(TCollection_ExtendedString(format))
+    doc_format = "XmlXCAF"  # Use file ext .xml to save in xml format
+    doc = TDocStd_Document(TCollection_ExtendedString(doc_format))
     app = XCAFApp_Application_GetApplication()
-    app.NewDocument(TCollection_ExtendedString(format), doc)
+    app.NewDocument(TCollection_ExtendedString(doc_format), doc)
     binxcafdrivers_DefineFormat(app)
     xmlxcafdrivers_DefineFormat(app)
     return doc, app
 
 
-class DocModel():
+class DocModel:
     """Maintain the 3D CAD model in OCAF XDE format.
 
     Generates self.part_dict and self.label_dict by parsing self.doc.
@@ -105,13 +104,15 @@ class DocModel():
         root_comp = TopoDS_Compound()
         self.root_builder = TopoDS_Builder()
         self.root_builder.MakeCompound(root_comp)
-        self.root_proto = prototype(root_comp, shape_tool.AddShape(root_comp, True))
+        self.root_proto = Prototype(
+            root_comp, shape_tool.AddShape(root_comp, True))
         set_label_name(self.root_proto.label, "Top")
 
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
         # To be used to construct treeView & access labels
-        self.label_dict = {}  # {uid: {keys: 'entry', 'name', 'parent_uid', 'ref_entry', 'is_assy'}}
+        # {uid: {keys: 'entry', 'name', 'parent_uid', 'ref_entry', 'is_assy'}}
+        self.label_dict = {}
         self._share_dict = {}  # {entry: highest_serial_nmbr_used}
         self.parent_uid_stack = []  # uid of parent lineage (topmost first)
         self.assy_entry_stack = []  # entries of containing assemblies, immediate last
@@ -171,7 +172,7 @@ class DocModel():
         nbr = labels.Length()  # number of labels at root
         logger.debug(f"Number of labels at doc root : {nbr}")
         shape_tool.GetShapes(labels)
-        root_label = labels.Value(1) # First label at root
+        root_label = labels.Value(1)  # First label at root
 
         # Get root label information
         # The first label at root holds an assembly, it is the Top Assy.
@@ -189,7 +190,7 @@ class DocModel():
                                       'parent_uid': None, 'ref_entry': None,
                                       'is_assy': True, 'inv_loc': loc.Inverted()}}
         self.parent_uid_stack.append(root_uid)
-        top_comps = TDF_LabelSequence() # Components of Top Assy
+        top_comps = TDF_LabelSequence()  # Components of Top Assy
         subchilds = False
         is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
         if top_comps.Length():  # if root_label is_assy:
@@ -240,10 +241,12 @@ class DocModel():
                         res_loc = temp_assy_loc_stack.pop(0)
                         for loc in temp_assy_loc_stack:
                             res_loc = res_loc.Multiplied(loc)
-                        display_shape = BRepBuilderAPI_Transform(c_shape, res_loc.Transformation()).Shape()
+                        display_shape = BRepBuilderAPI_Transform(
+                            c_shape, res_loc.Transformation()).Shape()
                     elif len(temp_assy_loc_stack) == 1:
                         res_loc = temp_assy_loc_stack.pop()
-                        display_shape = BRepBuilderAPI_Transform(c_shape, res_loc.Transformation()).Shape()
+                        display_shape = BRepBuilderAPI_Transform(
+                            c_shape, res_loc.Transformation()).Shape()
                     else:
                         res_loc = None
                     # It is possible for this component to both specify a
@@ -268,23 +271,24 @@ class DocModel():
                     self.label_dict[c_uid].update({'is_assy': True})
                     logger.debug("Referred item is an Assembly")
                     # Location vector is carried by component
-                    aLoc = TopLoc_Location()
-                    aLoc = shape_tool.GetLocation(c_label)
+                    a_loc = shape_tool.GetLocation(c_label)
                     # store inverted location transform in label_dict for this assembly
-                    inv_loc = aLoc.Inverted()
+                    inv_loc = a_loc.Inverted()
                     self.label_dict[c_uid].update({'inv_loc': inv_loc})
-                    self.assy_loc_stack.append(aLoc)
+                    self.assy_loc_stack.append(a_loc)
                     self.assy_entry_stack.append(ref_entry)
                     self.parent_uid_stack.append(c_uid)
-                    r_comps = TDF_LabelSequence() # Components of Assy
+                    r_comps = TDF_LabelSequence()  # Components of Assy
                     subchilds = False
-                    isAssy = shape_tool.GetComponents(ref_label, r_comps, subchilds)
+                    isAssy = shape_tool.GetComponents(
+                        ref_label, r_comps, subchilds)
                     logger.debug("Assy name: %s", ref_name)
                     logger.debug("Is Assembly? %s", isAssy)
                     logger.debug("Number of components: %s", r_comps.Length())
                     if r_comps.Length():
                         logger.debug("")
-                        logger.debug("Parsing components of label entry %s)", ref_entry)
+                        logger.debug(
+                            "Parsing components of label entry %s)", ref_entry)
                         self.parse_components(r_comps, shape_tool, color_tool)
             else:
                 print(f"Oops! All components are *not* references {c_uid}")
@@ -416,7 +420,7 @@ class DocModel():
         set_label_name(component_label, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
-        self.doc = self.doc_linter()  # part names get hosed without this
+        self.doc = self.doc_linter(self.doc)  # part names get hosed without this
         self.parse_doc()
         uid = self.get_uid_from_entry(entry)
         return uid
@@ -443,7 +447,7 @@ class DocModel():
         set_label_name(new_label, name)
         logger.info('Part %s added to root label', name)
         shape_tool.UpdateAssemblies()
-        self.doc = self.doc_linter()  # This gets color to work
+        self.doc = doc_linter(self.doc)  # This gets color to work
         self.parse_doc()
         uid = entry + '.0'  # this should work OK since it is new
         return uid
@@ -477,8 +481,10 @@ class DocModel():
 def get_label_name(label):
     return label.GetLabelName()
 
+
 def set_label_name(label, name):
     TDataStd_Name.Set(label, TCollection_ExtendedString(name))
+
 
 def get_name_from_uid(doc, uid):
     """Get name of label with uid."""
@@ -505,6 +511,7 @@ def get_name_from_uid(doc, uid):
         print(f"Index out of range {e}")
         return None
 
+
 def set_name_from_uid(doc, uid, name):
     """Set name of label with uid."""
 
@@ -530,8 +537,9 @@ def set_name_from_uid(doc, uid, name):
         print(f"Index out of range {e}")
         return None
 
-def doc_linter(dm):
-    """Clean dm.doc by cycling through a STEP save/load cycle."""
+
+def doc_linter(doc):
+    """Clean doc by cycling through a STEP save/load cycle."""
 
     # Create a file object to save to
     fname = "deleteme.txt"
@@ -539,14 +547,15 @@ def doc_linter(dm):
     WS = XSControl_WorkSession()
     step_writer = STEPCAFControl_Writer(WS, False)
     # Transfer shapes and write file
-    step_writer.Transfer(dm.doc, STEPControl_AsIs)
+    step_writer.Transfer(doc, STEPControl_AsIs)
     status = step_writer.Write(fname)
     assert status == IFSelect_RetDone
 
     # Create temporary document to receive STEP data
     temp_doc = TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
     app = XCAFApp_Application_GetApplication()
-    app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), temp_doc)  # Was "MDTV-XCAF"
+    app.NewDocument(TCollection_ExtendedString(
+        "MDTV-XCAF"), temp_doc)  # Was "MDTV-XCAF"
     binxcafdrivers_DefineFormat(app)
 
     step_reader = STEPCAFControl_Reader()
@@ -561,6 +570,7 @@ def doc_linter(dm):
         os.remove(fname)
     return temp_doc
 
+
 def copy_label_within_doc(source_label, target_label):
     """Intra-document copy (within a document)"""
 
@@ -569,18 +579,40 @@ def copy_label_within_doc(source_label, target_label):
     cp_label.Perform()
     return cp_label.IsDone()
 
+
 def copy_label(source_label, target_label):
     """Inter-document copy (between 2 documents)"""
 
     XLinkTool = TDocStd_XLinkTool()
     XLinkTool.Copy(target_label, source_label)
 
+
+def save_step_doc(doc):
+    """Export doc to STEP file."""
+
+    prompt = 'Choose filename for step file.'
+    fname, _ = QFileDialog.getSaveFileName(None, prompt, './',
+                                           "STEP files (*.stp *.STP *.step)")
+    if not fname:
+        print("Save step cancelled.")
+        return
+
+    # initialize STEP exporter
+    WS = XSControl_WorkSession()
+    step_writer = STEPCAFControl_Writer(WS, False)
+
+    # transfer shapes and write file
+    step_writer.Transfer(doc, STEPControl_AsIs)
+    status = step_writer.Write(fname)
+    assert status == IFSelect_RetDone
+
+
 def _load_step():
     """Read step file at f_path, transfer data to doc, return doc."""
 
     prompt = 'Select STEP file to import'
     f_path, _ = QFileDialog.getOpenFileName(None, prompt, './',
-                                           "STEP files (*.stp *.STP *.step)")
+                                            "STEP files (*.stp *.STP *.step)")
     base = os.path.basename(f_path)  # f_name.ext
     f_name, ext = os.path.splitext(base)
     logger.debug("Load file name: %s", f_path)
@@ -604,6 +636,7 @@ def _load_step():
         step_reader.Transfer(doc)
     return f_name, doc, app
 
+
 def load_stp_at_top(dm):
     """Get OCAF document from STEP file and assign it directly to dm.doc.
 
@@ -615,6 +648,7 @@ def load_stp_at_top(dm):
     dm.doc = doc
     dm.app = app
     dm.parse_doc()
+
 
 def load_stp_cmpnt(dm):
     """Get OCAF document from STEP file and add (as component) to doc root.
@@ -637,6 +671,7 @@ def load_stp_cmpnt(dm):
         color_tool.GetColor(shape, XCAFDoc_ColorSurf, color)
         if shape_tool.IsSimpleShape(label):
             _ = dm.add_component(shape, name, color)
+
 
 def load_stp_undr_top(dm):
     """Paste step root label under Top label at dm root
@@ -690,7 +725,7 @@ def load_stp_undr_top(dm):
     shape_tool.UpdateAssemblies()
 
     # Restore part color by cycling through save/load
-    dm.doc = doc_linter(dm)
+    dm.doc = doc_linter(dm.doc)
 
     # new doc means we need a new shape_tool
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
@@ -700,7 +735,7 @@ def load_stp_undr_top(dm):
     labels = TDF_LabelSequence()
     shape_tool.GetShapes(labels)
     root_label = labels.Value(1)  # First label at root
-    top_comps = TDF_LabelSequence() # Components of Top Assy
+    top_comps = TDF_LabelSequence()  # Components of Top Assy
     subchilds = False
     is_assy = shape_tool.GetComponents(root_label, top_comps, subchilds)
     n = top_comps.Length()
@@ -716,6 +751,7 @@ def load_stp_undr_top(dm):
 
     # Build new self.part_dict & tree view
     dm.parse_doc()
+
 
 def find_ref_label_of_first_component_of_label(doc, label=None):
     """Return referred label of first component of label in doc
@@ -749,6 +785,7 @@ def find_ref_label_of_first_component_of_label(doc, label=None):
         return ref_label
     else:
         return None
+
 
 def find_first_component_of_label(doc, label):
     """Return first component of label in doc"""
