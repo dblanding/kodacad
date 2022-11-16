@@ -29,7 +29,6 @@ import os.path
 from OCC.Core.BinXCAFDrivers import binxcafdrivers_DefineFormat
 from OCC.Core.XmlXCAFDrivers import xmlxcafdrivers_DefineFormat
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
-from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.PCDM import PCDM_SS_OK, PCDM_RS_OK
 from OCC.Core.Quantity import Quantity_Color
@@ -38,8 +37,7 @@ from OCC.Core.STEPCAFControl import (STEPCAFControl_Reader,
 from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
-from OCC.Core.TDF import (TDF_CopyLabel, TDF_Label,
-                          TDF_LabelSequence)
+from OCC.Core.TDF import TDF_CopyLabel, TDF_Label, TDF_LabelSequence
 from OCC.Core.TDocStd import TDocStd_Document, TDocStd_XLinkTool
 from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape, TopoDS_Builder
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
@@ -78,7 +76,7 @@ def create_doc():
 
     # Initialize the document
     # Choose format for TDocStd_Document
-    # format = "BinXCAF"  # Use file ext .bxf to save in binary format
+    # doc_format = "BinXCAF"  # Use file ext .xbf to save in binary format
     doc_format = "XmlXCAF"  # Use file ext .xml to save in xml format
     doc = TDocStd_Document(TCollection_ExtendedString(doc_format))
     app = XCAFApp_Application_GetApplication()
@@ -106,11 +104,11 @@ class DocModel:
         # Create root compound shape & label, store in prototype dataclass
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         root_comp = TopoDS_Compound()
-        self.root_builder = TopoDS_Builder()
-        self.root_builder.MakeCompound(root_comp)
-        self.root_proto = Prototype(
+        root_builder = TopoDS_Builder()
+        root_builder.MakeCompound(root_comp)
+        root_proto = Prototype(
             root_comp, shape_tool.AddShape(root_comp, True))
-        set_label_name(self.root_proto.label, "Top")
+        set_label_name(root_proto.label, "Top")
 
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
@@ -302,7 +300,7 @@ class DocModel:
     def save_step_doc(self):
         """Export self.doc to STEP file."""
 
-        prompt = 'Choose filename for step file.'
+        prompt = 'Specify name for saved step file.'
         fname, __ = QFileDialog.getSaveFileName(None, prompt, './',
                                                 "STEP files (*.stp *.STP *.step)")
         if not fname:
@@ -325,7 +323,7 @@ class DocModel:
         Use workaround: save_step_doc / load_stp_at_top
         """
 
-        prompt = 'Choose filename to open.'
+        prompt = 'Choose file to open.'
         fname, __ = QFileDialog.getOpenFileName(None, prompt, './',
                                                 "native CAD format (*.xml)")
 
@@ -355,7 +353,7 @@ class DocModel:
         if not doc:
             doc = self.doc
 
-        prompt = 'Choose filename for step file.'
+        prompt = 'Specify name of file for saved doc.'
         save_dialog = QFileDialog()
         fname, __ = save_dialog.getSaveFileName(None, prompt, './',
                                                 "native CAD format (*.xml)")
@@ -588,7 +586,7 @@ def copy_label(source_label, target_label):
 def save_step_doc(doc):
     """Export doc to STEP file."""
 
-    prompt = 'Choose filename for step file.'
+    prompt = 'Specify name for saved step file.'
     fname, __ = QFileDialog.getSaveFileName(None, prompt, './',
                                             "STEP files (*.stp *.STP *.step)")
     if not fname:
@@ -705,7 +703,7 @@ def load_stp_undr_top(dm):
     root_label = labels.Value(1)  # First label at root
     c_label = shape_tool.AddComponent(root_label, comp, True)
 
-    # Adding the compound shape as a component of root created a
+    # Adding the compound shape as a component of root creates a
     # 'sibling' label at root level holding the new prototype shape.
     # This label will be the target for pasting the step root label.
     ref_label = TDF_Label()  # label of referred shape
@@ -723,6 +721,10 @@ def load_stp_undr_top(dm):
     shape_tool.UpdateAssemblies()
 
     # Set name of component label
+    # I don't understand how or why this works
+    # This ends up fixing the 0:1:1:2:1 label of the step_doc
+    # Here's a theory: Maybe shape_tool and step_shape_tool end up
+    # getting 'merged' or overwritten after copy
     set_label_name(c_label, part_name)
 
     # Restore part color by cycling through save/load
@@ -745,6 +747,7 @@ def load_stp_undr_top(dm):
     shape_tool.UpdateAssemblies()
 
     # Repair component label name inside step file
+    # No need to do this. It's already fixed (see comments above)
     # ref_label = find_ref_label_of_first_component_of_label(dm.doc)
     # ref_lab = find_ref_label_of_first_component_of_label(dm.doc, ref_label)
     # comp = find_first_component_of_label(dm.doc, ref_lab)
