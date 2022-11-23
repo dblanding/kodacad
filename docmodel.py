@@ -76,13 +76,13 @@ def create_doc():
 
     # Initialize the document
     # Choose format for TDocStd_Document
-    # doc_format = "BinXCAF"  # Use file ext .xbf to save in binary format
-    doc_format = "XmlXCAF"  # Use file ext .xml to save in xml format
+    doc_format = "BinXCAF"  # Use file ext .xbf to save in binary format
+    # doc_format = "XmlXCAF"  # Use file ext .xml to save in xml format
     doc = TDocStd_Document(TCollection_ExtendedString(doc_format))
     app = XCAFApp_Application_GetApplication()
     app.NewDocument(TCollection_ExtendedString(doc_format), doc)
     binxcafdrivers_DefineFormat(app)
-    xmlxcafdrivers_DefineFormat(app)
+    # xmlxcafdrivers_DefineFormat(app)
     return doc, app
 
 
@@ -316,8 +316,9 @@ class DocModel:
         status = step_writer.Write(fname)
         assert status == IFSelect_RetDone
 
+
     def open_doc(self):
-        """Open (.xml) file, assign it to self.doc
+        """Open (.xbf) file, assign it to self.doc
 
         This isn't working yet.
         Use workaround: save_step_doc / load_stp_at_top
@@ -325,10 +326,10 @@ class DocModel:
 
         prompt = 'Choose file to open.'
         fname, __ = QFileDialog.getOpenFileName(None, prompt, './',
-                                                "native CAD format (*.xml)")
-
+                                                "native CAD format (*.xbf)")
+        print(f"{fname = }")
         if not fname:
-            print("Save step cancelled.")
+            print("Open file cancelled.")
             return
 
         # Create document to receive data from file
@@ -337,17 +338,16 @@ class DocModel:
         # Read file and transfer to doc
         open_status = app.Open(TCollection_ExtendedString(fname), doc)
         if open_status == PCDM_RS_OK:
-            # self.doc = doc
-            # self.parse_doc()
-            # print("File opened successfully.")
-
+            print("File opened successfully.")
             # Save new doc to have a look at it
-            self.save_doc(doc=doc)
+            self.doc = doc
+            save_step_doc(doc)
+            self.parse_doc()
         else:
             print("Unable to open file.")
 
     def save_doc(self, doc=None):
-        """Save doc to file in XML Format (.xml)"""
+        """Save doc to file in XML Format (.xbf)"""
 
         # Enable using this method to save a doc other than self.doc
         if not doc:
@@ -356,14 +356,14 @@ class DocModel:
         prompt = 'Specify name of file for saved doc.'
         save_dialog = QFileDialog()
         fname, __ = save_dialog.getSaveFileName(None, prompt, './',
-                                                "native CAD format (*.xml)")
+                                                "native CAD format (*.xbf)")
         if not fname:
             print("Save step cancelled.")
             return
 
         # append ".xml" if the user didn't
-        if not fname.endswith('.xml'):
-            fname += '.xml'
+        if not fname.endswith('.xbf'):
+            fname += '.xbf'
 
         # One of the few places app is needed
         save_status = self.app.SaveAs(doc, TCollection_ExtendedString(fname))
