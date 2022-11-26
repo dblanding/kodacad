@@ -605,13 +605,15 @@ def save_step_doc(doc):
 
 
 def _load_step():
-    """Read step file at f_path, transfer data to doc, return doc."""
+    """Allow user to select step file to load, create doc and app,
+
+    transfer step data to doc, return step_file_name, doc, app"""
 
     prompt = 'Select STEP file to import'
-    f_path, __ = QFileDialog.getOpenFileName(None, prompt, './',
-                                             "STEP files (*.stp *.STP *.step)")
+    f_path, __ = QFileDialog.getOpenFileName(
+        None, prompt, './', "STEP files (*.stp *.STP *.step)")
     base = os.path.basename(f_path)  # f_name.ext
-    f_name, ext = os.path.splitext(base)
+    step_file_name, ext = os.path.splitext(base)
     logger.debug("Load file name: %s", f_path)
     if not f_path:
         print("Load step cancelled")
@@ -631,7 +633,7 @@ def _load_step():
     if status == IFSelect_RetDone:
         logger.info("Transfer doc to STEPCAFControl_Reader")
         step_reader.Transfer(doc)
-    return f_name, doc, app
+    return step_file_name, doc, app
 
 
 def load_stp_at_top(dm):
@@ -671,25 +673,24 @@ def load_stp_cmpnt(dm):
 
 
 def load_stp_undr_top(dm):
-    """Add step file as a component under Top (root) label of dm
+    """Add step file as a component under Top (root) label of dm.doc
 
-    It's working better now than it used to,
-    but there are still some problems:
+    There are still some problems with this:
 
     Some step files (such as 'as1_pe_203.stp') are more difficult
     than others (such as 'as1-oc-214.stp)
 
-    When a step file is copied onto the project document model, sometimes
-    the name of the 0:1:1:2:1 label of the project document model and / or
-    the name of the 0:1:1:2:1 label of the step file (prior to copying)
-    get messed up. For now, both names are repaired after copying.
+    When a step file is copied onto the project document model,
+    the name of the new component of Top (label 0:1:1:1:1) referring to
+    the target label and the name of the 0:1:1:2:1 label of the step file
+    (prior to copying) get messed up and must be repaired after copying.
 
-    Also, step files loaded subsequently (at higher values of tag)
-    don't get loaded with their colors.
+    Also, step files loaded subsequently (under component labels
+    with higher tag values) don't get loaded with their colors.
     """
-    f_name, step_doc, step_app = _load_step()
+    step_file_name, step_doc, step_app = _load_step()
 
-    # Get part name (needed later for repair)
+    # Get part name (that needs to be repaired later)
     uid = '0:1:1:2:1.0'
     part_name = get_name_from_uid(step_doc, uid)
     print(f"{part_name = }")
@@ -704,14 +705,14 @@ def load_stp_undr_top(dm):
     root_label = labels.Value(1)  # First label at root
     c_label = shape_tool.AddComponent(root_label, comp, True)
 
-    # Adding the compound shape as a component of root creates a
-    # 'sibling' label at root level holding the new prototype shape.
-    # This label will be the target for pasting the step root label.
+    # The newly created component above refers to a new assembly and
+    # label that are automatically created at the top-level. This label
+    # will be the target label for copying the step data.
     ref_label = TDF_Label()  # label of referred shape
     __ = shape_tool.GetReferredShape(c_label, ref_label)
     target_label = ref_label
 
-    # Get root label of step data to paste (source label)
+    # Get root label of step data (source label)
     step_labels = TDF_LabelSequence()
     step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
     step_shape_tool.GetShapes(step_labels)
@@ -721,14 +722,15 @@ def load_stp_undr_top(dm):
     copy_label(step_root_label, target_label)
     shape_tool.UpdateAssemblies()
 
-    # Set name of component label
-    # I don't understand how or why this works
-    # This ends up fixing the 0:1:1:2:1 label of the step_doc
-    # Here's a theory: Maybe shape_tool and step_shape_tool end up
-    # getting 'merged' or overwritten after copy
+    # Repair name of 0:1:1:3:1 label of new doc
+    # I have no idea how or why this works.
+    # The c_label is a component of Top at label 0:1:1:1, but this
+    # ends up setting the name of the 0:1:1:3:1 label of dm.doc
     set_label_name(c_label, part_name)
 
-    # Restore part color by cycling through save/load
+    # At this point, dm.doc is a total mess, but somehow gets 'fixed' by
+    # saving to step and reloading. This also causes part colors to be
+    # restored. Only one more name needs to be repaired.
     dm.doc = doc_linter(dm.doc)
 
     # new doc means we need a new shape_tool
@@ -744,64 +746,8 @@ def load_stp_undr_top(dm):
     __ = shape_tool.GetComponents(root_label, top_comps, subchilds)
     n = top_comps.Length()
     comp_label = top_comps.Value(n)
-    set_label_name(comp_label, f_name)
+    set_label_name(comp_label, step_file_name)
     shape_tool.UpdateAssemblies()
-
-    # Repair component label name inside step file
-    # No need to do this. It's already fixed (see comments above)
-    # ref_label = find_ref_label_of_first_component_of_label(dm.doc)
-    # ref_lab = find_ref_label_of_first_component_of_label(dm.doc, ref_label)
-    # comp = find_first_component_of_label(dm.doc, ref_lab)
-    # set_label_name(comp, part_name)
 
     # Build new self.part_dict & tree view
     dm.parse_doc()
-
-
-def find_ref_label_of_first_component_of_label(doc, label=None):
-    """Return referred label of first component of label in doc
-    except if label=None, then find referred label of last component
-    """
-    first_comp = True
-    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
-    if not label:
-        labels = TDF_LabelSequence()
-        shape_tool.GetShapes(labels)
-        root_label = labels.Value(1)  # First label at root
-        label = root_label
-        first_comp = False
-    top_comps = TDF_LabelSequence()
-    subchilds = False
-    is_assy = shape_tool.GetComponents(label, top_comps, subchilds)
-    if top_comps.Length():
-        n = top_comps.Length()
-        if first_comp:
-            n = 1
-        ref_label = TDF_Label()  # label of referred shape (or assembly)
-        comp_1 = top_comps.Value(n)
-        print(f"{n = }")
-        print(f"{comp_1.GetLabelName() = }")
-        print(f"{comp_1.Depth() = }")
-        print(f"{shape_tool.IsReference(comp_1) = }")
-        print(f"{shape_tool.GetReferredShape(comp_1, ref_label) = }")
-        print(f"{ref_label.GetLabelName() = }")
-        print(f"{ref_label.EntryDumpToString() = }")
-        print(f"{ref_label.Depth() = }")
-        return ref_label
-    else:
-        return None
-
-
-def find_first_component_of_label(doc, label):
-    """Return first component of label in doc"""
-    shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
-    comps = TDF_LabelSequence()
-    subchilds = False
-    is_assy = shape_tool.GetComponents(label, comps, subchilds)
-    if comps.Length():
-        comp = comps.Value(1)
-        print(f"{comp.GetLabelName() = }")
-        print(f"{comp.Depth() = }")
-        return comp
-    else:
-        return None
