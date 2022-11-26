@@ -804,7 +804,7 @@ class MainWindow(QMainWindow):
 
     #############################################
     #
-    # 3D Measure functons...
+    # 3D Measure functions...
     #
     #############################################
 

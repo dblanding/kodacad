@@ -29,6 +29,7 @@ import os.path
 from OCC.Core.BinXCAFDrivers import binxcafdrivers_DefineFormat
 from OCC.Core.XmlXCAFDrivers import xmlxcafdrivers_DefineFormat
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
+from OCC.Core.BRep import BRep_Builder
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.PCDM import PCDM_SS_OK, PCDM_RS_OK
 from OCC.Core.Quantity import Quantity_Color
@@ -39,7 +40,7 @@ from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
 from OCC.Core.TDF import TDF_CopyLabel, TDF_Label, TDF_LabelSequence
 from OCC.Core.TDocStd import TDocStd_Document, TDocStd_XLinkTool
-from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape, TopoDS_Builder
+from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
 from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
                               XCAFDoc_DocumentTool_ColorTool,
@@ -104,7 +105,7 @@ class DocModel:
         # Create root compound shape & label, store in prototype dataclass
         shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
         root_comp = TopoDS_Compound()
-        root_builder = TopoDS_Builder()
+        root_builder = BRep_Builder()
         root_builder.MakeCompound(root_comp)
         root_proto = Prototype(
             root_comp, shape_tool.AddShape(root_comp, True))
@@ -695,7 +696,7 @@ def load_stp_undr_top(dm):
 
     # Add a compound shape as a component under dm.doc root label
     comp = TopoDS_Compound()
-    builder = TopoDS_Builder()
+    builder = BRep_Builder()
     builder.MakeCompound(comp)
     labels = TDF_LabelSequence()
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
