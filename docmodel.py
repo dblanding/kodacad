@@ -642,7 +642,11 @@ def load_stp_at_top(dm):
     This works as a surrogate for loading a CAD project that has previously
     been saved as a STEP file."""
 
-    f_name, doc, app = _load_step()
+    try:
+        f_name, doc, app = _load_step()
+    except TypeError as e:
+        print("Load step cancelled")
+        return
     logger.info("Transfer temp_doc to STEPCAFControl_Reader")
     dm.doc = doc
     dm.app = app
@@ -726,7 +730,8 @@ def load_stp_undr_top(dm):
     # I have no idea how or why this works.
     # The c_label is a component of Top at label 0:1:1:1, but this
     # ends up setting the name of the 0:1:1:3:1 label of dm.doc
-    set_label_name(c_label, part_name)
+    if part_name:
+        set_label_name(c_label, part_name)
 
     # At this point, dm.doc is a total mess, but somehow gets 'fixed' by
     # saving to step and reloading. This also causes part colors to be
