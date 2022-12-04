@@ -33,18 +33,28 @@ from OCC.Core.BRep import BRep_Builder
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.PCDM import PCDM_SS_OK, PCDM_RS_OK
 from OCC.Core.Quantity import Quantity_Color
-from OCC.Core.STEPCAFControl import (STEPCAFControl_Reader,
-                                     STEPCAFControl_Writer)
+from OCC.Core.STEPCAFControl import (
+    STEPCAFControl_Reader,
+    STEPCAFControl_Writer,
+)
 from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Core.TCollection import TCollection_ExtendedString
 from OCC.Core.TDataStd import TDataStd_Name
-from OCC.Core.TDF import TDF_CopyLabel, TDF_Label, TDF_LabelSequence
+from OCC.Core.TDF import (
+    TDF_CopyLabel,
+    TDF_Label,
+    TDF_LabelSequence,
+    TDF_ChildIterator,
+)
 from OCC.Core.TDocStd import TDocStd_Document, TDocStd_XLinkTool
 from OCC.Core.TopoDS import TopoDS_Compound, TopoDS_Shape
 from OCC.Core.XCAFApp import XCAFApp_Application_GetApplication
-from OCC.Core.XCAFDoc import (XCAFDoc_ColorGen, XCAFDoc_ColorSurf,
-                              XCAFDoc_DocumentTool_ColorTool,
-                              XCAFDoc_DocumentTool_ShapeTool)
+from OCC.Core.XCAFDoc import (
+    XCAFDoc_ColorGen,
+    XCAFDoc_ColorSurf,
+    XCAFDoc_DocumentTool_ColorTool,
+    XCAFDoc_DocumentTool_ShapeTool,
+)
 from OCC.Core.XSControl import XSControl_WorkSession
 from PyQt5.QtWidgets import QFileDialog
 
@@ -101,15 +111,6 @@ class DocModel:
     def __init__(self):
 
         self.doc, self.app = create_doc()
-
-        # Create root compound shape & label, store in prototype dataclass
-        shape_tool = XCAFDoc_DocumentTool_ShapeTool(self.doc.Main())
-        root_comp = TopoDS_Compound()
-        root_builder = BRep_Builder()
-        root_builder.MakeCompound(root_comp)
-        root_proto = Prototype(
-            root_comp, shape_tool.AddShape(root_comp, True))
-        set_label_name(root_proto.label, "Top")
 
         # To be used by redraw()
         self.part_dict = {}  # {uid: {keys: 'shape', 'name', 'color', 'loc'}}
@@ -321,7 +322,7 @@ class DocModel:
     def open_doc(self):
         """Open (.xbf) file, assign it to self.doc
 
-        This isn't working yet.
+        This doesn't work in PythonOCC.
         Use workaround: save_step_doc / load_stp_at_top
         """
 
@@ -679,80 +680,53 @@ def load_stp_cmpnt(dm):
 def load_stp_undr_top(dm):
     """Add step file as a component under Top (root) label of dm.doc
 
-    There are still some problems with this:
+    In order to get this to work, I have found that I need to use BRep_Builder
+    to build the root label, adding the target label to it. I haven't figured
+    out how to get it to add the target label to a pre-existing root label.
 
-    Some step files (such as 'as1_pe_203.stp') are more difficult
-    than others (such as 'as1-oc-214.stp)
-
-    When a step file is copied onto the project document model,
-    the name of the new component of Top (label 0:1:1:1:1) referring to
-    the target label and the name of the 0:1:1:2:1 label of the step file
-    (prior to copying) get messed up and must be repaired after copying.
-
-    Also, step files loaded subsequently (under component labels
-    with higher tag values) don't get loaded with their colors.
+    Also, it works quite well with 'as1-oc-214.stp'
+    Not so well with 'as1_pe_203.stp'
     """
-    step_file_name, step_doc, step_app = _load_step()
 
-    # Get part name (that needs to be repaired later)
-    uid = '0:1:1:2:1.0'
-    part_name = get_name_from_uid(step_doc, uid)
-    print(f"{part_name = }")
-
-    # Add a compound shape as a component under dm.doc root label
-    comp = TopoDS_Compound()
-    builder = BRep_Builder()
-    builder.MakeCompound(comp)
-    labels = TDF_LabelSequence()
+    # Create shape_tool for project doc
     shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
-    shape_tool.GetShapes(labels)
-    root_label = labels.Value(1)  # First label at root
-    c_label = shape_tool.AddComponent(root_label, comp, True)
 
-    # The newly created component above refers to a new assembly and
-    # label that are automatically created at the top-level. This label
-    # will be the target label for copying the step data.
-    ref_label = TDF_Label()  # label of referred shape
-    __ = shape_tool.GetReferredShape(c_label, ref_label)
-    target_label = ref_label
+    # Create target shape & label, store in prototype dataclass
+    target_shape = TopoDS_Compound()
+    t_builder = BRep_Builder()
+    t_builder.MakeCompound(target_shape)
+    target_proto = Prototype(target_shape, shape_tool.AddShape(target_shape, True))
+
+    # Create root compound shape & label, store in prototype dataclass
+    root_shape = TopoDS_Compound()
+    r_builder = BRep_Builder()
+    r_builder.MakeCompound(root_shape)
+    r_builder.Add(root_shape, target_proto.shape)
+    root_proto = Prototype(root_shape, shape_tool.AddShape(root_shape, True))
+    TDataStd_Name.Set(root_proto.label, TCollection_ExtendedString("Top"))
 
     # Get root label of step data (source label)
+    step_file_name, step_doc, step_app = _load_step()
     step_labels = TDF_LabelSequence()
     step_shape_tool = XCAFDoc_DocumentTool_ShapeTool(step_doc.Main())
     step_shape_tool.GetShapes(step_labels)
     step_root_label = step_labels.Value(1)
 
     # Copy source label to target label
-    copy_label(step_root_label, target_label)
+    copy_label(step_root_label, target_proto.label)
+
+    # Set name of step file to component referring to new target label
+    itr = TDF_ChildIterator(root_proto.label, False)
+    while itr.More():
+        component_label = itr.Value()
+        TDataStd_Name.Set(
+            component_label, TCollection_ExtendedString(step_file_name))
+        itr.Next()
     shape_tool.UpdateAssemblies()
 
-    # Repair name of 0:1:1:3:1 label of new doc
-    # I have no idea how or why this works.
-    # The c_label is a component of Top at label 0:1:1:1, but this
-    # ends up setting the name of the 0:1:1:3:1 label of dm.doc
-    if part_name:
-        set_label_name(c_label, part_name)
-
-    # At this point, dm.doc is a total mess, but somehow gets 'fixed' by
-    # saving to step and reloading. This also causes part colors to be
-    # restored. Only one more name needs to be repaired.
+    # At this point, dm.doc isn't quite right, but somehow gets 'fixed' by
+    # saving to step and reloading. This also fixes part colors.
     dm.doc = doc_linter(dm.doc)
-
-    # new doc means we need a new shape_tool
-    shape_tool = XCAFDoc_DocumentTool_ShapeTool(dm.doc.Main())
-    shape_tool.UpdateAssemblies()
-
-    # Repair name of component label referencing newly loaded step file
-    labels = TDF_LabelSequence()
-    shape_tool.GetShapes(labels)
-    root_label = labels.Value(1)  # First label at root
-    top_comps = TDF_LabelSequence()  # Components of Top Assy
-    subchilds = False
-    __ = shape_tool.GetComponents(root_label, top_comps, subchilds)
-    n = top_comps.Length()
-    comp_label = top_comps.Value(n)
-    set_label_name(comp_label, step_file_name)
-    shape_tool.UpdateAssemblies()
 
     # Build new self.part_dict & tree view
     dm.parse_doc()

@@ -254,9 +254,10 @@ class MainWindow(QMainWindow):
         self.showItemActive(0)
         self.setActiveAsy(self.activeAsyUID)
 
-        # Show 'Top' assy in initial tree view
-        dm.parse_doc()
-        self.build_tree()
+        # Used to show 'Top' assembly in initial tree view but removed
+        # it here in order to allow creating it in 'load_step_under_top'
+        # dm.parse_doc()
+        # self.build_tree()
 
     def createDockWidget(self):
         self.treeDockWidget = QDockWidget("Assy/Part Structure", self)
