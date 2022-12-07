@@ -618,6 +618,12 @@ class MainWindow(QMainWindow):
         self.setActiveWp(uid)
         return uid
 
+    def delete_wp(self, uid):
+        """Delete workplane whose ID is uid."""
+        if uid in self.wp_dict:
+            del self.wp_dict[uid]
+            self.repopulate_2D_tree_view()
+
     def appendToStack(self):
         """Called when <ret> is pressed on line edit"""
         self.lineEditStack.append(self.lineEdit.text())
