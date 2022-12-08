@@ -616,7 +616,7 @@ def printActiveAsyInfo():
         name = dm.label_dict[uid]["name"]
         print(f"Active Assembly (uid) Name: ({uid}) {name}")
     else:
-        print("None active")
+        print("No assembly active")
 
 
 def printActiveWpInfo():
@@ -625,7 +625,7 @@ def printActiveWpInfo():
         name = win.activeWp
         print(f"Active WP (uid) Name: ({uid}) {name}")
     else:
-        print("None active")
+        print("No workplane active")
 
 
 def printActivePartInfo():
@@ -634,7 +634,7 @@ def printActivePartInfo():
         name = dm.label_dict[uid]["name"]
         print(f"Active Part (uid) Name: ({uid}) {name}")
     else:
-        print("None active")
+        print("No part active")
 
 
 def printActPart():
