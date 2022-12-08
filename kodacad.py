@@ -730,6 +730,7 @@ if __name__ == "__main__":
 
     win.treeView.popMenu.addAction("Item Info", win.showClickedInfo)
     win.treeView.popMenu.addAction("Set Active", win.setClickedActive)
+    win.treeView.popMenu.addAction("Delete Item", win.deleteItem)
     win.treeView.popMenu.addAction("Make Transparent", win.setTransparent)
     win.treeView.popMenu.addAction("Make Opaque", win.setOpaque)
     win.treeView.popMenu.addAction("Edit Name", win.editName)

@@ -476,6 +476,8 @@ class MainWindow(QMainWindow):
         item = self.itemClicked
         if item:
             self.showItemInfo(item)
+        else:
+            print("Try first left clicking item then right clicking.")
 
     def showItemInfo(self, item):
         """Show info for item clicked in treeView."""
@@ -506,6 +508,8 @@ class MainWindow(QMainWindow):
             self.setItemActive(item)
             self.treeView.clearSelection()
             self.itemClicked = None
+        else:
+            print("Try first left clicking item then right clicking.")
 
     def setItemActive(self, item):
         """Set (part, wp or assy) represented by treeView item to be active."""
@@ -555,6 +559,25 @@ class MainWindow(QMainWindow):
             if uid:
                 self.showItemActive(uid)
 
+    def deleteItem(self):
+        """Delete item clicked."""
+        item = self.itemClicked
+        if item:
+            name = item.text(0)
+            uid = item.text(1)
+            if uid in self.wp_dict:
+                del self.wp_dict[uid]
+                self.build_tree()
+                self.redraw()
+                print(f"Workplane {name} deleted.")
+                if uid == self.activeWpUID:
+                    self.activeWp = None
+                    self.activeWpUID = 0
+            else:
+                print("Only workplane deletion is implemented at this time")
+        else:
+            print("Try first left clicking item then right clicking.")
+
     def setTransparent(self):
         """Set treeView item clicked transparent"""
         item = self.itemClicked
@@ -565,6 +588,8 @@ class MainWindow(QMainWindow):
                 self.erase_shape(uid)
                 self.draw_shape(uid)
             self.itemClicked = None
+        else:
+            print("Try first left clicking item then right clicking.")
 
     def setOpaque(self):
         """Set treeView item clicked opaque"""
@@ -576,6 +601,8 @@ class MainWindow(QMainWindow):
                 self.erase_shape(uid)
                 self.draw_shape(uid)
             self.itemClicked = None
+        else:
+            print("Try first left clicking item then right clicking.")
 
     def editName(self):
         """Edit name of treeView item clicked"""
@@ -593,6 +620,8 @@ class MainWindow(QMainWindow):
                 self.itemClicked = None
                 dm.change_label_name(uid, newName)
                 self.build_tree()
+        else:
+            print("Try first left clicking item then right clicking.")
 
     #############################################
     #
@@ -617,12 +646,6 @@ class MainWindow(QMainWindow):
         # Make new workplane active
         self.setActiveWp(uid)
         return uid
-
-    def delete_wp(self, uid):
-        """Delete workplane whose ID is uid."""
-        if uid in self.wp_dict:
-            del self.wp_dict[uid]
-            self.repopulate_2D_tree_view()
 
     def appendToStack(self):
         """Called when <ret> is pressed on line edit"""

@@ -88,7 +88,10 @@ class StepAnalyzer():
         labels = TDF_LabelSequence()
         self.shape_tool.GetShapes(labels)
         nbr = labels.Length()
-        rootlabel = labels.Value(1)  # First label at root
+        try:
+            rootlabel = labels.Value(1)  # First label at root
+        except RuntimeError as e:
+            return e
 
         # Get information from root label
         name = rootlabel.GetLabelName()
