@@ -477,7 +477,7 @@ class MainWindow(QMainWindow):
         if item:
             self.showItemInfo(item)
         else:
-            print("Try first left clicking item then right clicking.")
+            print("No item selected. Try first left clicking item then right clicking.")
 
     def showItemInfo(self, item):
         """Show info for item clicked in treeView."""
@@ -509,7 +509,7 @@ class MainWindow(QMainWindow):
             self.treeView.clearSelection()
             self.itemClicked = None
         else:
-            print("Try first left clicking item then right clicking.")
+            print("No item selected. Try first left clicking item then right clicking.")
 
     def setItemActive(self, item):
         """Set (part, wp or assy) represented by treeView item to be active."""
@@ -576,7 +576,7 @@ class MainWindow(QMainWindow):
             else:
                 print("Only workplane deletion is implemented at this time")
         else:
-            print("Try first left clicking item then right clicking.")
+            print("No item selected. Try first left clicking item then right clicking.")
 
     def setTransparent(self):
         """Set treeView item clicked transparent"""
@@ -589,7 +589,7 @@ class MainWindow(QMainWindow):
                 self.draw_shape(uid)
             self.itemClicked = None
         else:
-            print("Try first left clicking item then right clicking.")
+            print("No item selected. Try first left clicking item then right clicking.")
 
     def setOpaque(self):
         """Set treeView item clicked opaque"""
@@ -602,7 +602,7 @@ class MainWindow(QMainWindow):
                 self.draw_shape(uid)
             self.itemClicked = None
         else:
-            print("Try first left clicking item then right clicking.")
+            print("No item selected. Try first left clicking item then right clicking.")
 
     def editName(self):
         """Edit name of treeView item clicked"""
@@ -621,7 +621,7 @@ class MainWindow(QMainWindow):
                 dm.change_label_name(uid, newName)
                 self.build_tree()
         else:
-            print("Try first left clicking item then right clicking.")
+            print("No item selected. Try first left clicking item then right clicking.")
 
     #############################################
     #
