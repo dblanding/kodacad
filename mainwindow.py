@@ -274,8 +274,8 @@ class MainWindow(QMainWindow):
         """Centers the window on the screen."""
         resolution = QDesktopWidget().screenGeometry()
         self.move(
-            (resolution.width() / 2) - (self.frameSize().width() / 2),
-            (resolution.height() / 2) - (self.frameSize().height() / 2),
+            int(resolution.width() / 2) - int(self.frameSize().width() / 2),
+            int(resolution.height() / 2) - int(self.frameSize().height() / 2),
         )
 
     def contextMenu(self, point):
